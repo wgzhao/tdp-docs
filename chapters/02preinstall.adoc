@@ -1,0 +1,130 @@
+[[_preinstall]]
+== 安装准备
+=== 硬件环境要求
+
+{prodshortname}提供集群服务来保证服务的高可用，因此集群系统必须是3台以上物理服务器或虚拟机组成，每台服务器的最低配置如下：
+
+.最低配置要求
+* 1颗4核带超线程X86指令集CPU的服务器
+* 32G内存
+* 2个300G硬盘做RAID1，作为系统盘
+* 2个2T SATA硬盘，作为数据盘
+* 2个千兆以太网
+
+为了实现更好的性能以及性价比，{prodshortname}依据不同组件特性土建不同的配置，对于组件的Namenode和Master推荐使用以下配置：
+
+.Namenode和Master推荐配置：
+* 2颗6核带超线程的x86指令集CPU服务器 (比如Intel(R) Xeon(R)E5-2640 v3 CPU)
+* 128G以上内存
+* 4个600G以上硬盘做成RAID0+1做成系统盘和管理数据盘
+* 4个千兆以上网卡
+
+数据节点(Datanode)的硬盘配置依据不同的特点有不同的推荐，使用Spark(R)需要更多的内存以及计算资源。数据节点推荐配置如下：
+
+.Datanode推荐配置
+* 2颗8核带超线程的x86指令集CPU服务器 (比如Intel(R) Xeon(R)E5-2650 v3 CPU)
+* 2个300G以上硬盘做成RAID，作为系统盘
+* 8个2T以上容量SATA磁盘做成JBOD，作为数据盘
+* 4个千兆以上网卡
+
+=== 操作系统要求
+理论上{prodshortname}并不要求集群中的每个节点操作系统版本一致，但是为了管理方便和最大可能保持一致性，强烈建议所有节点安装相同的操作系统。{prodshortname}目前支持以下操作系统：
+
+.{prodshortname}支持的操作系统
+[cols="3,7", options="header"]
+|===
+|操作系统 |版本
+
+|Red Hat Enterprise Linux
+|6.5, 6.6, 6.7, 7.0, 7.1, 7.2
+
+|CentOS
+|6.5, 6.6, 6.7,7.0, 7.1, 7.2
+
+|===
+
+
+NOTE:   {prodshortname}安装包需要从操作系统的基本软件仓库中获取所依赖的软件包，如果您的操作系统不能获取基本软件仓库或者没有没有采取安全安装，则在{prodshortname}部署过程中，可能会出现无法找到所需软件包的报错。
+
+==== 浏览器要求 ====
+
+Tuatara 是一个基于浏览器的应用程序。为了获取全部的功能，Tuatara对浏览器有一定的要求，以下是经过测试可以兼容的浏览器最低版本：
+
+* Windows(7,8)
+** Internet Exporer 10
+** Firefox 18
+** Google Chrome 30
+* Mac OS X (10.6及以上)
+** Firefox 40
+** Safari 6
+** Google Chrome 30
+* Linux(CentOS,RHEL,Debian,Ubuntu)
+** Firefox 18
+** Google Chrome 26
+
+其他平台，我们推荐您使用最新稳定版本的浏览器。
+
+
+==== Java运行环境要求 ====
+
+{prodshortname}支持以下Java运行环境：
+
+* Oracle JDK 1.8 64-bit(不低于JDK 1.8_60)(默认)
+* Oracle JDK 1.7 64-bit(不低于JDK 1.7_67)
+* OpenJDK 8 64-bit
+* OpenJKD 7 64-bit
+
+NOTE: 如果您集群机器还没有安装JDK，您无需自行安装，{prodshortname}安装工具会安装自带的JDK软件。
+
+==== 数据库要求 ====
+
+Tuatara使用关系数据库来存储配置和拓扑结构信息。如果您安装{prodshortname}的Hive或Oozie组件，它们也需要关系数据库。下表列出了{prodshortname}平台需要关系数据库的组件以及对数据库的要求：
+
+.{prodshortname}组件对数据库的要求
+[cols="2,2,6", options="header"]
+|===
+|组件 |数据库 |描述
+
+|Tuatara
+a|
+
+- PostgreSQL 8
+- PostgreSQL 9.1.13+,9.3
+- MySQL 5.6
+- Oracle 11gR2
+- Oracle 12c
+|默认情况下，Tuatara使用PostgreSQL作为后端数据库
+
+|Hive
+a|
+
+- PostgreSQL 8
+- PostgreSQL 9.1.13+,9.3
+- MySQL 5.6
+- Oracle 11gR2
+- Oracle 12c
+|默认情况下，Hive使用MySQL作为后端数据库
+
+|Oozie
+a|
+
+* PostgreSQL 8 
+* PostgreSQL 9.1.13+,9.3 
+* MySQL 5.6 
+* Oracle 11gR2 
+* Oracle 12c 
+|默认情况下，Oozie会安装Derby实例，但从性能考虑，推荐使用MySQL作为后端数据库。
+
+|Ranger
+a|
+
+- PostgreSQL 8
+- PostgreSQL 9.1.13+,9.3
+- MySQL 5.6
+- Oracle 11gR2
+- Oracle 12c
+|必须存在上述数据库实例，Ranger并不会创建数据库实例
+
+|===
+
+

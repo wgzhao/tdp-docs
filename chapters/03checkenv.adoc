@@ -1,0 +1,184 @@
+[[_checkenv]]
+== 安装前的检查 ==
+=== 操作系统分区要求 ===
+
+系统安装和运行需要占用磁盘空间，操作系统以及必须的软件和日志预计需要150GB以上磁盘空间。对磁盘进行分区注意以下要求：
+
+* 至少需要swap和根分区
+* 推荐操作系统根分区为100GB -- 300GB
+* 推荐用于数据存储的每个磁盘挂载到/tdp/grid<n>(n为数字)上不同的挂载点，如果是RHEL6及类似操作系统，推荐文件系统为 `ext4` ，RHEL7及以上推荐使用 `xfs` 文件系统。
+* HDFS Datanode的数据目录要和系统分区分隔。
+
+对于Namenode服务器，建议的最小分区如下：
+
+.Namenode分区建议
+[cols="3,2,2,3", options="header"]
+|===
+|文件系统 |大小(GB) |挂载目录 |文件系统类型
+
+|/dev/sda1 
+|100 
+| / 
+| xfs
+
+|/dev/sda2 
+|16 
+| N/A 
+| swap
+
+|/dev/sda3 
+| 200 
+|/hadoop 
+| xfs
+
+|/dev/sda4 
+|200 
+| /var/log 
+| xfs
+
+|===
+
+
+对于Datanodeer而言，主要把存储磁盘按照顺序挂载到特定的目录，推荐的分区如下：
+
+.Datanode分区建议
+[cols="3,2,2,3", options="header"]
+|===
+|文件系统 |大小(GB) |挂载目录 |文件系统类型
+
+|/dev/sda1 |100 | / | xfs
+
+|/dev/sda2 |16 | N/A | swap
+
+|/dev/sda3 | 200 |/hadoop | xfs
+
+|/dev/sda4 |200 | /var/log | xfs
+
+|/dev/sdb1 |2000 | /tdp/grid1 |xfs
+
+|/dev/sdc1 |2000 | /tdp/grid2 |xfs
+
+|/dev/sdd1 |2000 | /tdp/grid3 |xfs
+
+|===
+
+
+=== 内存容量要求 ===
+
+每台服务器的内存建议不少于64GB。依据每台服务器上运行的{prodshortname}组件不同，所需要的内存大小也有所不同。以下列出{prodshortname}的重要组件所需要的推荐内容：
+
+.{prodshortname}重要组件所需内容
+[cols="6,4", options="header"]
+|===
+|服务 | 建议内存(GB)
+
+|Tuatara Server 
+|8
+
+|HDFS Namenode
+|32
+
+|HDFS Namenode(HA)
+|64
+
+|HDFS Datanode
+|4
+
+|YARN ResourceManager
+|8
+
+|YARN NodeManager
+|4
+
+|HBase Master Server
+|8
+
+|Hive server
+|8
+
+|===
+
+
+=== 网络设置 ===
+
+安装{prodshortname}的最低网络配置为千兆以太网络。当以太机器上有多个千兆以太网卡时，可以在安装{prodshortname}之前进行绑定设置。有关网卡如何绑定，可以参考操作系统配置手册，这里不赘述。
+
+=== NTP服务设置 ===
+{prodshortname}的大部分组件都是分布式服务，分布式服务的一个最基本依赖是对时间同步的要求。集群内的服务器时钟如果不同步会导致关键服务无法正常运行。因此需要检查集群中的每台服务器是否已经配置了NTP服务，且设置了自动启动。
+
+[cols="4,3,3",options="header"]
+|===
+| |检查 | 设置
+
+|RHEL/CentOS/ 6
+|chkconfig --list ntpd
+|chkconfig ntpd on
+
+|RHEL/CentOS/ 7
+|systemctl is-enabled ntpd
+|systemctl start ntpd
+
+|===
+
+
+=== 设置SSH无密码登陆 ===
+Tuatara为了可以自动在集群中的每台服务器上安装Tuatara Agent，需要无密码提示的方式通过SSH登陆到服务器来安装Agent。因此需要在安装 `Tuatara Server` 机器上的创建密钥对，并分发到集群中的每台机器。
+
+NOTE: 如果选择选择手工安装Tuatara Agent则不可以跳过这个步骤。
+
+首先在Tuatara Server机器上创建root账号的SSH公私钥（如果还没有）
+
+  ssh-keygen -t rsa
+
+而后，对每一台服务器，拷贝并设置私钥认证登陆
+
+  ssh-copy-id root@<remote.target.host>
+ 
+这里 `<remote.target.host>` 指的是集群中服务器的名字
+
+NOTE:  使用非root账号的无密钥SSH登陆来自动安装Tuatara Agent也是可行的，但要求改账号必须有 `sudo` 权限。
+
+
+=== 检查DNS及NSCD ===
+
+因为{prodshortname}使用FQDN来管理集群中的服务器，因此需要使用DNS服务器来解析集群内所有服务器的主机名。如果是小型集群（比如20个节点以下），建议可以把主机名以及对应的IP地址写入到每台服务器的 `/etc/hosts` 文件中。
+
+=== 配置防火墙 ===
+{prodshortname}平台中的服务之间有相当多的资源需要互相交换，涉及的端口众多。因为Hadoop一开始是针对集群内网络是互信的基础来来开发的。因此推荐针对集群内网络关闭防火墙。
+
+**RHEL/CentOS Linux 6**
+
+  chkconfig iptables off
+  service iptables off
+  
+**RHEL/CentOS Linux 7**
+
+  systemctl disable firewalld
+  systemctl stop firewalld
+  
+ 
+=== 禁用SELinux及PackageKit ===
+
+集群内服务器必须禁用SELinux特性。在每台机器上执行
+
+  setenforce 0
+  
+来禁用。同时编辑 `/etc/selinux/config` 文件，修改或增加 `SELINUX=disabled` 来确保重启后SELinux仍被禁用。
+
+如果服务器安装了 `PackageKit` ，修改 `/etc/yum/pluginconf.d/refresh-packagekit.conf` 修改下面这行 
+
+  enabled=0
+  
+
+
+
+
+  
+
+
+
+
+
+
+
+

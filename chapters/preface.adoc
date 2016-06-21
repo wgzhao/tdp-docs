@@ -1,0 +1,5 @@
+[preface]
+== 本书内容
+该手册详细描述了{prodverbname} {prodver}的架构以及安装过程。
+
+通过阅读该手册，读者可以掌握{prodverbname} {prodver} 产品的安装技能。
