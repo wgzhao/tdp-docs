@@ -1,3 +1,6 @@
 == 集群部署 ==
  
-上一章安装和配置Tuatara后,会提示下一步操作的地址以及账号和密码完成后的提示，打开浏览器，导航到http://tdp-dev2.tdata.com:8080[http://tdp-dev2.tdata.com:8080]
+上一章安装和配置Tuatara后,会提示下一步操作的地址以及账号和密码完成后的提示，打开浏览器，导航到http://tdp-dev2.tdata.com:8080[http://tdp-dev2.tdata.com:8080]。
+输入账号 `admin` 以及密码 `admin` 进行登陆。
+
+image:Tuatara-login.png[alt="登陆"]
