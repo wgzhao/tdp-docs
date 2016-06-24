@@ -5,29 +5,32 @@
 为了后面描述方便，这里我们假定集群由3台服务器组成，每台服务器的IP地址以及名称如下：
 
 .集群服务器一览表
-[cols="2,2,*", options="header"]
+[cols="2,2,3,*", options="header"]
 |===
-|序号 | 主机名  |IP地址
+|序号 | 主机名  |IP地址 | 操作系统及版本
 
 |1
 |tdp-dev1.tdata.com
 |192.168.2.240
+|CentOS 7
 
 |2
 |tdp-dev2.tdata.com
 |192.168.2.241
+|CentOS 7
 
 |3
 |tdp-dev3.tdata.com
 |192.168.2.242
+|CentOS 7
 
 |===
 
-我们将在 `tdp-dev1.tdata.com` 安装 `Tuatara Server`
+我们将在 `tdp-dev2.tdata.com` 安装 `Tuatara Server`
 
 === 安装Tuatara  ===
 
-将安装介质插入到 `tdp-dev1.tdata.com` 服务器上，如果是图形界面，应该会自动挂载，否则请在命令行执行
+将安装介质插入到 `tdp-dev2.tdata.com` 服务器上，如果是图形界面，应该会自动挂载，否则请在命令行执行
 
   mount /dev/sr0 /mnt
   
@@ -39,14 +42,15 @@
 # ./install
 ............................................................................
 
-. 系统首先需要您阅读软件授权许可。阅读完毕，输入 `Y` 表示接受，否则退出安装。
-
-image::{imgagedir}/readlicense.png[]
+. 系统首先需要您阅读软件授权许可。阅读完毕，输入 `Y` 或 `y` 表示接受，否则退出安装。
++
+image::{imagedir}/readlicense.png[]
 
 . 系统将会自动检查环境并安装需要的软件包，配置本地仓库，配置 `Tuatara Server`。
 . 一旦安装完成，系统会提示您下一步的操作。
++
 image::{imagedir}/install_complete.png[]
 
-再下一章,我们介绍如何利用向导来部署一个{prodshortname}集群.
+在下一章,我们介绍如何利用向导来部署一个{prodshortname}集群.
  
  
