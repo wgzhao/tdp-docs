@@ -1,0 +1,110 @@
+[[_tdprole]]
+== {prodshortname} 组件角色介绍 ==
+
+要在集群中运行{prodshortname}服务, 需要指定集群中的一个或多个节点执行该服务的特定功能.这些功能被归类为功能性的角色,角色用于定义节点能为集群中的服务器提供哪些功能. 角色分配是必须的,没有角色集群无法正常工作.在分配角色之前,需要了解这些角色的含义以及对应于服务节点需要哪些角色.
+
+=== Zookeeper 角色 ===
+
+[cols='3,7', option='header']
+|===
+| 角色 | 描述 
+
+| Zookeeper
+| 一个或多个运行ZooKeeper服务的节点。ZooKeeper服务是指包
+含一个或多个节点的集群提供服务框架用于集群管理。对于集
+群,Zookeeper服务提供的功能包括维护配置信息、命名、提供
+HyperBase的分布式同步,以及当 HMaster停止时触发master选
+择。HyperBase需要有一个ZooKeeper集群才能工作。 推荐在
+ZooKeeper集群中至少有3个节点。
+
+|===
+
+=== HDFS 角色 ===
+
+[cols='3,7', option='header']
+|===
+| 角色 | 描述 
+
+|Namenode 
+|HDFS系统中的节点用于维护文件系统中所有文件的目录结构并跟踪文件数据存储于哪些数据节点。当客户端需要从HDFS 文件系统中获得文件时,它通过和NameNode通讯来知道客户端哪个数据节点上有客户端需要的文件。 一个Hadoop集群中只能有一个NameNode。NameNode
+不能被赋予其他角色。
+
+|Datanode 
+|在HDFS中, Datanode是用来存储数据块的节点.
+
+|Secondary Namenode 
+|为NameNode上的数据创建周期性检查点的节点。节点将周期性地下载当前NameNode镜像和日志文件,将日志和镜像文件合并为一个新的镜像文件然后上传到NameNode。 被分配了NameNode角色的机器不应再被分配Secondary NameNode 角色。
+
+|Standby Namenode
+|Standby模式的NameNode元数据(Namespcae information 和 Block locations map)都是和Active NameNode中的元数据是同步的,一旦切换成Active模式,马上就可以提供NameNode服务。
+
+|JournalNode
+|Standby NameName和ActiveNameNode通过JournalNode通信,保持信息同步。用来选举ActiveNamenode以及失效切换
+
+|===
+
+=== YARN 角色 ===
+[cols='3,7', option='header']
+|===
+| 角色 | 描述 
+
+|Resource Manager
+|ResourceManager负责将各个资源部分(计算、内存、带宽等)安排 给基础 NodeManager,并与NodeManager一起启动和监视它们的基础 应用程序。
+
+|Timeline Server 
+|提供对YARN的作业历史日志信息的展现服务
+
+|NodeManager
+|NodeManager 管理一个YARN集群中的每个节点。提供针对集群中每个节点的服务，从监督对每个容器的生命周期管理到监视资源和跟踪节点的状态。
+
+|===
+
+=== HBase 角色 ===
+[cols='3,7', option='header']
+|===
+| 角色 | 描述 
+
+|HBase Master
+|实现HBase数据库以下功能：管理RegionServer，平衡整个集群。
+
+|HBase Region
+|负责服务和管理HBase区域的节点
+
+|HBase Thrift
+|Thrift Client API 开放的节点，客户端可通过Thrift和HBase通信。
+
+|===
+
+=== Hive 角色 ===
+[cols='3,7', option='header']
+|===
+| 角色 | 描述 
+
+|Hive Metastore
+|存储表结构以及元数据信息
+
+|Hive Server2
+|Hive运行节点，帮助查询和管理HDFS的大型数据集。
+
+|===
+
+=== Sqoop 角色 ===
+[cols='3,7', option='header']
+|===
+| 角色 | 描述 
+
+|Sqoop
+|Sqoop 是一款用于在Hadoop(Hive,HBase)和传统数据库(MySQL,Oracle,...)间进行数据交换的工具。
+
+|===
+
+=== Oozie 角色 ===
+[cols='3,7', option='header']
+|===
+| 角色 | 描述 
+
+|Oozie Server
+|Oozie的任务管理工具
+
+|===
+

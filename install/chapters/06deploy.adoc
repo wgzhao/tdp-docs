@@ -1,0 +1,232 @@
+== 集群部署 ==
+ 
+使用{prodshortname}安装向导，可以帮助您快速安装、配置和部署大数据集群，大致有一下几个步骤：
+
+=== 登陆安装向导 ===
+
+上一章安装和配置Tuatara后,会提示下一步操作的地址以及账号和密码：
+
+. 打开浏览器，浏览 http://tdp-dev2.tdata.com:8080 
+. 输入账号 `admin` 以及密码 `admin` 进行登陆。
+
+image::{imagedir}/Tuatara-login.png[alt="登陆"]
+
+=== 启动集群部署向导 ===
+
+登陆成功后，在欢迎界面，选择 `创建集群` 视图中的 "启动安装向导" 按钮。开始使用向导来部署集群。
+
+=== 集群命名 ===
+
+首先，需要给您的集群设置一个集群名字，集群名字不能包含特殊字符，当前仅支持字母以及下划线(_)。这里我们假定集群名为 `tdp_test`。点击“下一步”。
+
+image::{imagedir}/clustername.png[alt="cluster name"]
+
+=== 选择堆栈 ===
+
+堆栈是{prodshortname}的组件集合，可能存在多个堆栈版本，通过单选按钮选择您希望安装的堆栈版本（这里选择最新的  `{prodshortname} {prodver}` )。
+
+”高级资源库选项“ 里设定获取软件包的仓库地址，这里已经设定完毕，无需修改。点击”下一步“”
+
+image::{imagedir}/choosestack.png[alt="choose stack version"]
+
+=== 安装选项 ===
+
+为了搭建集群，安装向导需要您提供与集群部署相关的信息。您需要提供集群中每台服务器的FQDN名字。向导也需要您提供在<<setup_password_less_ssh>>一节中创建的私钥。通过主机名以及私钥，安装向导能够定位、访问、以及和集群内所有服务器进行安全的交互操作。
+
+. 在 `目标主机` 输入框里，输入您集群中的所有服务器主机名，每行一个，您可以通过使用中括号的方式来表示一个服务器集合。比如，对于从 `host01.example.com` 到 `host10.example.com` 的10台服务器，我们可以使用 `host[01-10].example.com` 的方式来表示。我们这里填写。
+
+............................................................................
+tdp-dev1.tdata.com
+tdp-dev2.tdata.com
+tdp-dev3.tdata.com
+............................................................................
+
+. 如果您选择让安装向导通过SSH方式来自动给每台服务器安装代理程序，那么点击 `提供SSH私钥来自动注册主机`选项。对于私钥，您可以选择点击 `选取文件` 的方式来提供一个私钥文件，或者直接在下面的文本框里输入粘贴私钥。
+已自行输入私钥为例，您可以已root账号登陆当前运行 `Tuatara Server`（这里是 `tdp-dev2.tdata.com` ) 服务器上，然后复制 `/root/.ssh/id_rsa` 文件内容，并粘贴到私钥文本框里。
++
+[NOTE] 如果您使用 `IE 9`，`选取文件` 按钮可能不会显示。请使用粘贴私钥的方式。
+. 如果您不希望自动安装代理程序，那么选择 `执行手工注册在所有主机上，不使用SSH` 按钮。可以查看<<install_agent_manually>>章节来获得详细步骤。
+. 然后点击“注册并确定”按钮。
+
+image::{imagedir}/choosenodes.png[alt="choose cluster nodes"]
+
+=== 主机确认 ===
+
+**主机确认**提供您确定安装向导所配置的服务器都是正确有效的。
+
+如果当前有服务器不对，可以选择对应的服务器，然后点击 `移除选中项` 的方式来删除。
+
+在屏幕的下方，您可能注意到有一个黄色的文本框提示说对主机进行检查时遇到了一些警告。可以点击 `这里` 链接这里来查看遇到的警告，警告页也提供了通过执行Python脚本的方式来帮助您修复警告并重新检查。
+
+当确认所有主机无误后，点击”下一步“
+
+image::{imagedir}/nodes-register.png[alt="cluster nodes register"]
+
+
+=== 选择服务 ===
+依据您在之前选择的堆栈版本不同，这里列出的服务组件可能会有所不同。
+您可以针对您的业务选择需要的组件。或者以后<<add_services>>。默认情况下，向导选择了所有服务。这里我们选择一下组件：
+
+* HDFS
+* YARN + MapReduces
+* Tez
+* Hive
+* HBase
+* Zookeeper
+* Spark
+* Pig
+* Ambari Metrics
+
+选定完毕后，点击”下一步“。
+
+image::{imagedir}/choosecomps.png[alt="choose cluster components"]
+
+
+NOTE: 所有的组件在之后还可以添加和删除，所以我们建议总是从选择目前需要的组件开始。
+
+=== 分配Master ===
+
+向导会依据集群内节点的数量和资源自动分配Master组件到合适的服务器，在这里，您可以自行指定每个Master组件分配到哪台服务器上。
+
+左边栏显示了当前的服务以及主机，右边栏显示当前已经分配了的Master组件以及分配的服务器。
+
+分配完毕后，点击 “下一步”。
+
+NOTE: 如果组件右侧有 icon:plus[role="green"] 符号，则表示该组件可以分配到多个服务器，比如 `Zookeeper Server` , `HBase Master` 。
+
+image::{imagedir}/masterdeploy.png[alt="choose Master components"]
+
+=== 分配Slave和Client ===
+
+和Master组件分配一样，向导会自动将所有Slave(DataNodes,NodeManagers,RegionServers)及Client组件分配给合适的服务器。
+
+这里我们把三台服务器都当成 `Datenode` 节点以及 `YARN NodeManager` 以及 `HBase RegionServer`。
+
+image::{imagedir}/slavedeploy.png[alt="choose Slave components"]
+
+
+=== 定制服务 ===
+
+定制服务步骤可以对您选择的每个服务参数进行配置。
+
+通过每个服务标签页，您可以看到每个服务的参数简述以及当前配置的值。当前如果有服务配置需要您自定配置，则会在服务标签页右上角用用红色的数字来标记。
+
+其中，重要的参数包括
+
+Directories:: {prodshortname}用于保存信息的目录，该参数非常重要。向导会基于服务器的文件系统挂载点以及系统环境来选择所有可能的存储目录。但是我们仍然**强烈建议**您检查其配置参数。对于类似 `/tmp` 以及 `/var` 这些目录不能用于HDFS NameNode 和 DataNode 目录。
+Password:: Hive，Oozie 需要数据库密码，Knox需要主安全密码。比Hive为例，选择 `Hive` 标签，展开 `高级选项` 。数据库密码字段标记为空色，需要您填写。
+Namenode:: 定义Namenode数据的保存路径
+Datanode:: 定义Datanode的数据保存路径，填写数据磁盘的挂载路径，一行一个。
+Hive Metastore:: 配置Hive Metastore所需要的数据库连接参数。
+
+我们推荐使用MySQL来保存 `Hive Metastore` 以及以后需要关系型数据库的服务的信息。假定我们在 `tdp-dev3.tdata.com` 上来安装 `MySQL Server`。SSH 登陆到 `tdp-dev3.tdata.com` ，首先安装必要的软件包。
+
+............................................................................
+yum install -y mariadb-server mariadb-libs mariadb
+systemctl enable mariadb
+systemctl start mariadb
+............................................................................
+
+  
+NOTE: 如果是CentOS 6.x版本，则执行 `yum install -y mysql-server mysql-libs mysql && service mysql start`
+
+然后创建必要的账号和数据库
+
+[source,sql]
+----
+MariaDB [(none)]> drop user ''@'localhost'; // <1>
+Query OK, 0 rows affected (0.00 sec)
+
+MariaDB [(none)]> drop user ''@'tdp-dev3.tdata.com';  // <1>
+Query OK, 0 rows affected (0.00 sec)
+
+MariaDB [(none)]> grant all on hive.* to 'hive'@'%' identified by 'hive123'; // <2>
+Query OK, 0 rows affected (0.00 sec)
+
+MariaDB [(none)]> create database hive; // <3>
+Query OK, 1 row affected (0.00 sec)
+----
+<1> 删除用户名为空的账号
+<2> 创建Hive Metastore服务连接数据库的账号和密码，这里账号为 `hive` ，密码为 `hive123`
+<3> 创建Hive Metastore服务需要的数据库，这里数据库名为 `hive`
+	
+回到安装向导页面，在 `Hive` 标签页的 `Advanced` 标签里,依据刚才创建的数据库账号和数据库名称，填写对应的内容
+
+............................................................................
+Hive Database: Existing MySQL Database 
+Database Host: tdp-dev3.tdata.com
+Database Password: hive123
+............................................................................
+
+填写完成后，点击 image:{imagedir}/conntest.png[alt="测试连接"] 按钮进行连接测试。 如果连接成功，则会给出 "连接成功" 的提示。
+
+完成上述步骤后，点击 ”下一步”。
+
+image::{imagedir}/srvsetup.png[alt="setup components"]
+
+=== 检查 ===
+
+所有的部署都在会这个页面显示。仔细检查这些部署，确认是否正确，如果有需要修改，可以点击页面左边栏的了导航树形菜单来跳转到您需要修改的页面。
+
+您可以选择 `打印` 来打印上述信息，以备以后参与。
+
+检查如果没有问题，则可以点击 “部署” 按钮。
+
+image::{imagedir}/srvinstall.png[alt="Installing Components"]
+
+=== 安装启动和测试 ===
+
+安装进度以及安装过程会在屏幕上显示。向导会针对每个需要安装的组件进行部署、启动和测试用来确保组件成功安装。
+
+如果想查看每台服务器的具体安装情况，可以点击 `消息` 栏目链接，在弹出的任务窗口，可以点击每一个独立的任务来查看详细的安装日志。
+
+image::{imagedir}/srvinstall.png[alt='install']
+
+当 `消息` 栏目出现绿色成功字样后，表示服务全部安装并启动完毕，可以点击 `下一步` 按钮。
+
+image::{imagedir}/srvcomplete.png[alt="Install completed"]
+
+
+=== 完成安装 ===
+
+显示安装小结，点击 `完成` 按钮。
+
+
+image::{imagedir}/wizardfinish.png[alt="Wizard finish"]
+
+
+向导完成后，将会回到集群管理界面，这里能看到当前集群的状态。
+
+image::{imagedir}/overview.png[alt="Cluster Management Overview"]
+ 
+[[install_agent_manually]]
+=== 手工安装代理程序 ===
+
+如果您不希望通过SSH自动登录安装代理程序的方式，您可以手工安装代理程序并注册。
+
+首先您想要创建包含有代理程序软件包的仓库。创建 `/etc/yum.repos.d/ambari.repo` 文件，填写以下内容：
+
+............................................................................
+[Tuatara-2.2.2.0]
+name=Tuatara 2.2.2.0
+baseurl=http://tdp-dev2.tdata.com/tuatara/centos7/2.2.2.0/
+gpgcheck=0
+enabled=1
+............................................................................
+
+[NOTE]  `baseurl` 中的主机地址 `tdp-dev2.tdata.com` 需要依据您实际环境进行修改。实际内容可以参考安装 `Tuatara Server` 服务器上的 `/etc/yum/repos.d/ambari.repo` 文件。
+
+然后安装 `ambari-agent` 程序
+
+`yum install -y ambari-agent`
+
+编辑 `/etc/ambari-agent/conf/ambari-agent.ini` ，找到 
+............................................................................
+[server]
+hostname=localhost
+............................................................................
+这几行，把 `localhost` 修改成安装有 `Tuatara Server` 的服务器主机名，这里是 `tdp-dev2.tdata.com`
+
+启动代理程序。
+
+`/etc/init.d/ambari-agent start`

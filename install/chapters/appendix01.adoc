@@ -1,0 +1,157 @@
+[appendix]
+== {prodshortname} 所用服务账号及端口 ==
+
+在 {prodshortname} 中，用到了不少系统账号以及众多的端口，这里做个列表，方便读者查询。
+
+=== 服务账号 ===
+[cols="10^,80^,10^", option="header"]
+|===
+|服务 | 组件 |账号
+
+|HDFS
+|NameNode,SecondaryNameNode,DataNode
+|hdfs
+
+|MapReduce2
+|HistoryServer
+|mapred
+
+|YARN
+|ResourceManager,NodeManager
+|yarn
+
+|Hive
+|Hive MetaStore,Hive Server2
+|hive
+
+|HCat
+|Hcatalog Server
+|hcat
+
+|WebHcat
+|WebHcat Server 
+|hcat
+
+|Oozie
+|Oozie Server
+|oozie
+
+|HBase
+|MasterServer,RegionServer,ThriftServer
+|hbase
+
+|Zookeeper
+|Zookeeper Server,Zookeeper Client
+|zookeeper
+
+|Ranger
+|Ranger Server
+|ranger
+
+|Solr
+|Solr Server
+|solr
+
+|Spark
+|Spark Server,Spark Thrift,Spark SQL
+|spark
+
+|HDFS
+|Hadoop HTTP Server
+|httpfs
+
+|===
+
+=== {prodshortname} 端口使用 ===
+
+{prodshortname}使用了相当多的高段端口，如果配置防火墙，则需要清楚了了解到Hadoop的每个组件默认情况下使用了哪些端口。下面我们依据各组件来分别列出默认情况下使用的端口信息。
+
+==== HDFS 使用端口 ====
+[cols=",,,,",options="header",]
+|=======================================================================
+|服务 |节点 |端口 |协议 |描述 
+|NameNode WebUI |主服务节点 |50070 |http |查看当前状态，浏览文件系统
+
+
+|NameNode WebUI |主服务节点 |50074 |https |安全http服务 
+
+|NameNode metadata service |主服务节点 |8020/9000 |IPC
+|文件系统元数据操作 
+
+|DataNode |所有从节点 |50075 |http |DataNode WebUI 
+
+|DataNode |所有从节点 |50475 |https |安全http服务 
+
+|DataNode |所有从节点 |50010 | |数据传输 
+
+|DataNode |所有从节点 |50020 |IPC |元数据操作
+
+|Secondary NameNode |Secondary Namenodes |50090 |http 
+
+|=======================================================================
+
+
+==== YARN 使用端口 ====
+[cols=",,,,",options="header",]
+|=======================================================================
+|服务 |节点 |端口 |协议 |描述 
+|Resource Manager WebUI |主节点 |8088 |http |资源管理的WebUI 
+
+|Resource Manager |主节点 |8032 |IPC |应用提交
+
+
+|NodeManager WebUI |所有从节点 |50060 |http | 
+|=======================================================================
+
+==== Hive使用端口 ====
+[cols=",,,,",options="header",]
+|=======================================================================
+|服务 |节点 |端口 |协议 |描述 
+|Hive Server |Hive服务节点 |10000 | |连接到Hive的编程服务 
+
+|Hive WebUI |Hive服务节点 |9999 |http |浏览Hive数据库 
+
+|Hive Metastore | |9933 |http |
+
+|=======================================================================
+
+==== HBase使用端口 ====
+[cols=",,,,",options="header",]
+|=======================================================================
+|服务 |节点 |端口 |协议 |描述 
+|HMaster |主节点 |60000 | N/A |
+
+|HMaster Info WebUI |主节点 |60010 |http | 
+
+|Region Server |所有从节点 |60020 | N/A | 
+
+|Region Server |所有从节点 |60030 |http | 
+
+|HBase REST Server |所有REST节点 |8080 |http | 
+|HBase REST Server WebUI |所有REST节点 |8085 |http |
+
+|HBase Thrift Server |所有Thrift节点 |9090 |N/A | 
+
+|HBase Thrift Server WebUI |所有Thrift节点 |9050 | | 
+
+|=======================================================================
+
+==== Zookeeper使用端口 ====
+[cols=",,,",options="header",]
+|=======================================================================
+|服务 |节点 |端口 |描述 
+|ZooKeeper Server |所有ZK节点 |2888 |ZK节点间通信 
+
+|ZooKeeper Server |所有ZK节点 |3888 |ZK领导者和其他节点通信 
+
+|ZooKeeper Server |所有ZK节点 |2181 |来自zoo.cfg，客户端连接 
+
+|=======================================================================
+
+
+
+
+
+
+
+

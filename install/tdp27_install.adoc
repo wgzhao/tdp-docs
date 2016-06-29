@@ -5,7 +5,7 @@
 :corpshortname: 天云魔方
 :prodverbname: TCloudata Data Platform
 :prodshortname: TDP
-:prodver: V2.7
+:prodver: 2.7
 :imagedir: ./images
 :stylesdir: ./styles
 :doctype: book
@@ -27,6 +27,7 @@
 :lang: zh_cn
 :preface-title: 前言
 :toc-title: 目录
+:appendix-caption: 附录
 :orgname: 湖南天云魔方数据科技有限公司
 :last-update-label: 最后更新时间
 :front-cover-image: image:cover/cover.pdf[width=1050,height=1600]
@@ -36,7 +37,9 @@ include::chapters/preface.adoc[]
 include::chapters/01intro.adoc[]
 include::chapters/02preinstall.adoc[]
 include::chapters/03checkenv.adoc[]
-include::chapters/04install.adoc[]
-include::chapters/05deploy.adoc[]
+include::chapters/04roles.adoc[]
+include::chapters/05install.adoc[]
+include::chapters/06deploy.adoc[]
+include::chapters/appendix01.adoc[]
 
 

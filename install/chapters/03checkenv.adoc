@@ -120,7 +120,7 @@
 
 |===
 
-
+[[setup_password_less_ssh]]
 === 设置SSH无密码登陆 ===
 Tuatara为了可以自动在集群中的每台服务器上安装Tuatara Agent，需要无密码提示的方式通过SSH登陆到服务器来安装Agent。因此需要在安装 `Tuatara Server` 机器上的创建密钥对，并分发到集群中的每台机器。
 
