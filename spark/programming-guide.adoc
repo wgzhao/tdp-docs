@@ -1,0 +1,593 @@
+[概论]
+== 概论  ==
+
+宏观上说，每个 Spark 应用程序都由一个__驱动程序(driverprograme)__构成，驱动程序在集群上运行用户的 `main`
+函数来执行各种各样的__并行操作(parallel operations)__。Spark 的主要抽象是提供一个__弹性分布式数据集(RDD resilient distributed
+dataset)__，RDD 是指能横跨集群所有节点进行并行计算的分区元素集合。RDD 可以从 Hadoop 文件系统中的一个文件中创建而来(或其他 Hadoop
+支持的文件系统)，或者从一个已有的 Scala 集合转换得到。用户可以要求 Spark 将 RDD __持久化(persist)__到内存中，来让它在并行计算中高效地重用。最后，RDD 能从节点失败中自动地恢复过来。
+
+Spark 的第二个抽象是__共享变量(sharedvariables)__，共享变量能被运行在并行计算中。默认情况下，当 Spark 运行一个并行函数时，这个并行函数会作为一个任务集在不同的节点上运行，它会把函数里使用的每个变量都复制搬运到每个任务中。有时，一个变量需要被共享到交叉任务中或驱动程序和任务之间。Spark 支持 2 种类型的共享变量：**广播变量(broadcastvariables)**，用来在所有节点的内存中缓存一个值；累加器(accumulators)，仅仅只能执行“添加(added)”操作，例如：记数器(counters)和求和(sums)。
+
+这个指南会在 Spark 支持的所有语言中演示它的每一个特征。可以非常简单地从一个 Spark 交互式 shell 开始 -—— `bin/spark-shell` 开始一个 Scala shell，或 `bin/pyspark` 开始一个 Python shell。
+
+[introduce-spark]
+== 引入 Spark ==
+
+
+Spark 1.2.0 使用 Scala 2.10 写应用程序，你需要使用一个兼容的 Scala
+版本(例如：2.10.X)。
+
+写 Spark 应用程序时，你需要添加 Spark 的 Maven 依赖，Spark 可以通过
+Maven 中心仓库来获得：
+
+....
+groupId = org.apache.spark
+artifactId = spark-core_2.10
+version = 1.2.0
+....
+
+另外，如果你希望访问 HDFS 集群，你需要根据你的 HDFS 版本添加
+`hadoop-client` 的依赖。一些公共的 HDFS 版本 tags
+在https://spark.apache.org/docs/latest/hadoop-third-party-distributions.html[第三方发行页面]中被列出。
+
+....
+groupId = org.apache.hadoop
+artifactId = hadoop-client
+version = <your-hdfs-version>
+....
+
+最后，你需要导入一些 Spark
+的类和隐式转换到你的程序，添加下面的行就可以了：
+
+[source,scala]
+----
+import org.apache.spark.SparkContext
+import org.apache.spark.SparkContext._
+import org.apache.spark.SparkConf
+----
+[init-spark]
+== 初始化 Spark ==
+
+Spark 编程的第一步是需要创建一个
+https://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.SparkContext[SparkContext]
+对象，用来告诉 Spark 如何访问集群。在创建 `SparkContext`
+之前，你需要构建一个
+https://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.SparkConf[SparkConf]
+对象， SparkConf 对象包含了一些你应用程序的信息。
+
+[source,scala]
+----
+val conf = new SparkConf().setAppName(appName).setMaster(master)
+new SparkContext(conf)
+----
+
+`appName` 参数是你程序的名字，它会显示在 cluster UI 上。`master` 是
+https://spark.apache.org/docs/latest/submitting-applications.html#master-urls[Spark,
+Mesos 或 YARN 集群的 URL]，或运行在本地模式时，使用专用字符串
+“local”。在实践中，当应用程序运行在一个集群上时，你并不想要把 `master`
+硬编码到你的程序中，你可以https://spark.apache.org/docs/latest/submitting-applications.html[用
+spark-submit
+启动你的应用程序]的时候传递它。然而，你可以在本地测试和单元测试中使用
+“local” 运行 Spark 进程。
+
+[use-shell]
+== 使用 Shell ==
+
+在 Spark shell 中，有一个专有的 SparkContext
+已经为你创建好。在变量中叫做 `sc`。你自己创建的 SparkContext
+将无法工作。可以用 `--master` 参数来设置 SparkContext 要连接的集群，用
+`--jars` 来设置需要添加到 classpath 中的 JAR 包，如果有多个 JAR
+包使用**逗号**分割符连接它们。例如：在一个拥有 4 核的环境上运行
+`bin/spark-shell`，使用：
+
+....
+$ ./bin/spark-shell --master local[4]
+....
+
+或在 classpath 中添加 `code.jar`，使用：
+
+....
+$ ./bin/spark-shell --master local[4] --jars code.jar
+....
+
+执行 `spark-shell --help` 获取完整的选项列表。在这之后，调用
+`spark-shell` 会比
+https://spark.apache.org/docs/latest/submitting-applications.html[spark-submit
+脚本]更为普遍。
+
+[[rdds]]
+== 弹性分布式数据集 (RDDs) ==
+
+Spark 核心的概念是 __Resilient Distributed Dataset(RDD)__：一个可并行操作的有容错机制的数据集合。有 2 种方式创建
+RDDs：第一种是在你的驱动程序中并行化一个已经存在的集合；另外一种是引用一个外部存储系统的数据集，例如共享的文件系统，HDFS，HBase或其他
+Hadoop 数据格式的数据源。
+
+[[parallelized-collections]]
+== 并行集合 ==
+
+并行集合 (__Parallelized collections__)的创建是通过在一个已有的集合(Scala `Seq`)上调用 SparkContext 的 `parallelize` 方法实现的。集合中的元素被复制到一个可并行操作的分布式数据集中。例如，这里演示了如何在一个包含 1 到 5 的数组中创建并行集合：
+
+[source,scala]
+----
+val data = Array(1, 2, 3, 4, 5)
+val distData = sc.parallelize(data)
+----
+
+一旦创建完成，这个分布式数据集(`distData`)就可以被并行操作。例如，我们可以调用 `distData.reduce((a, b) => a + b)` 将这个数组中的元素相加。我们以后再描述在分布式上的一些操作。
+
+并行集合一个很重要的参数是切片数(__slices__)，表示一个数据集切分的份数。Spark 会在集群上为每一个切片运行一个任务。你可以在集群上为每个 CPU 设置 2-4 个切片(slices)。正常情况下，Spark 会试着基于你的集群状况自动地设置切片的数目。然而，你也可以通过
+`parallelize` 的第二个参数手动地设置(例如：`sc.parallelize(data, 10)`)。
+
+[[external-datasets]]
+== 外部数据集 ==
+
+Spark 可以从任何一个 Hadoop
+支持的存储源创建分布式数据集，包括你的本地文件系统，HDFS，Cassandra，HBase，link:http://wiki.apache.org/hadoop/AmazonS3[Amazon S3]等。 Spark 支持文本文件(text
+files)，link:http://hadoop.apache.org/docs/current/api/org/apache/hadoop/mapred/SequenceFileInputFormat.html[SequenceFiles]
+和其他 Hadoop
+link:http://hadoop.apache.org/docs/stable/api/org/apache/hadoop/mapred/InputFormat.html[InputFormat]。
+
+文本文件 RDDs 可以使用 SparkContext 的 `textFile` 方法创建。
+在这个方法里传入文件的 URI (机器上的本地路径或 `hdfs://`，`s3n://`
+等)，然后它会将文件读取成一个行集合。这里是一个调用例子：
+
+[source,scala]
+----
+scala> val distFile = sc.textFile("data.txt")
+distFile: RDD[String] = MappedRDD@1d4cee08
+----
+
+一旦创建完成，`distFiile`
+就能做数据集操作。例如，我们可以用下面的方式使用 `map` 和 `reduce`
+操作将所有行的长度相加：`distFile.map(s => s.length).reduce((a, b) => a + b)`。
+
+注意，Spark 读文件时：
+
+* 如果使用本地文件系统路径，文件必须能在 work
+节点上用相同的路径访问到。要么复制文件到所有的
+workers，要么使用网络的方式共享文件系统。
+* 所有 Spark 的基于文件的方法，包括
+`textFile`，能很好地支持文件目录，压缩过的文件和通配符。例如，你可以使用
+`textFile("/my/文件目录")`，`textFile("/my/文件目录/*.txt")` 和
+`textFile("/my/文件目录/*.gz")`。
+* `textFile`
+方法也可以选择第二个可选参数来控制切片(__slices__)的数目。默认情况下，Spark
+为每一个文件块(HDFS 默认文件块大小是
+64M)创建一个切片(__slice__)。但是你也可以通过一个更大的值来设置一个更高的切片数目。注意，你不能设置一个小于文件块数目的切片值。
+
+除了文本文件，Spark 的 Scala API 支持其他几种数据格式：
+
+* `SparkContext.wholeTextFiles`
+让你读取一个包含多个小文本文件的文件目录并且返回每一个(filename,
+content)对。与 `textFile` 的差异是：它记录的是每个文件中的每一行。
+* 对于
+http://hadoop.apache.org/docs/current/api/org/apache/hadoop/mapred/SequenceFileInputFormat.html[SequenceFiles]，可以使用
+SparkContext 的 `sequenceFile[K, V]` 方法创建，K 和 V 分别对应的是 key
+和 values 的类型。像
+http://hadoop.apache.org/docs/current/api/org/apache/hadoop/io/IntWritable.html[IntWritable]
+与
+http://hadoop.apache.org/docs/current/api/org/apache/hadoop/io/Text.html[Text]
+一样，它们必须是 Hadoop 的
+http://hadoop.apache.org/docs/current/api/org/apache/hadoop/io/Writable.html[Writable]
+接口的子类。另外，对于几种通用的 Writables，Spark
+允许你指定原生类型来替代。例如： `sequenceFile[Int, String]`
+将会自动读取 IntWritables 和 Text。
+* 对于其他的 Hadoop InputFormats，你可以使用 `SparkContext.hadoopRDD`
+方法，它可以指定任意的 `JobConf`，输入格式(InputFormat)，key
+类型，values 类型。你可以跟设置 Hadoop job
+一样的方法设置输入源。你还可以在新的 MapReduce
+接口(org.apache.hadoop.mapreduce)基础上使用
+`SparkContext.newAPIHadoopRDD`(译者注：老的接口是
+`SparkContext.newHadoopRDD`)。
+* `RDD.saveAsObjectFile` 和 `SparkContext.objectFile`
+支持保存一个RDD，保存格式是一个简单的 Java
+对象序列化格式。这是一种效率不高的专有格式，如
+Avro，它提供了简单的方法来保存任何一个 RDD。
+
+[[rdd-operations]]
+== RDD 操作 ==
+
+RDDs 支持 2 种类型的操作：__转换(transformations)__
+从已经存在的数据集中创建一个新的数据集；__动作(actions)__
+在数据集上进行计算之后返回一个值到驱动程序。例如，`map`
+是一个转换操作，它将每一个数据集元素传递给一个函数并且返回一个新的
+RDD。另一方面，`reduce` 是一个动作，它使用相同的函数来聚合 RDD
+的所有元素，并且将最终的结果返回到驱动程序(不过也有一个并行
+`reduceByKey` 能返回一个分布式数据集)。
+
+在 Spark
+中，所有的转换(transformations)都是惰性(lazy)的，它们不会马上计算它们的结果。相反的，它们仅仅记录转换操作是应用到哪些基础数据集(例如一个文件)上的。转换仅仅在这个时候计算：当动作(action)
+需要一个结果返回给驱动程序的时候。这个设计能够让 Spark
+运行得更加高效。例如，我们可以实现：通过 `map` 创建一个新数据集在
+`reduce` 中使用，并且仅仅返回 `reduce` 的结果给
+driver，而不是整个大的映射过的数据集。
+
+默认情况下，每一个转换过的 RDD
+会在每次执行动作(action)的时候重新计算一次。然而，你也可以使用 `persist`
+(或 `cache`)方法持久化(`persist`)一个 RDD 到内存中。在这个情况下，Spark
+会在集群上保存相关的元素，在你下次查询的时候会变得更快。在这里也同样支持持久化
+RDD 到磁盘，或在多个节点间复制。
+
+[[basic]]
+=== 基础 ===
+
+为了说明 RDD 基本知识，考虑下面的简单程序：
+
+[source,scala]
+----
+val lines = sc.textFile("data.txt")
+val lineLengths = lines.map(s => s.length)
+val totalLength = lineLengths.reduce((a, b) => a + b)
+----
+
+第一行是定义来自于外部文件的
+RDD。这个数据集并没有加载到内存或做其他的操作：`lines`
+仅仅是一个指向文件的指针。第二行是定义 `lineLengths`，它是 `map`
+转换(transformation)的结果。同样，`lineLengths`
+由于懒惰模式也_没有_立即计算。最后，我们执行
+`reduce`，它是一个动作(action)。在这个地方，Spark
+把计算分成多个任务(task)，并且让它们运行在多个机器上。每台机器都运行自己的
+map 部分和本地 reduce 部分。然后仅仅将结果返回给驱动程序。
+
+如果我们想要再次使用 `lineLengths`，我们可以添加：
+
+[source,scala]
+----
+lineLengths.persist()
+----
+
+在 `reduce` 之前，它会导致 `lineLengths`
+在第一次计算完成之后保存到内存中。
+
+[[passing-functions-spark]]
+=== 传递函数到 Spark ===
+
+Spark 的 API
+很大程度上依靠在驱动程序里传递函数到集群上运行。这里有两种推荐的方式：
+
+* link:http://docs.scala-lang.org/tutorials/tour/anonymous-function-syntax.html[匿名函数
+(Anonymous function syntax)]，可以在比较短的代码中使用。
+* 全局单例对象里的静态方法。例如，你可以定义 `object MyFunctions`
+然后传递 `MyFounctions.func1`，像下面这样：
+
+[source,scala]
+----
+object MyFunctions {
+  def func1(s: String): String = { ... }
+}
+
+myRdd.map(MyFunctions.func1)
+----
+
+注意，它可能传递的是一个类实例里的一个方法引用(而不是一个单例对象)，这里必须传送包含方法的整个对象。例如：
+
+[source,scala]
+----
+class MyClass {
+  def func1(s: String): String = { ... }
+  def doStuff(rdd: RDD[String]): RDD[String] = { rdd.map(func1) }
+}
+----
+
+这里，如果我们创建了一个 `new MyClass` 对象，并且调用它的
+`doStuff`，`map` 里面引用了这个 `MyClass` 实例中的 `func1`
+方法，所以这个对象必须传送到集群上。类似写成
+`rdd.map(x => this.func1(x))`。
+
+以类似的方式，访问外部对象的字段将会引用整个对象：
+
+[source,scala]
+----
+class MyClass {
+  val field = "Hello"
+  def doStuff(rdd: RDD[String]): RDD[String] = { rdd.map(x => field + x) }
+}
+----
+
+相当于写成 `rdd.map(x => this.field + x)`，引用了整个 `this`
+对象。为了避免这个问题，最简单的方式是复制 `field`
+到一个本地变量而不是从外部访问它：
+
+[source,scala]
+----
+def doStuff(rdd: RDD[String]): RDD[String] = {
+  val field_ = this.field
+  rdd.map(x => field_ + x)
+}
+----
+
+
+[[using-key-value-pair]]
+== 使用键值对 ==
+
+虽然很多 Spark 操作工作在包含任意类型对象的 RDDs
+上的，但是少数几个特殊操作仅仅在键值(key-value)对 RDDs
+上可用。最常见的是分布式 "shuffle" 操作，例如根据一个 key
+对一组数据进行分组和聚合。
+
+在 Scala
+中，这些操作在包含http://www.scala-lang.org/api/2.10.4/index.html#scala.Tuple2[二元组(Tuple2)](在语言的内建元组中，通过简单的写
+(a, b) 创建) 的 RDD 上自动地变成可用的，只要在你的程序中导入
+`org.apache.spark.SparkContext._` 来启用 Spark 的隐式转换。在
+PairRDDFunctions
+的类里键值对操作是可以使用的，如果你导入隐式转换它会自动地包装成元组
+RDD。
+
+例如，下面的代码在键值对上使用 `reduceByKey`
+操作来统计在一个文件里每一行文本内容出现的次数：
+
+[source,scala]
+----
+val lines = sc.textFile("data.txt")
+val pairs = lines.map(s => (s, 1))
+val counts = pairs.reduceByKey((a, b) => a + b)
+----
+
+我们也可以使用
+`counts.sortByKey()`，例如，将键值对按照字母进行排序，最后
+`counts.collect()` 把它们作为一个对象数组带回到驱动程序。
+
+注意：当使用一个自定义对象作为 key
+在使用键值对操作的时候，你需要确保自定义 `equals()` 方法和 `hashCode()`
+方法是匹配的。更加详细的内容，查看
+http://docs.oracle.com/javase/7/docs/api/java/lang/Object.html#hashCode()[Object.hashCode()
+文档]中的契约概述。
+
+
+[[transformations]]
+== Transformations ==
+
+下面的表格列了 Spark 支持的一些常用 transformations。详细内容请参阅 RDD
+API
+文档(https://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.rdd.RDD[Scala],
+https://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/api/java/JavaRDD.html[Java],
+https://spark.apache.org/docs/latest/api/python/pyspark.rdd.RDD-class.html[Python])
+和 PairRDDFunctions
+文档(https://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.rdd.PairRDDFunctions[Scala],
+https://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/api/java/JavaPairRDD.html[Java])。
+
+[width="11%",cols="50%,50%",options="header",]
+|=======================================================================
+|Transformation |Meaning
+|map(__func__) |返回一个新的分布式数据集，将数据源的每一个元素传递给函数
+_func_ 映射组成。
+
+|filter(__func__) |返回一个新的数据集，从数据源中选中一些元素通过函数
+_func_ 返回 true。
+
+|flatMap(__func__) |类似于 map，但是每个输入项能被映射成多个输出项(所以
+_func_ 必须返回一个 Seq，而不是单个 item)。
+
+|mapPartitions(__func__) |类似于 map，但是分别运行在 RDD
+的每个分区上，所以 _func_ 的类型必须是 `Iterator<T> => Iterator<U>`
+当运行在类型为 T 的 RDD 上。
+
+|mapPartitionsWithIndex(__func__) |类似于 mapPartitions，但是 _func_
+需要提供一个 integer 值描述索引(index)，所以 _func_ 的类型必须是 (Int,
+Iterator) => Iterator 当运行在类型为 T 的 RDD 上。
+
+|sample(withReplacement, fraction, seed) |对数据进行采样。
+
+|union(otherDataset) |Return a new dataset that contains the union of
+the elements in the source dataset and the argument.
+
+|intersection(otherDataset) |Return a new RDD that contains the
+intersection of elements in the source dataset and the argument.
+
+|distinct([numTasks])) |Return a new dataset that contains the distinct
+elements of the source dataset.
+
+|groupByKey([numTasks]) |When called on a dataset of (K, V) pairs,
+returns a dataset of (K, Iterable) pairs. Note: If you are grouping in
+order to perform an aggregation (such as a sum or average) over each
+key, using reduceByKey or combineByKey will yield much better
+performance. Note: By default, the level of parallelism in the output
+depends on the number of partitions of the parent RDD. You can pass an
+optional numTasks argument to set a different number of tasks.
+
+|reduceByKey(func, [numTasks]) |When called on a dataset of (K, V)
+pairs, returns a dataset of (K, V) pairs where the values for each key
+are aggregated using the given reduce function func, which must be of
+type (V,V) => V. Like in groupByKey, the number of reduce tasks is
+configurable through an optional second argument.
+
+|aggregateByKey(zeroValue)(seqOp, combOp, [numTasks]) |When called on a
+dataset of (K, V) pairs, returns a dataset of (K, U) pairs where the
+values for each key are aggregated using the given combine functions and
+a neutral "zero" value. Allows an aggregated value type that is
+different than the input value type, while avoiding unnecessary
+allocations. Like in groupByKey, the number of reduce tasks is
+configurable through an optional second argument.
+
+|sortByKey([ascending], [numTasks]) |When called on a dataset of (K, V)
+pairs where K implements Ordered, returns a dataset of (K, V) pairs
+sorted by keys in ascending or descending order, as specified in the
+boolean ascending argument.
+
+|join(otherDataset, [numTasks]) |When called on datasets of type (K, V)
+and (K, W), returns a dataset of (K, (V, W)) pairs with all pairs of
+elements for each key. Outer joins are also supported through
+leftOuterJoin and rightOuterJoin.
+
+|cogroup(otherDataset, [numTasks]) |When called on datasets of type (K,
+V) and (K, W), returns a dataset of (K, Iterable, Iterable) tuples. This
+operation is also called groupWith.
+
+|cartesian(otherDataset) |When called on datasets of types T and U,
+returns a dataset of (T, U) pairs (all pairs of elements).
+
+|pipe(command, [envVars]) |Pipe each partition of the RDD through a
+shell command, e.g. a Perl or bash script. RDD elements are written to
+the process's stdin and lines output to its stdout are returned as an
+RDD of strings.
+
+|coalesce(numPartitions) |Decrease the number of partitions in the RDD
+to numPartitions. Useful for running operations more efficiently after
+filtering down a large dataset.
+
+|repartition(numPartitions) |Reshuffle the data in the RDD randomly to
+create either more or fewer partitions and balance it across them. This
+always shuffles all data over the network.
+|=======================================================================
+
+[[actions]]
+== Actions ==
+
+下面的表格列了 Spark 支持的一些常用 actions。详细内容请参阅 RDD API
+文档(https://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.rdd.RDD[Scala],
+https://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/api/java/JavaRDD.html[Java],
+https://spark.apache.org/docs/latest/api/python/pyspark.rdd.RDD-class.html[Python])
+和 PairRDDFunctions
+文档(https://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.rdd.PairRDDFunctions[Scala],
+https://spark.apache.org/docs/latest/api/java/index.html?org/apache/spark/api/java/JavaPairRDD.html[Java])。
+
+[width="11%",cols="50%,50%",options="header",]
+|=======================================================================
+|Action |Meaning
+|reduce(func) |Aggregate the elements of the dataset using a function
+func (which takes two arguments and returns one). The function should be
+commutative and associative so that it can be computed correctly in
+parallel.
+
+|collect() |Return all the elements of the dataset as an array at the
+driver program. This is usually useful after a filter or other operation
+that returns a sufficiently small subset of the data.
+
+|count() |Return the number of elements in the dataset.
+
+|first() |Return the first element of the dataset (similar to take(1)).
+
+|take(n) |Return an array with the first n elements of the dataset. Note
+that this is currently not executed in parallel. Instead, the driver
+program computes all the elements.
+
+|takeSample(withReplacement, num, [seed]) |Return an array with a random
+sample of num elements of the dataset, with or without replacement,
+optionally pre-specifying a random number generator seed.
+
+|takeOrdered(n, [ordering]) |Return the first n elements of the RDD
+using either their natural order or a custom comparator.
+
+|saveAsTextFile(path) |Write the elements of the dataset as a text file
+(or set of text files) in a given directory in the local filesystem,
+HDFS or any other Hadoop-supported file system. Spark will call toString
+on each element to convert it to a line of text in the file.
+
+|saveAsSequenceFile(path) (Java and Scala) |Write the elements of the
+dataset as a Hadoop SequenceFile in a given path in the local
+filesystem, HDFS or any other Hadoop-supported file system. This is
+available on RDDs of key-value pairs that either implement Hadoop's
+Writable interface. In Scala, it is also available on types that are
+implicitly convertible to Writable (Spark includes conversions for basic
+types like Int, Double, String, etc).
+
+|saveAsObjectFile(path) (Java and Scala) |Write the elements of the
+dataset in a simple format using Java serialization, which can then be
+loaded using SparkContext.objectFile().
+
+|countByKey() |Only available on RDDs of type (K, V). Returns a hashmap
+of (K, Int) pairs with the count of each key.
+
+|foreach(func) |Run a function func on each element of the dataset. This
+is usually done for side effects such as updating an accumulator
+variable (see below) or interacting with external storage systems.
+|=======================================================================
+
+[[rdd-persistence]]
+== RDD 持久化 ==
+
+Spark 有一个最重要的功能是在内存中_持久化_ (或 __缓存__)一个数据集。
+
+
+[[share-vars]]
+== 共享变量 ==
+
+一般情况下，当一个传递给Spark操作(例如map和reduce)的函数在远程节点上面运行时，Spark操作实际上操作的是这个函数所用变量的一个独立副本。这些变量被复制到每台机器上，并且这些变量在远程机器上
+的所有更新都不会传递回驱动程序。通常跨任务的读写变量是低效的，但是，Spark还是为两种常见的使用模式提供了两种有限的共享变量：广播变量（broadcast
+variable）和累加器（accumulator）
+
+[[brodcase-vars]]
+== 广播变量 ==
+
+
+广播变量允许程序员缓存一个只读的变量在每台机器上面，而不是每个任务保存一份拷贝。例如，利用广播变量，我们能够以一种更有效率的方式将一个大数据量输入集合的副本分配给每个节点。（Broadcast
+variables allow the programmer to keep a read-only variable cached on
+each machine rather than shipping a copy of it with tasks.They can be
+used, for example, to give every node a copy of a large input dataset in
+an efficient
+manner.）Spark也尝试着利用有效的广播算法去分配广播变量，以减少通信的成本。
+
+一个广播变量可以通过调用`SparkContext.broadcast(v)`方法从一个初始变量v中创建。广播变量是v的一个包装变量，它的值可以通过`value`方法访问，下面的代码说明了这个过程：
+
+[source,scala]
+----
+ scala> val broadcastVar = sc.broadcast(Array(1, 2, 3))
+ broadcastVar: spark.Broadcast[Array[Int]] = spark.Broadcast(b5c40191-a864-4c7d-b9bf-d87e1a4e787c)
+ scala> broadcastVar.value
+ res0: Array[Int] = Array(1, 2, 3)
+----
+
+广播变量创建以后，我们就能够在集群的任何函数中使用它来代替变量v，这样我们就不需要再次传递变量v到每个节点上。另外，为了保证所有的节点得到广播变量具有相同的值，对象v不能在广播之后被修改。
+
+[[accumulators]]
+== 累加器 ==
+
+
+顾名思义，累加器是一种只能通过关联操作进行“加”操作的变量，因此它能够高效的应用于并行操作中。它们能够用来实现`counters`和`sums`。Spark原生支持数值类型的累加器，开发者可以自己添加支持的类型。
+如果创建了一个具名的累加器，它可以在spark的UI中显示。这对于理解运行阶段(running
+stages)的过程有很重要的作用。（注意：这在python中还不被支持）
+
+一个累加器可以通过调用`SparkContext.accumulator(v)`方法从一个初始变量v中创建。运行在集群上的任务可以通过`add`方法或者使用`+=`操作来给它加值。然而，它们无法读取这个值。只有驱动程序可以使用`value`方法来读取累加器的值。
+如下的代码，展示了如何利用累加器将一个数组里面的所有元素相加：
+
+[source,scala]
+----
+scala> val accum = sc.accumulator(0, "My Accumulator")
+accum: spark.Accumulator[Int] = 0
+scala> sc.parallelize(Array(1, 2, 3, 4)).foreach(x => accum += x)
+...
+10/09/29 18:41:08 INFO SparkContext: Tasks finished in 0.317106 s
+scala> accum.value
+res2: Int = 10
+----
+
+这个例子利用了内置的整数类型累加器。开发者可以利用子类https://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.AccumulatorParam[AccumulatorParam]创建自己的
+累加器类型。AccumulatorParam接口有两个方法：`zero`方法为你的数据类型提供一个“0
+值”（zero
+value）；`addInPlace`方法计算两个值的和。例如，假设我们有一个`Vector`类代表数学上的向量，我们能够
+如下定义累加器：
+
+[source,scala]
+----
+object VectorAccumulatorParam extends AccumulatorParam[Vector] {
+  def zero(initialValue: Vector): Vector = {
+    Vector.zeros(initialValue.size)
+  }
+  def addInPlace(v1: Vector, v2: Vector): Vector = {
+    v1 += v2
+  }
+}
+// Then, create an Accumulator of this type:
+val vecAccum = sc.accumulator(new Vector(...))(VectorAccumulatorParam)
+----
+
+在scala中，Spark支持用更一般的https://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.Accumulable[Accumulable]接口来累积数据-结果类型和用于累加的元素类型
+不一样（例如通过收集的元素建立一个列表）。Spark也支持用`SparkContext.accumulableCollection`方法累加一般的scala集合类型。
+
+[[where-to-go]]
+== 从这里开始 ==
+
+你能够从spark官方网站查看一些link:http://spark.apache.org/examples.html[spark运行例子]。另外，Spark的example目录包含几个Spark例子，你能够通过如下方式运行Java或者scala例子：
+
+[source,shell]
+----
+./bin/run-example SparkPi
+----
+
+为了优化你的项目，
+link:https://spark.apache.org/docs/latest/configuration.html[configuration]和link:https://spark.apache.org/docs/latest/tuning.html[tuning]指南提高了最佳
+实践的信息。保证你保存在内存中的数据是有效的格式是非常重要的事情。为了给部署操作提高帮助，link:https://spark.apache.org/docs/latest/cluster-overview.html[集群模式概述]介绍了
+包含分布式操作和支持集群管理的组件。
+
+最后，完整的API文档可以在后面链接link:https://spark.apache.org/docs/latest/api/scala/#org.apache.spark.package[scala],link:https://spark.apache.org/docs/latest/api/java/[java],
+link:https://spark.apache.org/docs/latest/api/python/[python]中查看。

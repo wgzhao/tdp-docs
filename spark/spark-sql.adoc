@@ -1,0 +1,626 @@
+[[spark-sql]]
+== Spark SQL ==
+
+Spark SQL允许Spark执行用SQL,
+HiveQL或者Scala表示的关系查询。这个模块的核心是一个新类型的RDD-http://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.sql.SchemaRDD[SchemaRDD]。
+SchemaRDDs由http://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.sql.package@Row:org.apache.spark.sql.catalyst.expressions.Row.type[行]对象组成，行对象拥有一个模式（scheme）
+来描述行中每一列的数据类型。SchemaRDD与关系型数据库中的表很相似。可以通过存在的RDD、一个http://parquet.io/[Parquet]文件、一个JSON数据库或者对存储在http://hive.apache.org/[Apache
+Hive]中的数据执行HiveSQL查询中创建。
+
+本章的所有例子都利用了Spark分布式系统中的样本数据，可以在`spark-shell`中运行它们。
+
+[[geting-started]]
+== 开始 ==
+
+Spark中所有相关功能的入口点是http://spark.apache.org/docs/latest/api/scala/index.html#org.apache.spark.sql.SQLContext[SQLContext]类或者它的子类，
+创建一个SQLContext的所有需要仅仅是一个SparkContext。
+
+[source,scala]
+----
+val sc: SparkContext // An existing SparkContext.
+val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+
+// createSchemaRDD is used to implicitly convert an RDD to a SchemaRDD.
+import sqlContext.createSchemaRDD
+----
+
+除了一个基本的SQLContext，你也能够创建一个HiveContext，它支持基本SQLContext所支持功能的一个超集。它的额外的功能包括用更完整的HiveQL分析器写查询去访问HiveUDFs的能力、
+从Hive表读取数据的能力。用HiveContext你不需要一个已经存在的Hive开启，SQLContext可用的数据源对HiveContext也可用。HiveContext分开打包是为了避免在Spark构建时包含了所有
+的Hive依赖。如果对你的应用程序来说，这些依赖不存在问题，Spark
+1.2推荐使用HiveContext。以后的稳定版本将专注于为SQLContext提供与HiveContext等价的功能。
+
+用来解析查询语句的特定SQL变种语言可以通过`spark.sql.dialect`选项来选择。这个参数可以通过两种方式改变，一种方式是通过`setConf`方法设定，另一种方式是在SQL命令中通过`SET key=value`
+来设定。对于SQLContext，唯一可用的方言是“sql”，它是Spark
+SQL提供的一个简单的SQL解析器。在HiveContext中，虽然也支持"sql"，但默认的方言是“hiveql”。这是因为HiveQL解析器更
+完整。在很多用例中推荐使用“hiveql”。
+
+[[interoprating-with-rdds]]
+== 用 RDDs 做交互操作 ==
+
+Spark SQL支持通过SchemaRDD接口操作各种数据源。一个SchemaRDD能够作为一个一般的RDD被操作，也可以被注册为一个临时的表。注册一个SchemaRDD为一个表就
+可以允许你在其数据上运行SQL查询。这节描述了加载数据为SchemaRDD的多种方法。
+
+Spark支持两种方法将存在的RDDs转换为SchemaRDDs。第一种方法使用反射来推断包含特定对象类型的RDD的模式(schema)。在你写spark程序的同时，当你已经知道了模式，这种基于反射的
+方法可以使代码更简洁并且程序工作得更好。
+
+创建SchemaRDDs的第二种方法是通过一个编程接口来实现，这个接口允许你构造一个模式，然后在存在的RDDs上使用它。虽然这种方法更冗长，但是它允许你在运行期之前不知道列以及列
+的类型的情况下构造SchemaRDDs。
+
+[[inferring-the-schema-using-reflection]]
+=== 利用反射推断模式 ===
+
+Spark SQL的Scala接口支持将包含样本类的RDDs自动转换为SchemaRDD。这个样本类定义了表的模式。
+
+给样本类的参数名字通过反射来读取，然后作为列的名字。样本类可以嵌套或者包含复杂的类型如序列或者数组。这个RDD可以隐式转化为一个SchemaRDD，然后注册为一个表。表可以在后续的
+sql语句中使用。
+
+[source,scala]
+----
+// sc is an existing SparkContext.
+val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+// createSchemaRDD is used to implicitly convert an RDD to a SchemaRDD.
+import sqlContext.createSchemaRDD
+
+// Define the schema using a case class.
+// Note: Case classes in Scala 2.10 can support only up to 22 fields. To work around this limit,
+// you can use custom classes that implement the Product interface.
+case class Person(name: String, age: Int)
+
+// Create an RDD of Person objects and register it as a table.
+val people = sc.textFile("examples/src/main/resources/people.txt").map(_.split(",")).map(p => Person(p(0), p(1).trim.toInt))
+people.registerTempTable("people")
+
+// SQL statements can be run by using the sql methods provided by sqlContext.
+val teenagers = sqlContext.sql("SELECT name FROM people WHERE age >= 13 AND age <= 19")
+
+// The results of SQL queries are SchemaRDDs and support all the normal RDD operations.
+// The columns of a row in the result can be accessed by ordinal.
+teenagers.map(t => "Name: " + t(0)).collect().foreach(println)
+----
+
+[[programmatically-specifying-the-schema]]
+=== 编程指定模式 ===
+
+当样本类不能提前确定（例如，记录的结构是经过编码的字符串，或者一个文本集合将会被解析，不同的字段投影给不同的用户），一个SchemaRDD可以通过三步来创建。
+
+- 从原来的RDD创建一个行的RDD
+- 创建由一个`StructType`表示的模式与第一步创建的RDD的行结构相匹配
+- 在行RDD上通过`applySchema`方法应用模式
+
+[source,scala]
+----
+// sc is an existing SparkContext.
+val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+
+// Create an RDD
+val people = sc.textFile("examples/src/main/resources/people.txt")
+
+// The schema is encoded in a string
+val schemaString = "name age"
+
+// Import Spark SQL data types and Row.
+import org.apache.spark.sql._
+
+// Generate the schema based on the string of schema
+val schema =
+  StructType(
+    schemaString.split(" ").map(fieldName => StructField(fieldName, StringType, true)))
+
+// Convert records of the RDD (people) to Rows.
+val rowRDD = people.map(_.split(",")).map(p => Row(p(0), p(1).trim))
+
+// Apply the schema to the RDD.
+val peopleSchemaRDD = sqlContext.applySchema(rowRDD, schema)
+
+// Register the SchemaRDD as a table.
+peopleSchemaRDD.registerTempTable("people")
+
+// SQL statements can be run by using the sql methods provided by sqlContext.
+val results = sqlContext.sql("SELECT name FROM people")
+
+// The results of SQL queries are SchemaRDDs and support all the normal RDD operations.
+// The columns of a row in the result can be accessed by ordinal.
+results.map(t => "Name: " + t(0)).collect().foreach(println)
+----
+
+[[data-sources]]
+== 数据源 ==
+
+[[parquet-files]]
+=== Parquet文件 ===
+
+Parquet是一种柱状(columnar)格式，可以被许多其它的数据处理系统支持。Spark SQL提供支持读和写Parquet文件的功能，这些文件可以自动地保留原始数据的模式。
+
+[[loading-data]]
+==== 加载数据 ====
+
+[source,scala]
+----
+// Encoders for most common types are automatically provided by importing spark.implicits._
+import spark.implicits._
+
+val peopleDF = spark.read.json("examples/src/main/resources/people.json")
+
+// DataFrames can be saved as Parquet files, maintaining the schema information
+peopleDF.write.parquet("people.parquet")
+
+// Read in the parquet file created above
+// Parquet files are self-describing so the schema is preserved
+// The result of loading a Parquet file is also a DataFrame
+val parquetFileDF = spark.read.parquet("people.parquet")
+
+// Parquet files can also be used to create a temporary view and then used in SQL statements
+parquetFileDF.createOrReplaceTempView("parquetFile")
+val namesDF = spark.sql("SELECT name FROM parquetFile WHERE age BETWEEN 13 AND 19")
+namesDF.map(attributes => "Name: " + attributes(0)).show()
+// +------------+
+// |       value|
+// +------------+
+// |Name: Justin|
+// +------------+
+----
+
+[[partition-discovery]]
+==== 分区发现 ====
+
+Table partitioning is a common optimization approach used in systems like Hive. In a partitioned table, data are usually stored in different directories, with partitioning column values encoded in the path of each partition directory. The Parquet data source is now able to discover and infer partitioning information automatically. For example, we can store all our previously used population data into a partitioned table using the following directory structure, with two extra columns, gender and country as partitioning columns:
+
+....
+path
+└── to
+    └── table
+        ├── gender=male
+        │   ├── ...
+        │   │
+        │   ├── country=US
+        │   │   └── data.parquet
+        │   ├── country=CN
+        │   │   └── data.parquet
+        │   └── ...
+        └── gender=female
+            ├── ...
+            │
+            ├── country=US
+            │   └── data.parquet
+            ├── country=CN
+            │   └── data.parquet
+            └── ...
+....
+
+By passing path/to/table to either SparkSession.read.parquet or SparkSession.read.load, Spark SQL will automatically extract the partitioning information from the paths. Now the schema of the returned DataFrame becomes:
+
+.....
+root
+|-- name: string (nullable = true)
+|-- age: long (nullable = true)
+|-- gender: string (nullable = true)
+|-- country: string (nullable = true)
+.....
+
+Notice that the data types of the partitioning columns are automatically inferred. Currently, numeric data types and string type are supported. Sometimes users may not want to automatically infer the data types of the partitioning columns. For these use cases, the automatic type inference can be configured by spark.sql.sources.partitionColumnTypeInference.enabled, which is default to true. When type inference is disabled, string type will be used for the partitioning columns.
+
+Starting from Spark 1.6.0, partition discovery only finds partitions under the given paths by default. For the above example, if users pass path/to/table/gender=male to either SparkSession.read.parquet or SparkSession.read.load, gender will not be considered as a partitioning column. If users need to specify the base path that partition discovery should start with, they can set basePath in the data source options. For example, when path/to/table/gender=male is the path of the data and users set basePath to path/to/table/, gender will be a partitioning column.
+
+[[Schema-Merging]]
+==== 模式合并 ====
+
+Like ProtocolBuffer, Avro, and Thrift, Parquet also supports schema evolution. Users can start with a simple schema, and gradually add more columns to the schema as needed. In this way, users may end up with multiple Parquet files with different but mutually compatible schemas. The Parquet data source is now able to automatically detect this case and merge schemas of all these files.
+
+Since schema merging is a relatively expensive operation, and is not a necessity in most cases, we turned it off by default starting from 1.5.0. You may enable it by
+
+setting data source option mergeSchema to true when reading Parquet files (as shown in the examples below), or
+setting the global SQL option spark.sql.parquet.mergeSchema to true.
+
+[source,scala]
+----
+// This is used to implicitly convert an RDD to a DataFrame.
+import spark.implicits._
+
+// Create a simple DataFrame, store into a partition directory
+val squaresDF = spark.sparkContext.makeRDD(1 to 5).map(i => (i, i * i)).toDF("value", "square")
+squaresDF.write.parquet("data/test_table/key=1")
+
+// Create another DataFrame in a new partition directory,
+// adding a new column and dropping an existing column
+val cubesDF = spark.sparkContext.makeRDD(6 to 10).map(i => (i, i * i * i)).toDF("value", "cube")
+cubesDF.write.parquet("data/test_table/key=2")
+
+// Read the partitioned table
+val mergedDF = spark.read.option("mergeSchema", "true").parquet("data/test_table")
+mergedDF.printSchema()
+
+// The final schema consists of all 3 columns in the Parquet files together
+// with the partitioning column appeared in the partition directory paths
+// root
+// |-- value: int (nullable = true)
+// |-- square: int (nullable = true)
+// |-- cube: int (nullable = true)
+// |-- key : int (nullable = true)
+----
+
+Find full example code at "examples/src/main/scala/org/apache/spark/examples/sql/SQLDataSourceExample.scala" in the Spark repo.
+
+[[Hive-metastore-Parquet-table-conversion]]
+==== Hive metastore Parquet 表约定 ====
+
+When reading from and writing to Hive metastore Parquet tables, Spark SQL will try to use its own Parquet support instead of Hive SerDe for better performance. This behavior is controlled by the spark.sql.hive.convertMetastoreParquet configuration, and is turned on by default.
+
+[[Hive-Parquet-Schema-Reconciliation]]
+===== Hive/Parquet 模式调和 =====
+
+There are two key differences between Hive and Parquet from the perspective of table schema processing.
+
+Hive is case insensitive, while Parquet is not
+Hive considers all columns nullable, while nullability in Parquet is significant
+Due to this reason, we must reconcile Hive metastore schema with Parquet schema when converting a Hive metastore Parquet table to a Spark SQL Parquet table. The reconciliation rules are:
+
+Fields that have the same name in both schema must have the same data type regardless of nullability. The reconciled field should have the data type of the Parquet side, so that nullability is respected.
+
+The reconciled schema contains exactly those fields defined in Hive metastore schema.
+
+Any fields that only appear in the Parquet schema are dropped in the reconciled schema.
+Any fields that only appear in the Hive metastore schema are added as nullable field in the reconciled schema.
+
+[[Metadata-Refreshing]]
+===== 元数据刷新 =====
+
+Spark SQL caches Parquet metadata for better performance. When Hive metastore Parquet table conversion is enabled, metadata of those converted tables are also cached. If these tables are updated by Hive or other external tools, you need to refresh them manually to ensure consistent metadata.
+
+[source,scala]
+----
+// spark is an existing SparkSession
+spark.catalog.refreshTable("my_table")
+----
+
+[[configuration]]
+=== 配置 ===
+
+可以在SQLContext上使用setConf方法配置Parquet或者在用SQL时运行 `SET key=value` 命令来配置Parquet。
+
+|=====
+|Property Name | Default | Meaning
+
+|spark.sql.parquet.binaryAsString | false | 一些其它的Parquet-producing系统，特别是Impala和其它版本的Spark SQL，当写出Parquet模式的时候，二进制数据和字符串之间无法区分。这个标记告诉Spark SQL将二进制数据解释为字符串来提供这些系统的兼容性。
+|spark.sql.parquet.cacheMetadata | true | 打开parquet元数据的缓存，可以提高静态数据的查询速度
+|spark.sql.parquet.compression.codec | gzip | 设置写parquet文件时的压缩算法，可以接受的值包括：uncompressed, snappy, gzip, lzo
+|spark.sql.parquet.filterPushdown | false | 打开Parquet过滤器的pushdown优化。因为已知的Paruet错误，这个特征默认是关闭的。如果你的表不包含任何空的字符串或者二进制列，打开这个特征仍是安全的
+|spark.sql.hive.convertMetastoreParquet | true | 当设置为false时，Spark SQL将使用Hive SerDe代替内置的支持
+|=====
+
+[[json-datasets]]
+=== JSON数据集 ===
+
+Spark SQL能够自动推断JSON数据集的模式，加载它为一个SchemaRDD。这种转换可以通过下面两种方法来实现
+
+- jsonFile ：从一个包含JSON文件的目录中加载。文件中的每一行是一个JSON对象
+- jsonRDD ：从存在的RDD加载数据，这些RDD的每个元素是一个包含JSON对象的字符串
+
+注意，作为jsonFile的文件不是一个典型的JSON文件，每行必须是独立的并且包含一个有效的JSON对象。结果是，一个多行的JSON文件经常会失败
+
+[source,scala]
+----
+// A JSON dataset is pointed to by path.
+// The path can be either a single text file or a directory storing text files
+val path = "examples/src/main/resources/people.json"
+val peopleDF = spark.read.json(path)
+
+// The inferred schema can be visualized using the printSchema() method
+peopleDF.printSchema()
+// root
+//  |-- age: long (nullable = true)
+//  |-- name: string (nullable = true)
+
+// Creates a temporary view using the DataFrame
+peopleDF.createOrReplaceTempView("people")
+
+// SQL statements can be run by using the sql methods provided by spark
+val teenagerNamesDF = spark.sql("SELECT name FROM people WHERE age BETWEEN 13 AND 19")
+teenagerNamesDF.show()
+// +------+
+// |  name|
+// +------+
+// |Justin|
+// +------+
+
+// Alternatively, a DataFrame can be created for a JSON dataset represented by
+// an RDD[String] storing one JSON object per string
+val otherPeopleRDD = spark.sparkContext.makeRDD(
+  """{"name":"Yin","address":{"city":"Columbus","state":"Ohio"}}""" :: Nil)
+val otherPeople = spark.read.json(otherPeopleRDD)
+otherPeople.show()
+// +---------------+----+
+// |        address|name|
+// +---------------+----+
+// |[Columbus,Ohio]| Yin|
+// +---------------+----+
+----
+
+[[hive-table]]
+=== Hive表 ===
+
+Spark SQL也支持从Apache Hive中读出和写入数据。然而，Hive有大量的依赖，所以它不包含在Spark集合中。可以通过`-Phive`和`-Phive-thriftserver`参数构建Spark，使其
+支持Hive。注意这个重新构建的jar包必须存在于所有的worker节点中，因为它们需要通过Hive的序列化和反序列化库访问存储在Hive中的数据。
+
+当和Hive一起工作是，开发者需要提供HiveContext。HiveContext从SQLContext继承而来，它增加了在MetaStore中发现表以及利用HiveSql写查询的功能。没有Hive部署的用户也
+可以创建HiveContext。当没有通过`hive-site.xml`配置，上下文将会在当前目录自动地创建`metastore_db`和`warehouse`。
+
+[source,scala]
+----
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.SparkSession
+
+case class Record(key: Int, value: String)
+
+// warehouseLocation points to the default location for managed databases and tables
+val warehouseLocation = "file:${system:user.dir}/spark-warehouse"
+
+val spark = SparkSession
+  .builder()
+  .appName("Spark Hive Example")
+  .config("spark.sql.warehouse.dir", warehouseLocation)
+  .enableHiveSupport()
+  .getOrCreate()
+
+import spark.implicits._
+import spark.sql
+
+sql("CREATE TABLE IF NOT EXISTS src (key INT, value STRING)")
+sql("LOAD DATA LOCAL INPATH 'examples/src/main/resources/kv1.txt' INTO TABLE src")
+
+// Queries are expressed in HiveQL
+sql("SELECT * FROM src").show()
+// +---+-------+
+// |key|  value|
+// +---+-------+
+// |238|val_238|
+// | 86| val_86|
+// |311|val_311|
+// ...
+
+// Aggregation queries are also supported.
+sql("SELECT COUNT(*) FROM src").show()
+// +--------+
+// |count(1)|
+// +--------+
+// |    500 |
+// +--------+
+
+// The results of SQL queries are themselves DataFrames and support all normal functions.
+val sqlDF = sql("SELECT key, value FROM src WHERE key < 10 ORDER BY key")
+
+// The items in DaraFrames are of type Row, which allows you to access each column by ordinal.
+val stringsDS = sqlDF.map {
+  case Row(key: Int, value: String) => s"Key: $key, Value: $value"
+}
+stringsDS.show()
+// +--------------------+
+// |               value|
+// +--------------------+
+// |Key: 0, Value: val_0|
+// |Key: 0, Value: val_0|
+// |Key: 0, Value: val_0|
+// ...
+
+// You can also use DataFrames to create temporary views within a HiveContext.
+val recordsDF = spark.createDataFrame((1 to 100).map(i => Record(i, s"val_$i")))
+recordsDF.createOrReplaceTempView("records")
+
+// Queries can then join DataFrame data with data stored in Hive.
+sql("SELECT * FROM records r JOIN src s ON r.key = s.key").show()
+// +---+------+---+------+
+// |key| value|key| value|
+// +---+------+---+------+
+// |  2| val_2|  2| val_2|
+// |  2| val_2|  2| val_2|
+// |  4| val_4|  4| val_4|
+// ...
+----
+
+[[performance-tuning]]
+== 性能调优 ==
+
+对于某些工作负载，可以在通过在内存中缓存数据或者打开一些实验选项来提高性能。
+
+[[caching-data-in-memory]]
+=== 在内存中缓存数据 ===
+
+Spark
+SQL可以通过调用 `sqlContext.cacheTable("tableName")` 方法来缓存使用柱状格式的表。然后，Spark将会仅仅浏览需要的列并且自动地压缩数据以减少内存的使用以及垃圾回收的
+压力。你可以通过调用 `sqlContext.uncacheTable("tableName")` 方法在内存中删除表。
+
+注意，如果你调用 `schemaRDD.cache()` 而不是 `sqlContext.cacheTable(...)`,表将不会用柱状格式来缓存。在这种情况下，`sqlContext.cacheTable(...)` 是强烈推荐的用法。
+
+可以在SQLContext上使用setConf方法或者在用SQL时运行`SET key=value`命令来配置内存缓存。
+
+[width="16%",cols="34%,33%,33%",options="header",]
+|=======================================================================
+|Property Name |Default |Meaning
+|spark.sql.inMemoryColumnarStorage.compressed |true
+|当设置为true时，Spark
+SQL将为基于数据统计信息的每列自动选择一个压缩算法。
+
+|spark.sql.inMemoryColumnarStorage.batchSize |10000
+|柱状缓存的批数据大小。更大的批数据可以提高内存的利用率以及压缩效率，但有OOMs的风险
+|=======================================================================
+
+[[other-configuration-options]]
+=== 其它的配置选项 ===
+
+以下的选项也可以用来调整查询执行的性能。有可能这些选项会在以后的版本中弃用，这是因为更多的优化会自动执行。
+
+[width="16%",cols="34%,33%,33%",options="header",]
+|=======================================================================
+|Property Name |Default |Meaning
+|spark.sql.autoBroadcastJoinThreshold |10485760(10m)
+|配置一个表的最大大小(byte)。当执行join操作时，这个表将会广播到所有的worker节点。可以将值设置为-1来禁用广播。注意，目前的统计数据只支持Hive
+Metastore表，命令`ANALYZE TABLE <tableName> COMPUTE STATISTICS noscan`已经在这个表中运行。
+
+|spark.sql.codegen |false
+|当为true时，特定查询中的表达式求值的代码将会在运行时动态生成。对于一些拥有复杂表达式的查询，此选项可导致显著速度提升。然而，对于简单的查询，这个选项会减慢查询的执行
+
+|spark.sql.shuffle.partitions |200
+|配置join或者聚合操作shuffle数据时分区的数量
+|=======================================================================
+
+
+[[distruted-sql-engine]]
+== 分布式 SQL 引擎
+
+Spark SQL也支持直接运行SQL查询的接口，不用写任何代码。
+
+[[running-the-thrift-jdbc-server]]
+=== 运行Thrift JDBC/ODBC服务器 ===
+
+这里实现的Thrift JDBC/ODBC服务器与Hive
+1.2.1中的link:https://cwiki.apache.org/confluence/display/Hive/Setting+Up+HiveServer2[HiveServer2]相一致。你可以用在Spark
+或者Hive 1.2.1附带的beeline脚本测试JDBC服务器。
+
+在Spark目录中，运行下面的命令启动JDBC/ODBC服务器。
+
+[source,shell]
+----
+./sbin/start-thriftserver.sh
+----
+
+这个脚本接受任何的`bin/spark-submit`命令行参数，加上一个`--hiveconf`参数用来指明Hive属性。你可以运行`./sbin/start-thriftserver.sh --help`来获得所有可用选项的完整
+列表。默认情况下，服务器监听`localhost:10000`。你可以用环境变量覆盖这些变量。
+
+[source,shell]
+----
+export HIVE_SERVER2_THRIFT_PORT=<listening-port>
+export HIVE_SERVER2_THRIFT_BIND_HOST=<listening-host>
+./sbin/start-thriftserver.sh \
+  --master <master-uri> \
+  ...
+----
+
+或者通过系统变量覆盖。
+
+[source,shell]
+----
+./sbin/start-thriftserver.sh \
+  --hiveconf hive.server2.thrift.port=<listening-port> \
+  --hiveconf hive.server2.thrift.bind.host=<listening-host> \
+  --master <master-uri>
+  ...
+----
+
+现在你可以用beeline测试Thrift JDBC/ODBC服务器。
+
+[source,shell]
+----
+./bin/beeline
+----
+
+连接到Thrift JDBC/ODBC服务器的方式如下：
+
+[source,shell]
+----
+beeline> !connect jdbc:hive2://localhost:10000
+----
+
+Beeline将会询问你用户名和密码。在非安全的模式，简单地输入你机器的用户名和空密码就行了。对于安全模式，你可以按照link:https://cwiki.apache.org/confluence/display/Hive/HiveServer2+Clients[Beeline文档]的说明来执行。
+
+Configuration of Hive is done by placing your hive-site.xml, core-site.xml and hdfs-site.xml files in conf/.
+
+You may also use the beeline script that comes with Hive.
+
+Thrift JDBC server also supports sending thrift RPC messages over HTTP transport. Use the following setting to enable HTTP mode as system property or in hive-site.xml file in conf/:
+
+[source,shell]
+----
+hive.server2.transport.mode - Set this to value: http
+hive.server2.thrift.http.port - HTTP port number fo listen on; default is 10001
+hive.server2.http.endpoint - HTTP endpoint; default is cliservice
+----
+To test, use beeline to connect to the JDBC/ODBC server in http mode with:
+
+[source,shell]
+----
+beeline> !connect jdbc:hive2://<host>:<port>/<database>?hive.server2.transport.mode=http;hive.server2.thrift.http.path=<http_endpoint>
+----
+
+[[runing-spark-sql-cli]]
+=== 运行Spark SQL CLI ===
+
+Spark SQL
+CLI是一个便利的工具，它可以在本地运行Hive元存储服务、执行命令行输入的查询。注意，Spark
+SQL CLI不能与Thrift JDBC服务器通信。
+
+在Spark目录运行下面的命令可以启动Spark SQL CLI。
+
+[source,shell]
+----
+./bin/spark-sql
+----
+
+[[spark-data-type]]
+== Spark SQL数据类型==
+
+Spark SQL 支持以下数据类型
+
+* 数字类型
+** ByteType：代表一个字节的整数。范围是-128到127
+** ShortType：代表两个字节的整数。范围是-32768到32767
+** IntegerType：代表4个字节的整数。范围是-2147483648到2147483647
+** LongType：代表8个字节的整数。范围是-9223372036854775808到9223372036854775807
+** FloatType：代表4字节的单精度浮点数
+** DoubleType：代表8字节的双精度浮点数
+** DecimalType：代表任意精度的10进制数据。通过内部的java.math.BigDecimal支持。BigDecimal由一个任意精度的整型非标度值和一个32位整数组成
+** StringType：代表一个字符串值
+** BinaryType：代表一个byte序列值
+** BooleanType：代表boolean值
+** Datetime类型
+*** TimestampType：代表包含字段年，月，日，时，分，秒的值
+*** DateType：代表包含字段年，月，日的值
+** 复杂类型
+*** ArrayType(elementType,
+containsNull)：代表由elementType类型元素组成的序列值。`containsNull` 用来指明 `ArrayType` 中的值是否有null值
+*** MapType(keyType, valueType, valueContainsNull)：表示包括一组键 -
+值对的值。通过keyType表示key数据的类型，通过valueType表示value数据的类型。`valueContainsNull` 用来指明 `MapType` 中的值是否有null值
+*** StructType(fields):表示一个拥有 `StructFields (fields) `序列结构的值
+**** StructField(name, dataType,
+nullable):代表 `StructType` 中的一个字段，字段的名字通过 `name` 指定，`dataType` 指定field的数据类型， `nullable` 表示字段的值是否有null值。
+
+Spark的所有数据类型都定义在包 `org.apache.spark.sql` 中，你可以通过 `import  org.apache.spark.sql._` 访问它们。
+
+[width="16%",cols="34%,33%,33%",options="header",]
+|=======================================================================
+|数据类型 |Scala中的值类型 |访问或者创建数据类型的API
+|ByteType |Byte |ByteType
+
+|ShortType |Short |ShortType
+
+|IntegerType |Int |IntegerType
+
+|LongType |Long |LongType
+
+|FloatType |Float |FloatType
+
+|DoubleType |Double |DoubleType
+
+|DecimalType |scala.math.BigDecimal |DecimalType
+
+|StringType |String |StringType
+
+|BinaryType |Array[Byte] |BinaryType
+
+|BooleanType |Boolean |BooleanType
+
+|TimestampType |java.sql.Timestamp |TimestampType
+
+|DateType |java.sql.Date |DateType
+
+|ArrayType |scala.collection.Seq |ArrayType(elementType, [containsNull])
+注意containsNull默认为true
+
+|MapType |scala.collection.Map |MapType(keyType, valueType,
+[valueContainsNull]) 注意valueContainsNull默认为true
+
+|StructType |org.apache.spark.sql.Row |StructType(fields)
+，注意fields是一个StructField序列，相同名字的两个StructField不被允许
+
+|StructField |The value type in Scala of the data type of this field
+(For example, Int for a StructField with the data type IntegerType)
+|StructField(name, dataType, nullable)
+|=======================================================================

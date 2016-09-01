@@ -1,0 +1,555 @@
+[[submitting-application]]
+== 提交应用程序 ==
+
+在Spark
+bin目录下的`spark-submit`可以用来在集群上启动应用程序。它可以通过统一的接口使用Spark支持的所有https://spark.apache.org/docs/latest/cluster-overview.html#cluster-manager-types[集群管理器]
+，所有你不必为每一个管理器做相应的配置。
+
+[[launching-applications-with-spark-submit]]
+=== 用spark-submit启动应用程序 ===
+
+`bin/spark-submit`脚本负责建立包含Spark以及其依赖的类路径（classpath），它支持不同的集群管理器以及Spark支持的加载模式。
+
+[source,shell]
+----
+./bin/spark-submit \
+  --class <main-class>
+  --master <master-url> \
+  --deploy-mode <deploy-mode> \
+  --conf <key>=<value> \
+  ... # other options
+  <application-jar> \
+  [application-arguments]
+----
+
+一些常用的选项是：
+
+* `--class`：你的应用程序的入口点(如org.apache.spark.examples.SparkPi)
+* `--master`：集群的master URL(如spark://23.195.26.187:7077)
+* `--deploy-mode`：在worker节点部署你的driver(cluster)或者本地作为外部客户端（client）。默认是client。
+* `--conf`：任意的Spark配置属性，格式是key=value。
+* `application-jar`：包含应用程序以及其依赖的jar包的路径。这个URL必须在集群中全局可见，例如，存在于所有节点的`hdfs://`路径或`file://`路径
+* `application-arguments`：传递给主类的主方法的参数
+
+一个通用的部署策略是从网关集群提交你的应用程序，这个网关机器和你的worker集群物理上协作。在这种设置下，`client`模式是适合的。在`client`模式下，driver直接在`spark-submit`进程
+中启动，而这个进程直接作为集群的客户端。应用程序的输入和输出都和控制台相连接。因此，这种模式特别适合涉及REPL的应用程序。
+
+另一种选择，如果你的应用程序从一个和worker机器相距很远的机器上提交，通常情况下用`cluster`模式减少drivers和executors的网络迟延。注意，`cluster`模式目前不支持独立集群、
+mesos集群以及python应用程序。
+
+有几个我们使用的集群管理器特有的可用选项。例如，在Spark独立集群的`cluster`模式下，你也可以指定`--supervise`用来确保driver自动重启（如果它因为非零退出码失败）。
+为了列举spark-submit所有的可用选项，用`--help`运行它。
+
+[source,shell]
+----
+# Run application locally on 8 cores
+./bin/spark-submit \
+  --class org.apache.spark.examples.SparkPi \
+  --master local[8] \
+  /path/to/examples.jar \
+  100
+
+# Run on a Spark Standalone cluster in client deploy mode
+./bin/spark-submit \
+  --class org.apache.spark.examples.SparkPi \
+  --master spark://207.184.161.138:7077 \
+  --executor-memory 20G \
+  --total-executor-cores 100 \
+  /path/to/examples.jar \
+  1000
+
+# Run on a Spark Standalone cluster in cluster deploy mode with supervise
+./bin/spark-submit \
+  --class org.apache.spark.examples.SparkPi \
+  --master spark://207.184.161.138:7077 \
+  --deploy-mode cluster
+  --supervise
+  --executor-memory 20G \
+  --total-executor-cores 100 \
+  /path/to/examples.jar \
+  1000
+
+# Run on a YARN cluster
+export HADOOP_CONF_DIR=XXX
+./bin/spark-submit \
+  --class org.apache.spark.examples.SparkPi \
+  --master yarn-cluster \  # can also be `yarn-client` for client mode
+  --executor-memory 20G \
+  --num-executors 50 \
+  /path/to/examples.jar \
+  1000
+
+# Run a Python application on a Spark Standalone cluster
+./bin/spark-submit \
+  --master spark://207.184.161.138:7077 \
+  examples/src/main/python/pi.py \
+  1000
+----
+
+[[master-urls]]
+=== Master URLs ===
+
+
+传递给Spark的url可以用下面的模式
+
+[cols=",",options="header",]
+|=======================================================================
+|Master URL |Meaning
+|local |用一个worker线程本地运行Spark
+
+|local[K]
+|用k个worker线程本地运行Spark(理想情况下，设置这个值为你的机器的核数)
+
+|local[*] |用尽可能多的worker线程本地运行Spark
+
+|spark://HOST:PORT
+|连接到给定的Spark独立部署集群master。端口必须是master配置的端口，默认是7077
+
+|mesos://HOST:PORT |连接到给定的mesos集群
+
+|yarn-client
+|以`client`模式连接到Yarn集群。群集位置将基于通过HADOOP_CONF_DIR变量找到
+
+|yarn-cluster
+|以`cluster`模式连接到Yarn集群。群集位置将基于通过HADOOP_CONF_DIR变量找到
+|=======================================================================
+
+[[spark-standalone-mode]]
+== Spark独立部署模式 ==
+
+
+[[installing-spark-standalone-to-a-cluster]]
+=== 安装Spark独立模式集群 ===
+
+安装Spark独立模式，你只需要将Spark的编译版本简单的放到集群的每个节点。你可以获得每个稳定版本的预编译版本，也可以自己编译。
+
+[[starting-a-cluster-manually]]
+=== 手动启动集群 ===
+
+你能够通过下面的方式启动独立的master服务器。
+
+[source,shell]
+----
+./sbin/start-master.sh
+----
+
+一旦启动，master将会为自己打印出`spark://HOST:PORT`
+URL，你能够用它连接到workers或者作为"master"参数传递给`SparkContext`。你也可以在master
+web UI上发现这个URL， master web UI默认的地址是`http://localhost:8080`。
+
+相同的，你也可以启动一个或者多个workers或者将它们连接到master。
+
+[source,shell]
+----
+./bin/spark-class org.apache.spark.deploy.worker.Worker spark://IP:PORT
+----
+
+一旦你启动了一个worker，查看master web
+UI。你可以看到新的节点列表以及节点的CPU数以及内存。
+
+下面的配置参数可以传递给master和worker。
+
+[width="11%",cols="50%,50%",options="header",]
+|=======================================================================
+|Argument |Meaning
+|-h HOST, --host HOST |监听的主机名
+
+|-i HOST, --ip HOST |同上，已经被淘汰
+
+|-p PORT, --port PORT |监听的服务的端口（master默认是7077，worker随机）
+
+|--webui-port PORT |web UI的端口(master默认是8080，worker默认是8081)
+
+|-c CORES, --cores CORES
+|Spark应用程序可以使用的CPU核数（默认是所有可用）；这个选项仅在worker上可用
+
+|-m MEM, --memory MEM
+|Spark应用程序可以使用的内存数（默认情况是你的机器内存数减去1g）；这个选项仅在worker上可用
+
+|-d DIR, --work-dir DIR
+|用于暂存空间和工作输出日志的目录（默认是SPARK_HOME/work）；这个选项仅在worker上可用
+
+|--properties-file FILE
+|自定义的Spark配置文件的加载目录（默认是conf/spark-defaults.conf）
+|=======================================================================
+
+[[cluster-launch-scripts]]
+=== 集群启动脚本 ===
+
+为了用启动脚本启动Spark独立集群，你应该在你的Spark目录下建立一个名为`conf/slaves`的文件，这个文件必须包含所有你要启动的Spark
+worker所在机器的主机名，一行一个。如果
+`conf/slaves`不存在，启动脚本默认为单个机器（localhost），这台机器对于测试是有用的。注意，master机器通过ssh访问所有的worker。在默认情况下，SSH是并行运行，需要设置无密码（采用私有密钥）的访问。
+如果你没有设置为无密码访问，你可以设置环境变量`SPARK_SSH_FOREGROUND`，为每个worker提供密码。
+
+一旦你设置了这个文件，你就可以通过下面的shell脚本启动或者停止你的集群。
+
+* sbin/start-master.sh：在机器上启动一个master实例
+* sbin/start-slaves.sh：在每台机器上启动一个slave实例
+* sbin/start-all.sh：同时启动一个master实例和所有slave实例
+* sbin/stop-master.sh：停止master实例
+* sbin/stop-slaves.sh：停止所有slave实例
+* sbin/stop-all.sh：停止master实例和所有slave实例
+
+注意，这些脚本必须在你的Spark
+master运行的机器上执行，而不是在你的本地机器上面。
+
+你可以在`conf/spark-env.sh`中设置环境变量进一步配置集群。利用`conf/spark-env.sh.template`创建这个文件，然后将它复制到所有的worker机器上使设置有效。下面的设置可以起作用：
+
+[width="11%",cols="50%,50%",options="header",]
+|=======================================================================
+|Environment Variable |Meaning
+|SPARK_MASTER_IP |绑定master到一个指定的ip地址
+
+|SPARK_MASTER_PORT |在不同的端口上启动master（默认是7077）
+
+|SPARK_MASTER_WEBUI_PORT |master web UI的端口（默认是8080）
+
+|SPARK_MASTER_OPTS |应用到master的配置属性，格式是
+"-Dx=y"（默认是none），查看下面的表格的选项以组成一个可能的列表
+
+|SPARK_LOCAL_DIRS
+|Spark中暂存空间的目录。包括map的输出文件和存储在磁盘上的RDDs(including
+map output files and RDDs that get stored on
+disk)。这必须在一个快速的、你的系统的本地磁盘上。它可以是一个逗号分隔的列表，代表不同磁盘的多个目录
+
+|SPARK_WORKER_CORES |Spark应用程序可以用到的核心数（默认是所有可用）
+
+|SPARK_WORKER_MEMORY
+|Spark应用程序用到的内存总数（默认是内存总数减去1G）。注意，每个应用程序个体的内存通过`spark.executor.memory`设置
+
+|SPARK_WORKER_PORT |在指定的端口上启动Spark worker(默认是随机)
+
+|SPARK_WORKER_WEBUI_PORT |worker UI的端口（默认是8081）
+
+|SPARK_WORKER_INSTANCES
+|每台机器运行的worker实例数，默认是1。如果你有一台非常大的机器并且希望运行多个worker，你可以设置这个数大于1。如果你设置了这个环境变量，确保你也设置了`SPARK_WORKER_CORES`环境变量用于限制每个worker的核数或者每个worker尝试使用所有的核。
+
+|SPARK_WORKER_DIR |Spark
+worker运行目录，该目录包括日志和暂存空间（默认是SPARK_HOME/work）
+
+|SPARK_WORKER_OPTS |应用到worker的配置属性，格式是
+"-Dx=y"（默认是none），查看下面表格的选项以组成一个可能的列表
+
+|SPARK_DAEMON_MEMORY |分配给Spark
+master和worker守护进程的内存（默认是512m）
+
+|SPARK_DAEMON_JAVA_OPTS |Spark
+master和worker守护进程的JVM选项，格式是"-Dx=y"（默认为none）
+
+|SPARK_PUBLIC_DNS |Spark master和worker公共的DNS名（默认是none）
+|=======================================================================
+
+注意，启动脚本还不支持windows。为了在windows上启动Spark集群，需要手动启动master和workers。
+
+`SPARK_MASTER_OPTS`支持一下的系统属性：
+
+[width="16%",cols="34%,33%,33%",options="header",]
+|=======================================================================
+|Property Name |Default |Meaning
+|spark.deploy.retainedApplications |200
+|展示完成的应用程序的最大数目。老的应用程序会被删除以满足该限制
+
+|spark.deploy.retainedDrivers |200
+|展示完成的drivers的最大数目。老的应用程序会被删除以满足该限制
+
+|spark.deploy.spreadOut |true
+|这个选项控制独立的集群管理器是应该跨节点传递应用程序还是应努力将程序整合到尽可能少的节点上。在HDFS中，传递程序是数据本地化更好的选择，但是，对于计算密集型的负载，整合会更有效率。
+
+|spark.deploy.defaultCores |(infinite)
+|在Spark独立模式下，给应用程序的默认核数（如果没有设置`spark.cores.max`）。如果没有设置，应用程序总数获得所有可用的核，除非设置了`spark.cores.max`。在共享集群上设置较低的核数，可用防止用户默认抓住整个集群。
+
+|spark.worker.timeout |60
+|独立部署的master认为worker失败（没有收到心跳信息）的间隔时间。
+|=======================================================================
+
+`SPARK_WORKER_OPTS`支持的系统属性：
+
+[width="16%",cols="34%,33%,33%",options="header",]
+|=======================================================================
+|Property Name |Default |Meaning
+|spark.worker.cleanup.enabled |false
+|周期性的清空worker/应用程序目录。注意，这仅仅影响独立部署模式。不管应用程序是否还在执行，用于程序目录都会被清空
+
+|spark.worker.cleanup.interval |1800 (30分)
+|在本地机器上，worker清空老的应用程序工作目录的时间间隔
+
+|spark.worker.cleanup.appDataTtl |7 * 24 * 3600 (7天)
+|每个worker中应用程序工作目录的保留时间。这个时间依赖于你可用磁盘空间的大小。应用程序日志和jar包上传到每个应用程序的工作目录。随着时间的推移，工作目录会很快的填满磁盘空间，特别是如果你运行的作业很频繁。
+|=======================================================================
+
+[[connecting-an-applications-to-the-cluster]]
+=== 连接一个应用程序到集群中 ===
+
+为了在Spark集群中运行一个应用程序，简单地传递`spark://IP:PORT`
+URL到link:[SparkContext]
+
+为了在集群上运行一个交互式的Spark shell，运行一下命令：
+
+[source,shell]
+----
+./bin/spark-shell --master spark://IP:PORT
+----
+
+你也可以传递一个选项`--total-executor-cores <numCores>`去控制spark-shell的核数。
+
+[[launching-spark-application]]
+=== 启动Spark应用程序 ===
+
+link:submitting-applications.md[spark-submit脚本]支持最直接的提交一个Spark应用程序到集群。对于独立部署的集群，Spark目前支持两种部署模式。在`client`模式中，driver启动进程与
+客户端提交应用程序所在的进程是同一个进程。然而，在`cluster`模式中，driver在集群的某个worker进程中启动，只有客户端进程完成了提交任务，它不会等到应用程序完成就会退出。
+
+如果你的应用程序通过Spark
+submit启动，你的应用程序jar包将会自动分发到所有的worker节点。对于你的应用程序依赖的其它jar包，你应该用`--jars`符号指定（如`--jars jar1,jar2`）。
+
+另外，`cluster`模式支持自动的重启你的应用程序（如果程序一非零的退出码退出）。为了用这个特征，当启动应用程序时，你可以传递`--supervise`符号到`spark-submit`。如果你想杀死反复失败的应用，
+你可以通过如下的方式：
+
+[source,shell]
+----
+./bin/spark-class org.apache.spark.deploy.Client kill <master url> <driver ID>
+----
+
+你可以在独立部署的Master web UI（http://:8080）中找到driver ID。
+
+[[resource-scheduling]]
+=== 资源调度 ===
+
+独立部署的集群模式仅仅支持简单的FIFO调度器。然而，为了允许多个并行的用户，你能够控制每个应用程序能用的最大资源数。在默认情况下，它将获得集群的所有核，这只有在某一时刻只
+允许一个应用程序才有意义。你可以通过`spark.cores.max`在http://spark.apache.org/docs/latest/configuration.html#spark-properties[SparkConf]中设置核数。
+
+[source,scala]
+----
+val conf = new SparkConf()
+             .setMaster(...)
+             .setAppName(...)
+             .set("spark.cores.max", "10")
+val sc = new SparkContext(conf)
+----
+
+另外，你可以在集群的master进程中配置`spark.deploy.defaultCores`来改变默认的值。在`conf/spark-env.sh`添加下面的行：
+
+[source,properties]
+----
+export SPARK_MASTER_OPTS="-Dspark.deploy.defaultCores=<value>"
+----
+
+这在用户没有配置最大核数的共享集群中是有用的。
+
+[[high-availability]]
+=== 高可用 ===
+
+默认情况下，独立的调度集群对worker失败是有弹性的（在Spark本身的范围内是有弹性的，对丢失的工作通过转移它到另外的worker来解决）。然而，调度器通过master去执行调度决定，
+这会造成单点故障：如果master死了，新的应用程序就无法创建。为了避免这个，我们有两个高可用的模式。
+
+[[standby-masters-with-zookeeper]]
+==== 用ZooKeeper的备用master ====
+
+利用ZooKeeper去支持领导选举以及一些状态存储，你能够在你的集群中启动多个master，这些master连接到同一个ZooKeeper实例上。一个被选为“领导”，其它的保持备用模式。如果当前
+的领导死了，另一个master将会被选中，恢复老master的状态，然后恢复调度。整个的恢复过程大概需要1到2分钟。注意，这个恢复时间仅仅会影响调度新的应用程序-运行在失败master中的
+应用程序不受影响。
+
+[[configuration]]
+===== 配置 =====
+
+为了开启这个恢复模式，你可以用下面的属性在`spark-env`中设置`SPARK_DAEMON_JAVA_OPTS`。
+
+[width="11%",cols="50%,50%",options="header",]
+|=======================================================================
+|System property |Meaning
+|spark.deploy.recoveryMode
+|设置ZOOKEEPER去启动备用master模式（默认为none）
+
+|spark.deploy.zookeeper.url
+|zookeeper集群url(如192.168.1.100:2181,192.168.1.101:2181)
+
+|spark.deploy.zookeeper.dir |zookeeper保存恢复状态的目录（默认是/spark）
+|=======================================================================
+
+可能的陷阱：如果你在集群中有多个masters，但是没有用zookeeper正确的配置这些masters，这些masters不会发现彼此，会认为它们都是leaders。这将会造成一个不健康的集群状态（因为所有的master都会独立的调度）。
+
+[[details]]
+===== 细节 =====
+
+zookeeper集群启动之后，开启高可用是简单的。在相同的zookeeper配置（zookeeper
+URL和目录）下，在不同的节点上简单地启动多个master进程。master可以随时添加和删除。
+
+为了调度新的应用程序或者添加worker到集群，它需要知道当前leader的IP地址。这可以通过简单的传递一个master列表来完成。例如，你可能启动你的SparkContext指向`spark://host1:port1,host2:port2`。
+这将造成你的SparkContext同时注册这两个master-如果`host1`死了，这个配置文件将一直是正确的，因为我们将找到新的leader-`host2`。
+
+"registering with a
+Master"和正常操作之间有重要的区别。当启动时，一个应用程序或者worker需要能够发现和注册当前的leader
+master。一旦它成功注册，它就在系统中了。如果
+错误发生，新的leader将会接触所有之前注册的应用程序和worker，通知他们领导关系的变化，所以它们甚至不需要事先知道新启动的leader的存在。
+
+由于这个属性的存在，新的master可以在任何时候创建。你唯一需要担心的问题是新的应用程序和workers能够发现它并将它注册进来以防它成为leader
+master。
+
+[[single-node-recovery-with-local-filesystem]]
+==== 用本地文件系统做单节点恢复 ====
+
+zookeeper是生产环境下最好的选择，但是如果你想在master死掉后重启它，`FILESYSTEM`模式可以解决。当应用程序和worker注册，它们拥有足够的状态写入提供的目录，以至于在重启master
+进程时它们能够恢复。
+
+[[configuration1]]
+===== 配置 =====
+
+为了开启这个恢复模式，你可以用下面的属性在`spark-env`中设置`SPARK_DAEMON_JAVA_OPTS`。
+
+[cols=",",options="header",]
+|=======================================================================
+|System property |Meaning
+|spark.deploy.recoveryMode
+|设置为FILESYSTEM开启单节点恢复模式（默认为none）
+
+|spark.deploy.recoveryDirectory |用来恢复状态的目录
+|=======================================================================
+
+[[details1]]
+===== 细节 =====
+
+* 这个解决方案可以和监控器/管理器（如http://mmonit.com/monit/[monit]）相配合，或者仅仅通过重启开启手动恢复。
+* 虽然文件系统的恢复似乎比没有做任何恢复要好，但对于特定的开发或实验目的，这种模式可能是次优的。特别是，通过`stop-master.sh`杀掉master不会清除它的恢复状态，所以，不管你何时启动一个新的master，它都将进入恢复模式。这可能使启动时间增加到1分钟。
+* 虽然它不是官方支持的方式，你也可以创建一个NFS目录作为恢复目录。如果原始的master节点完全死掉，你可以在不同的节点启动master，它可以正确的恢复之前注册的所有应用程序和workers。未来的应用程序会发现这个新的master。
+
+[[running-spark-on-yarn]]
+== 在YARN上运行Spark ==
+
+[[configuration]]
+=== 配置 ===
+
+大部分为`Spark on YARN`模式提供的配置与其它部署模式提供的配置相同。下面这些是为`Spark on YARN`模式提供的配置。
+
+[[spark-properties]]
+=== Spark属性 ===
+
+[width="16%",cols="34%,33%,33%",options="header",]
+|=======================================================================
+|Property Name |Default |Meaning
+|spark.yarn.applicationMaster.waitTries |10 |ApplicationMaster等待Spark
+master的次数以及SparkContext初始化尝试的次数
+
+|spark.yarn.submit.file.replication |HDFS默认的复制次数（3）
+|上传到HDFS的文件的HDFS复制水平。这些文件包括Spark jar、app
+jar以及任何分布式缓存文件/档案
+
+|spark.yarn.preserve.staging.files |false
+|设置为true，则在作业结束时保留阶段性文件（Spark jar、app
+jar以及任何分布式缓存文件）而不是删除它们
+
+|spark.yarn.scheduler.heartbeat.interval-ms |5000 |Spark application
+master给YARN ResourceManager发送心跳的时间间隔（ms）
+
+|spark.yarn.max.executor.failures |numExecutors * 2,最小为3
+|失败应用程序之前最大的执行失败数
+
+|spark.yarn.historyServer.address |(none)
+|Spark历史服务器（如host.com:18080）的地址。这个地址不应该包含一个模式（http://）。默认情况下没有设置值，这是因为该选项是一个可选选项。当Spark应用程序完成从ResourceManager
+UI到Spark历史服务器UI的连接时，这个地址从YARN ResourceManager得到
+
+|spark.yarn.dist.archives |(none)
+|提取逗号分隔的档案列表到每个执行器的工作目录
+
+|spark.yarn.dist.files |(none)
+|放置逗号分隔的文件列表到每个执行器的工作目录
+
+|spark.yarn.executor.memoryOverhead |executorMemory * 0.07,最小384
+|分配给每个执行器的堆内存大小（以MB为单位）。它是VM开销、interned字符串或者其它本地开销占用的内存。这往往随着执行器大小而增长。（典型情况下是6%-10%）
+
+|spark.yarn.driver.memoryOverhead |driverMemory * 0.07,最小384
+|分配给每个driver的堆内存大小（以MB为单位）。它是VM开销、interned字符串或者其它本地开销占用的内存。这往往随着执行器大小而增长。（典型情况下是6%-10%）
+
+|spark.yarn.queue |default |应用程序被提交到的YARN队列的名称
+
+|spark.yarn.jar |(none) |Spark
+jar文件的位置，覆盖默认的位置。默认情况下，Spark on
+YARN将会用到本地安装的Spark jar。但是Spark
+jar也可以HDFS中的一个公共位置。这允许YARN缓存它到节点上，而不用在每次运行应用程序时都需要分配。指向HDFS中的jar包，可以这个参数为"hdfs:///some/path"
+
+|spark.yarn.access.namenodes |(none) |你的Spark应用程序访问的HDFS
+namenode列表。例如，`spark.yarn.access.namenodes=hdfs://nn1.com:8032,hdfs://nn2.com:8032`，Spark应用程序必须访问namenode列表，Kerberos必须正确配置来访问它们。Spark获得namenode的安全令牌，这样Spark应用程序就能够访问这些远程的HDFS集群。
+
+|spark.yarn.containerLauncherMaxThreads |25
+|为了启动执行者容器，应用程序master用到的最大线程数
+
+|spark.yarn.appMasterEnv.[EnvironmentVariableName] |(none)
+|添加通过`EnvironmentVariableName`指定的环境变量到Application
+Master处理YARN上的启动。用户可以指定多个该设置，从而设置多个环境变量。在yarn-cluster模式下，这控制Spark
+driver的环境。在yarn-client模式下，这仅仅控制执行器启动者的环境。
+|=======================================================================
+
+[[launching-spark-on-yarn]]
+=== 在YARN上启动Spark ===
+
+确保`HADOOP_CONF_DIR`或`YARN_CONF_DIR`指向的目录包含Hadoop集群的（客户端）配置文件。这些配置用于写数据到dfs和连接到YARN
+ResourceManager。
+
+有两种部署模式可以用来在YARN上启动Spark应用程序。在yarn-cluster模式下，Spark
+driver运行在application
+master进程中，这个进程被集群中的YARN所管理，客户端会在初始化应用程序
+之后关闭。在yarn-client模式下，driver运行在客户端进程中，application
+master仅仅用来向YARN请求资源。
+
+和Spark单独模式以及Mesos模式不同，在这些模式中，master的地址由"master"参数指定，而在YARN模式下，ResourceManager的地址从Hadoop配置得到。因此master参数是简单的`yarn-client`和`yarn-cluster`。
+
+在yarn-cluster模式下启动Spark应用程序。
+
+[source,shell]
+----
+./bin/spark-submit --class path.to.your.Class --master yarn-cluster [options] <app jar> [app options]
+----
+
+例子：
+
+[source,shell]
+----
+$ ./bin/spark-submit --class org.apache.spark.examples.SparkPi \
+    --master yarn-cluster \
+    --num-executors 3 \
+    --driver-memory 4g \
+    --executor-memory 2g \
+    --executor-cores 1 \
+    --queue thequeue \
+    lib/spark-examples*.jar \
+    10
+----
+
+以上启动了一个YARN客户端程序用来启动默认的 Application
+Master，然后SparkPi会作为Application
+Master的子线程运行。客户端会定期的轮询Application Master用于状态更新并将
+更新显示在控制台上。一旦你的应用程序运行完毕，客户端就会退出。
+
+在yarn-client模式下启动Spark应用程序，运行下面的shell脚本
+
+[source,shell]
+----
+$ ./bin/spark-shell --master yarn-client
+----
+
+[[add-other-jars]]
+=== 添加其它的jar ===
+
+在yarn-cluster模式下，driver运行在不同的机器上，所以离开了保存在本地客户端的文件，`SparkContext.addJar`将不会工作。为了使`SparkContext.addJar`用到保存在客户端的文件，
+在启动命令中加上`--jars`选项。
+
+[source,shell]
+----
+$ ./bin/spark-submit --class my.main.Class \
+    --master yarn-cluster \
+    --jars my-other-jar.jar,my-other-other-jar.jar
+    my-main-jar.jar
+    app_arg1 app_arg2
+----
+
+[[important-notes]]
+=== 注意事项 ===
+
+* 在Hadoop
+2.2之前，YARN不支持容器核的资源请求。因此，当运行早期的版本时，通过命令行参数指定的核的数量无法传递给YARN。在调度决策中，核请求是否兑现取决于用哪个调度器以及
+如何配置调度器。
+* Spark
+executors使用的本地目录将会是YARN配置（yarn.nodemanager.local-dirs）的本地目录。如果用户指定了`spark.local.dir`，它将被忽略。
+* `--files`和`--archives`选项支持指定带 * # *
+号文件名。例如，你能够指定`--files localtest.txt#appSees.txt`，它上传你在本地命名为`localtest.txt`的文件到HDFS，但是将会链接为名称`appSees.txt`。当你的应用程序运行在YARN上时，你应该使用`appSees.txt`去引用该文件。
+* 如果你在yarn-cluster模式下运行`SparkContext.addJar`，并且用到了本地文件，
+`--jars`选项允许`SparkContext.addJar`函数能够工作。如果你正在使用 HDFS,
+HTTP, HTTPS或FTP，你不需要用到该选项
