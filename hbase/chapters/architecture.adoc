@@ -1,0 +1,203 @@
+= 架构 =
+
+[[arch.comps]]
+== HBase 组件 ==
+
+从物理角度来看，HBase有三种类型的服务器组成Maser/Slave结构。
+RegionServer 提供数据的读和写，当访问数据时，客户端直接和RegionServer通信。
+Region分配，DDL语句操作则由HBase Master(HMaster)来处理。而作为HDFS的Zookeeper组件则用来维护HBase集群的状态。
+
+RegionServer管理的数据最终以文件的形式存储在HDFS上。RegionServer通过和HDFS DataNode协作，使得数据本地化(把数据推到靠近需要的位置)。因此HBase发生写操作时，是将数据写入本地，但是一旦Region被移走，则需要等待 compaction 操作后才能实现本地化。
+
+image::{imagedir}/hbase_arch.png[]
+
+[[arch.region]]
+== Regions == 
+
+HBase 表依据行键按照水平划分到多个"Regions"中。一个region包含的起止行键的所有行信息。多个Region分到到集群中的某一个节点上，称为"RegionServer"，"RegionServer" 处理数据的读写操作。一个RegionSever可以包含1000个左右的Region。
+每个region默认1GB大小。
+
+image::{imagedir}/hbase_regions.png[]
+
+[[arch.hmaster]]
+== HBase Master ==
+
+HBase Master用来处理Region分配，DDL语句执行。
+一个master用来：
+
+* 和RegionServer协同
+** 启动时分配region，恢复或均衡负载时重新分配region
+** 监控集群内所有的RegionServer实例（监听来自Zookeeper的通知）
+* 管理功能
+** 创建，删除，更新表的功能接口
+
+image::{imagedir}/hbase_hmaster.png[]
+
+== Zookeeper: 协调者 ==
+
+HBase使用Zookeeper充当集群的分布式协调者用来维护服务状态。Zookeeper维护哪些服务是在线可用的，哪些是离线或不可用的，同时发出通知。
+
+image::{imagedir}/hbase_zookeeper.png[]
+
+
+== 各组件如何协同 ==
+
+Zookeeper用来协调和共享集群中个成员组件的状态。RegionServer和活跃HMaster通过会话连接到Zookeeper。
+Zookeeper通过心跳为活跃会话维护短暂节点。
+
+image::{imagedir}/hbase_together.png[]
+
+每个RegionServer创建一个短暂节点。HMaster监控这些节点用来发现有效的RegionServer服务器，同时监控这些节点用户发现失效的节点。
+HMaster采用竞争方式创建短暂节点，Zookeeper检测到第一个短暂节点后，选择它为唯一活跃Master节点。活跃的HMaster发送心跳给Zookeeper，Zookeeper据此来判断HMaster是否失效。非活跃HMaster监听活跃HMaster失败的消息。
+
+如果一个RegionServer或者活跃HMaster不再发送心跳，那么会话就会过期，同时对应的短暂节点会被删除。监听者会收到删除节点的通知。非活跃HMaster监听到活跃HMaster失效后，它变成为活跃HMaster。
+
+== HBase首次读写 ==
+
+HBase有一个特别的表，名为 `META` ，它记录了集群中region的位置信息。而Zookeeper则用来存储 `META` 表的位置信息。
+
+客户端首次向HBase服务发起读写请求过程如下：
+
+. 客户端从Zookeeper处获得拥有 `META` 表的RegionServer。
+. 客户端查询 `.META.` 服务获得拥有它想查询的记录范围数据的RegionServer。客户端存储 `META` 表的位置信息。
+. 从对应的RegionServer获得记录
+
+对于以后的查询，客户端使用缓存来获得 `META` 表的位置以及之前记录的位置，因此它不再需要去查询 `META` 表。除非因为region被移走或者HMaster失效，那么客户端需要重新发起查询并更新缓存。
+
+image::{imagedir}/hbase_rw.png[]
+
+
+== HBase META 表 ==
+
+* META 表保存系统所中所有的region列表
+* META表类似一个B树
+* META表结构如下：
+** Key: region start key,region id
+** Values: RegionServer
+
+image::{imagedir}/hbase_meta.png[]
+
+
+== RegionServer 组件 ==
+
+一个RegionSever运行在HDFS的DataNode上，拥有以下组件：
+
+* WAL: 预写日志(Write Ahead Log, WAL)是一个文件，用来存储哪些还没有来得及之持久化的数据；用户服务崩溃是数据恢复。
+* BlockCache: 读缓存。在内存中存储那些频繁读取的数据。采取LRU(Least Reccent Used)算法进行数据淘汰。
+* MemStore: 写缓存。存储那些还没有写入到磁盘的数据。每个Region的每个列族有一个MemStore。
+* HFile: HFile以键值对格式存储记录到磁盘上。
+
+image::{imagedir}/hbase_regionservercomps.png[]
+
+== HBase 写步骤 ==
+
+当客户端发起一个Put请求时，首先写WAL。
+
+image::{imagedir}/hbase_write1.png[]
+
+一旦数据写入到WAL，它会保存到MemStore上。然后put请求收到写入确认的消息。
+
+image::{imagedir}/hbase_write2.png[]
+
+== MemStore ==
+
+MemStore在内存中存储排序的键值对数据，它和保存在HFile上对应的文件是相同的。每个列族有一个MemStore。当有新数据进来时，MemStore会更新排序。
+
+image::{imagedir}/hbase_memstore.png[]
+
+
+== HBase Region Flush ==
+
+当MemStore积累了足够多的数据后，整个数据会写入到一个新的HFile文件中，并保存到HDFS上。每个列族HBase使用多个HFile来存储数据。这些文件总是在MemStore刷入到磁盘时创建。
+
+这就是HBase的列族为什么有数量限制的一个原因。每一个列族一个MemStore，当一个满了，就刷到磁盘上。它也保存了最后写入的序列数，这样系统就知道到目前为止持久化了设么。
+
+最大的序列数作为一个元数据字段保存在HFile里，用来反射持久化在哪里结束以及从哪里继续。当一个region启动时，它读取序列数并当做新的Edit的序列数。
+
+image::{imagedir}/hbase_regionflush.png[]
+
+== HBase HFile ==
+
+存储在HFile文件的里的数据包含了已排序的键值对。当MemStore累计了足够数据时，整个排序的键值对数据会写入存储在HDFS上的新HFile文件，这些是一个顺序写操作，因此很快。
+
+image::{imagedir}/hbase_hfile.png[]
+
+一个HFile文件包含一个多层索引，这使得HBase无需获取整个文件就可以找到需要的数据。多层索引类似一颗B+树：
+
+* 键值对按升序存储
+* 索引指针通过行键指向键值，他们封装在64K的块里。
+* 每一个块有自己的叶子索引
+* 每个块的最后一个key保存在中间索引上
+* 根索引指向中间索引
+
+文件尾部指向元数据块。尾部同时还包含了比如布隆(bloom)过滤和时间范围等信息。布隆过滤协助跳过哪些没有包含特定行键的文件。时间范围信息对跳过哪些不在时间范围之内的查询起到帮助作用。
+
+image::{imagedir}/hbase_hfilearch.png[]
+
+HFile的索引在打开HFile时加入到内存中，并一直保存，这使得查询性能更高。
+
+image::{imagedir}/hbase_hfileindex.png[]
+
+== HBase 读合并 ==
+
+我们已经知道，行记录的键值对可能在多个位置，行单元保存在HFile文件里。MemStore存储了最近更新的单元。而BlockCache则有最近读取的单元。那么，当读取以一个整行记录时，系统是如何协调这些组件来返回一个完整的且最新的记录呢？答案是读合并(Read Merge)，读合并使用以下步骤来合并来自HFile、MemStore、BlockCache的键值数据：
+
+. 首先，扫描器查找BlockCache里的行单元数据
+. 接着，扫描器查询MemStore，这里包含了最近的更改
+. 如果扫描器没有在MemStore和BlockCache都没有找到行单元信息，那么HBase将使用BlockCache索引以及布隆过滤来加载HFile文件到内存中，HFile应该包含了需要查询的数据。
+
+
+image::{imagedir}/hbase_readmerge1.png[]
+
+按照上面的讨论，我们知道每个MemStore可能有多个HFile文件，那就意味着当读时，则需要查询多个文件，这可能导致性能低下，这种情况我们称为读放大(read amplification)。
+
+image::{imagedir}/hbase_readmerge2.png[]
+
+== HBase 合并 ==
+
+HBase 自动把抓取多个小HFile文件，然后合并写入到几个更大的HFile文件里。这个过程我们称为小合并(Minor Compaction)。小合并减少了HFile文件的数量，提升了查询性能。
+
+image::{imagedir}/hbase_minorcompact.png[]
+
+与小合并相对应的是大合并(Major Compaction)，它指的把在一个region上的属于一个列族的所有HFile文件合并成一个大的HFile文件，在这个过程中，它会丢弃已经删除的或过期的单元，这提升了读取性能；然后，因为大合并需要重写所有的HFile文件，因此在这个过程中，会有大量的磁盘I/O和网络传输发生。这我们称为写放大(write amplification)。
+
+大合并可以设置为定期启动运行。考虑到写放大效应，大合并一般设置在周末或夜晚进行。
+大合并同时也会把那些在远程节点的数据抓取到本地节点上来。
+
+image::{imagedir}/hbase_majorcompact.png[]
+
+
+== Region 切分 ==
+
+一开始，每个表只有一个region。随着region的膨胀，它切分成两个子region。该过程完成迅速，因为系统知识简单的为新region创建两个引用文件，每个只持有原始region一半的内容。
+
+RegionServer通过在父region内创建切分目录来完成。之后，它会关闭该region，这样它就不再接受任何请求。
+
+然后RegionSever开始准备生成新的子region（多线程），通过在切分目录内设置必要的文件结构来完成。其中包括新的region目录以及引用文件。如果该过程成功完成，它就会把两个新的region目录移到表目录中。 META 表会更新更新，指明该region已经被切分，以及子region分别的名称和位置等信息，这就避免了它被意外的重新打开。
+
+现在两个子region已经就绪，同时将会被同一个RegionSever并行打开。现在需要更新META表，将这两个region作为可用region对待--看起来就像是完全独立的一样。
+
+原始region最终会被清除，意味着它会从META表中删除，磁盘上它的所有文件也会被删除。最后，HMaster会收到该切分的通知，通过负载均衡等将这些新的region移动到其他服务器上。
+
+image::{imagedir}/hbase_regionsplit.png[]
+
+
+== 读负载均衡 ==
+
+Region切分最初发生在同一个RegionServer上，但处于负载均衡的目的，HMastre会把新的region移动到其他服务器上。这就导致RegionSever需要从远程HDFS节点上获取数据，知道大合并把这些数据文件移到本地节点。
+
+image::{imagedir}/hbase_readhb.png[]
+
+
+== 数据复制 ==
+
+HBase的数据复制依赖于HDFS的数据副本功能。HDFS会复制WAL以及HFile块。当数据写入到HDFS时，本地会写一份拷贝，然后复制到第二个节点，然后复制一份拷贝到本地后，接着复制到第三个节点。
+
+image::{imagedir}/hbase_datarep.png[]
+
+
+
+
+
+
+

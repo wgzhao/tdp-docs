@@ -1,0 +1,154 @@
+[[getting_started]]
+= 快速开始
+:doctype: book
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+
+== 介绍
+
+<<quickstart,快速开始>> 通过对HBase的一些基本操作的介绍，让您对HBase有一个直观的理解。在快速开始之前，您应该首先安装了 TDP 产品。
+
+== 连接到HBase
+
+登陆到您安装有 TDP 产品的任意服务器，运行 `hbase shell` 即可连接到HBase集群中。 当您启动HBase Shell并连接到HBase集群时，他会打印集群版本信息以及一些使用方法。
+HBase Shell 提示符以 `>` 结尾。
+
+----
+
+$ hbase shell
+hbase(main):001:0>
+----
+
+== 显示HBase Shell 帮助文本 ==
+在上述提示符下，输入 `help` 并回车，可以看到一些基本用法，并同时给出了这些基本用法的例子。
+注意那些表名，列族名，列名都是引号引用。
+
+== 创建表 ==
+
+使用 `create` 命令可以创建一个新表，创建表时需要指定表的名字以及列族的名字。
+
+----
+hbase(main):001:0> create 'test', 'cf'
+0 row(s) in 0.4170 seconds
+
+=> Hbase::Table - test
+----
+
+== 列出表的基本信息 ==
+使用 `list` 命令来列出表的基本信息
+
+----
+hbase(main):002:0> list 'test'
+TABLE
+test
+1 row(s) in 0.0180 seconds
+
+=> ["test"]
+----
+
+== 给表添加数据 ==
+为了给表添加数据，使用 `put` 命令。
+
+----
+hbase(main):003:0> put 'test', 'row1', 'cf:a', 'value1'
+0 row(s) in 0.0850 seconds
+
+hbase(main):004:0> put 'test', 'row2', 'cf:b', 'value2'
+0 row(s) in 0.0110 seconds
+
+hbase(main):005:0> put 'test', 'row3', 'cf:c', 'value3'
+0 row(s) in 0.0100 seconds
+----
+
+上述例子，我们插入了三个值。
+第一个插入的值在行键为 `row`，列名为 `cf:a` 的单元，其单元内容为 `value1` 。
+注意这里的列名 `cf:a` ，它是由 `<column family>:<column name>` 形式组成，其中 `<column family>` 表示列族，在创建表的时候就已经确定了，这里为 `cf` , `<column name>` 表示这个列的名字，一般在插入值的时候来确定。
+
+
+== 一次获取表所有数据 ==
+获取HBase表数据的一个办法是使用 `scan` 命令，默认情况下，他会扫描表的所有数据并输出，你可以通过设置扫描属性的方式来限定扫描的行数。
+
+----
+hbase(main):006:0> scan 'test'
+ROW                                      COLUMN+CELL
+ row1                                    column=cf:a, timestamp=1421762485768, value=value1
+ row2                                    column=cf:b, timestamp=1421762491785, value=value2
+ row3                                    column=cf:c, timestamp=1421762496210, value=value3
+3 row(s) in 0.0230 seconds
+----
+
+== 获取单行数据 == 
+
+可以通过 `get` 命令来一次获取单行数据。
+
+----
+hbase(main):007:0> get 'test', 'row1'
+COLUMN                                   CELL
+ cf:a                                    timestamp=1421762485768, value=value1
+1 row(s) in 0.0350 seconds
+----
+
+==  禁用表 ==
+
+如果你想删除一张表，或者是修改它的某些设置，或者是别的一些情况，一般我们需要先用 `disable` 禁用表。完成操作后，再用 `enable` 启用表。I
+
+----
+hbase(main):008:0> disable 'test'
+0 row(s) in 1.1820 seconds
+
+hbase(main):009:0> enable 'test'
+0 row(s) in 0.1770 seconds
+----
+
+
+== 删除表 == 
+
+为了删除一张表，可以使用 `drop` 命令。
+
+----
+hbase(main):011:0> drop 'test'
+0 row(s) in 0.1370 seconds
+----
+
+== 退出 HBase Shell ==
+
+要退出HBase Shell 环境，使用 `quit` 命令即可。
+
+
+== 检查HDFS上的HBase目录 == 
+
+默认情况下，HBase的所有数据保存在HDFS的 _/hbase/_ 目录。您可以使用 `hdfs dfs` 命令来列出这些目录。
+
+----
+
+$ ./bin/hadoop fs -ls /hbase
+Found 7 items
+drwxr-xr-x   - hbase users          0 2015-06-25 18:58 /hbase/.tmp
+drwxr-xr-x   - hbase users          0 2015-06-25 21:49 /hbase/WALs
+drwxr-xr-x   - hbase users          0 2015-06-25 18:48 /hbase/corrupt
+drwxr-xr-x   - hbase users          0 2015-06-25 18:58 /hbase/data
+-rw-r--r--   3 hbase users         42 2015-06-25 18:41 /hbase/hbase.id
+-rw-r--r--   3 hbase users          7 2015-06-25 18:41 /hbase/hbase.version
+drwxr-xr-x   - hbase users          0 2015-06-25 21:49 /hbase/oldWALs
+----
+
+
+
+== 通过浏览器访问HBase ==
+
+您有也可以通过访问HBase的Web UI来查看HBase集群的相关信息。按照之前我们安装 TDP的例子。
+If everything is set up correctly, you should be able to connect to the UI for the Master
+`http://node-a.example.com:16010/` or the secondary master at `http://node-b.example.com:16010/`
+for the secondary master, using a web browser.
+If you can connect via `localhost` but not from another host, check your firewall rules.
+You can see the web UI for each of the RegionServers at port 16030 of their IP addresses, or by
+clicking their links in the web UI for the Master.
+
+. Test what happens when nodes or services disappear.
++
+With a three-node cluster like you have configured, things will not be very resilient.
+Still, you can test what happens when the primary Master or a RegionServer disappears, by killing the processes and watching the logs.
+
+

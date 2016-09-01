@@ -1,0 +1,2195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Asciidoctor 1.5.4">
+<meta name="author" content="湖南天云魔方数据科技有限公司">
+<title>Apache HBase&#8482; 参考指南</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
+<link rel="stylesheet" href="./asciidoctor.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.5.0/css/font-awesome.min.css">
+</head>
+<body class="book toc2 toc-left">
+<div id="header">
+<h1>Apache HBase&#8482; 参考指南</h1>
+<div class="details">
+<span id="author" class="author">湖南天云魔方数据科技有限公司</span><br>
+<span id="email" class="email">&lt;<a href="mailto:support@tcloudata.com">support@tcloudata.com</a>&gt;</span><br>
+<span id="revnumber">version 1</span>
+</div>
+<div id="toc" class="toc2">
+<div id="toctitle">目录</div>
+<ul class="sectlevel0">
+<li><a href="#getting_started">快速开始</a>
+<ul class="sectlevel1">
+<li><a href="#_介绍">1. 介绍</a></li>
+<li><a href="#_连接到hbase">2. 连接到HBase</a></li>
+<li><a href="#_显示hbase_shell_帮助文本">3. 显示HBase Shell 帮助文本</a></li>
+<li><a href="#_创建表">4. 创建表</a></li>
+<li><a href="#_列出表的基本信息">5. 列出表的基本信息</a></li>
+<li><a href="#_给表添加数据">6. 给表添加数据</a></li>
+<li><a href="#_一次获取表所有数据">7. 一次获取表所有数据</a></li>
+<li><a href="#_获取单行数据">8. 获取单行数据</a></li>
+<li><a href="#_禁用表">9. 禁用表</a></li>
+<li><a href="#_删除表">10. 删除表</a></li>
+<li><a href="#_退出_hbase_shell">11. 退出 HBase Shell</a></li>
+<li><a href="#_检查hdfs上的hbase目录">12. 检查HDFS上的HBase目录</a></li>
+<li><a href="#_通过浏览器访问hbase">13. 通过浏览器访问HBase</a></li>
+</ul>
+</li>
+<li><a href="#_架构">架构</a>
+<ul class="sectlevel1">
+<li><a href="#arch.comps">14. HBase 组件</a></li>
+<li><a href="#arch.region">15. Regions</a></li>
+<li><a href="#arch.hmaster">16. HBase Master</a></li>
+<li><a href="#_zookeeper_协调者">17. Zookeeper: 协调者</a></li>
+<li><a href="#_各组件如何协同">18. 各组件如何协同</a></li>
+<li><a href="#_hbase首次读写">19. HBase首次读写</a></li>
+<li><a href="#_hbase_meta_表">20. HBase META 表</a></li>
+<li><a href="#_regionserver_组件">21. RegionServer 组件</a></li>
+<li><a href="#_hbase_写步骤">22. HBase 写步骤</a></li>
+<li><a href="#_memstore">23. MemStore</a></li>
+<li><a href="#_hbase_region_flush">24. HBase Region Flush</a></li>
+<li><a href="#_hbase_hfile">25. HBase HFile</a></li>
+<li><a href="#_hbase_读合并">26. HBase 读合并</a></li>
+<li><a href="#_hbase_合并">27. HBase 合并</a></li>
+<li><a href="#_region_切分">28. Region 切分</a></li>
+<li><a href="#_读负载均衡">29. 读负载均衡</a></li>
+<li><a href="#_数据复制">30. 数据复制</a></li>
+</ul>
+</li>
+<li><a href="#datamodel">数据模型</a>
+<ul class="sectlevel1">
+<li><a href="#conceptual.view">31. 逻辑模型</a></li>
+<li><a href="#physical.view">32. 物理模型</a></li>
+<li><a href="#_表">33. 表</a></li>
+<li><a href="#_行键">34. 行键</a></li>
+<li><a href="#columnfamily">35. 列族</a></li>
+<li><a href="#_单元格">36. 单元格</a></li>
+<li><a href="#_数据模型的操作">37. 数据模型的操作</a>
+<ul class="sectlevel2">
+<li><a href="#_get">37.1. Get</a></li>
+<li><a href="#_put">37.2. Put</a></li>
+<li><a href="#scan">37.3. Scan</a></li>
+<li><a href="#_delete">37.4. Delete</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#shell">HBase Shell 基本命令</a>
+<ul class="sectlevel1">
+<li><a href="#_表管理命令">38. 表管理命令</a>
+<ul class="sectlevel2">
+<li><a href="#_list">38.1. list</a></li>
+<li><a href="#_create">38.2. create</a></li>
+<li><a href="#_describe">38.3. describe</a></li>
+<li><a href="#_disable_和_disable_all">38.4. disable 和 disable_all</a></li>
+<li><a href="#_enable_和_enable_all">38.5. enable 和 enable_all</a></li>
+<li><a href="#_drop_和_drop_all">38.6. drop 和 drop_all</a></li>
+<li><a href="#_exists">38.7. exists</a></li>
+<li><a href="#_is_disabled_和_is_enabled">38.8. is_disabled 和 is_enabled</a></li>
+<li><a href="#_show_filter">38.9. show_filter</a></li>
+<li><a href="#_alter">38.10. alter</a></li>
+<li><a href="#_alter_async_和_alter_status">38.11. alter_async 和 alter_status</a></li>
+</ul>
+</li>
+<li><a href="#_数据操作命令">39. 数据操作命令</a>
+<ul class="sectlevel2">
+<li><a href="#_count">39.1. count</a></li>
+<li><a href="#_delete_2">39.2. delete</a></li>
+<li><a href="#_deleteall">39.3. deleteall</a></li>
+<li><a href="#_get_2">39.4. get</a></li>
+<li><a href="#_put_2">39.5. put</a></li>
+<li><a href="#_scan">39.6. scan</a></li>
+<li><a href="#_truncate_和_truncate_preserve">39.7. truncate 和 truncate_preserve</a></li>
+<li><a href="#_get_counter">39.8. get_counter</a></li>
+</ul>
+</li>
+<li><a href="#hbase.shell.noninteractive">40. HBase Shell in OS Scripts</a>
+<ul class="sectlevel2">
+<li><a href="#_checking_for_success_or_failure_in_scripts">40.1. Checking for Success or Failure In Scripts</a></li>
+</ul>
+</li>
+<li><a href="#_read_hbase_shell_commands_from_a_command_file">41. Read HBase Shell Commands from a Command File</a></li>
+<li><a href="#_passing_vm_options_to_the_shell">42. Passing VM Options to the Shell</a></li>
+<li><a href="#_shell_tricks">43. Shell Tricks</a>
+<ul class="sectlevel2">
+<li><a href="#_table_variables">43.1. Table variables</a></li>
+<li><a href="#__em_irbrc_em">43.2. <em>irbrc</em></a></li>
+<li><a href="#_log_data_to_timestamp">43.3. LOG data to timestamp</a></li>
+<li><a href="#tricks.pre-split">43.4. Pre-splitting tables with the HBase Shell</a></li>
+<li><a href="#_debug">43.5. Debug</a></li>
+<li><a href="#_commands">43.6. Commands</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<div>
+  <a href="http://hbase.apache.org"><img src="images/hbase_logo_with_orca.png" alt="Apache HBase Logo" /></a>
+</div>
+</div>
+</div>
+<h1 id="getting_started" class="sect0"><a class="anchor" href="#getting_started"></a>快速开始</h1>
+<div class="sect1">
+<h2 id="_介绍"><a class="anchor" href="#_介绍"></a>1. 介绍</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p><a href="#quickstart">快速开始</a> 通过对HBase的一些基本操作的介绍，让您对HBase有一个直观的理解。在快速开始之前，您应该首先安装了 TDP 产品。</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_连接到hbase"><a class="anchor" href="#_连接到hbase"></a>2. 连接到HBase</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>登陆到您安装有 TDP 产品的任意服务器，运行 <code>hbase shell</code> 即可连接到HBase集群中。 当您启动HBase Shell并连接到HBase集群时，他会打印集群版本信息以及一些使用方法。
+HBase Shell 提示符以 <code>&gt;</code> 结尾。</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>$ hbase shell
+hbase(main):001:0&gt;</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_显示hbase_shell_帮助文本"><a class="anchor" href="#_显示hbase_shell_帮助文本"></a>3. 显示HBase Shell 帮助文本</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>在上述提示符下，输入 <code>help</code> 并回车，可以看到一些基本用法，并同时给出了这些基本用法的例子。
+注意那些表名，列族名，列名都是引号引用。</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_创建表"><a class="anchor" href="#_创建表"></a>4. 创建表</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>使用 <code>create</code> 命令可以创建一个新表，创建表时需要指定表的名字以及列族的名字。</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>hbase(main):001:0&gt; create 'test', 'cf'
+0 row(s) in 0.4170 seconds
+
+=&gt; Hbase::Table - test</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_列出表的基本信息"><a class="anchor" href="#_列出表的基本信息"></a>5. 列出表的基本信息</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>使用 <code>list</code> 命令来列出表的基本信息</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>hbase(main):002:0&gt; list 'test'
+TABLE
+test
+1 row(s) in 0.0180 seconds
+
+=&gt; ["test"]</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_给表添加数据"><a class="anchor" href="#_给表添加数据"></a>6. 给表添加数据</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>为了给表添加数据，使用 <code>put</code> 命令。</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>hbase(main):003:0&gt; put 'test', 'row1', 'cf:a', 'value1'
+0 row(s) in 0.0850 seconds
+
+hbase(main):004:0&gt; put 'test', 'row2', 'cf:b', 'value2'
+0 row(s) in 0.0110 seconds
+
+hbase(main):005:0&gt; put 'test', 'row3', 'cf:c', 'value3'
+0 row(s) in 0.0100 seconds</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>上述例子，我们插入了三个值。
+第一个插入的值在行键为 <code>row</code>，列名为 <code>cf:a</code> 的单元，其单元内容为 <code>value1</code> 。
+注意这里的列名 <code>cf:a</code> ，它是由 <code>&lt;column family&gt;:&lt;column name&gt;</code> 形式组成，其中 <code>&lt;column family&gt;</code> 表示列族，在创建表的时候就已经确定了，这里为 <code>cf</code> , <code>&lt;column name&gt;</code> 表示这个列的名字，一般在插入值的时候来确定。</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_一次获取表所有数据"><a class="anchor" href="#_一次获取表所有数据"></a>7. 一次获取表所有数据</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>获取HBase表数据的一个办法是使用 <code>scan</code> 命令，默认情况下，他会扫描表的所有数据并输出，你可以通过设置扫描属性的方式来限定扫描的行数。</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>hbase(main):006:0&gt; scan 'test'
+ROW                                      COLUMN+CELL
+ row1                                    column=cf:a, timestamp=1421762485768, value=value1
+ row2                                    column=cf:b, timestamp=1421762491785, value=value2
+ row3                                    column=cf:c, timestamp=1421762496210, value=value3
+3 row(s) in 0.0230 seconds</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_获取单行数据"><a class="anchor" href="#_获取单行数据"></a>8. 获取单行数据</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>可以通过 <code>get</code> 命令来一次获取单行数据。</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>hbase(main):007:0&gt; get 'test', 'row1'
+COLUMN                                   CELL
+ cf:a                                    timestamp=1421762485768, value=value1
+1 row(s) in 0.0350 seconds</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_禁用表"><a class="anchor" href="#_禁用表"></a>9. 禁用表</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>如果你想删除一张表，或者是修改它的某些设置，或者是别的一些情况，一般我们需要先用 <code>disable</code> 禁用表。完成操作后，再用 <code>enable</code> 启用表。I</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>hbase(main):008:0&gt; disable 'test'
+0 row(s) in 1.1820 seconds
+
+hbase(main):009:0&gt; enable 'test'
+0 row(s) in 0.1770 seconds</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_删除表"><a class="anchor" href="#_删除表"></a>10. 删除表</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>为了删除一张表，可以使用 <code>drop</code> 命令。</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>hbase(main):011:0&gt; drop 'test'
+0 row(s) in 0.1370 seconds</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_退出_hbase_shell"><a class="anchor" href="#_退出_hbase_shell"></a>11. 退出 HBase Shell</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>要退出HBase Shell 环境，使用 <code>quit</code> 命令即可。</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_检查hdfs上的hbase目录"><a class="anchor" href="#_检查hdfs上的hbase目录"></a>12. 检查HDFS上的HBase目录</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>默认情况下，HBase的所有数据保存在HDFS的 <em>/hbase/</em> 目录。您可以使用 <code>hdfs dfs</code> 命令来列出这些目录。</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>$ ./bin/hadoop fs -ls /hbase
+Found 7 items
+drwxr-xr-x   - hbase users          0 2015-06-25 18:58 /hbase/.tmp
+drwxr-xr-x   - hbase users          0 2015-06-25 21:49 /hbase/WALs
+drwxr-xr-x   - hbase users          0 2015-06-25 18:48 /hbase/corrupt
+drwxr-xr-x   - hbase users          0 2015-06-25 18:58 /hbase/data
+-rw-r--r--   3 hbase users         42 2015-06-25 18:41 /hbase/hbase.id
+-rw-r--r--   3 hbase users          7 2015-06-25 18:41 /hbase/hbase.version
+drwxr-xr-x   - hbase users          0 2015-06-25 21:49 /hbase/oldWALs</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_通过浏览器访问hbase"><a class="anchor" href="#_通过浏览器访问hbase"></a>13. 通过浏览器访问HBase</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>您有也可以通过访问HBase的Web UI来查看HBase集群的相关信息。按照之前我们安装 TDP的例子。
+If everything is set up correctly, you should be able to connect to the UI for the Master
+<code><a href="http://node-a.example.com:16010/" class="bare">http://node-a.example.com:16010/</a></code> or the secondary master at <code><a href="http://node-b.example.com:16010/" class="bare">http://node-b.example.com:16010/</a></code>
+for the secondary master, using a web browser.
+If you can connect via <code>localhost</code> but not from another host, check your firewall rules.
+You can see the web UI for each of the RegionServers at port 16030 of their IP addresses, or by
+clicking their links in the web UI for the Master.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Test what happens when nodes or services disappear.</p>
+<div class="paragraph">
+<p>With a three-node cluster like you have configured, things will not be very resilient.
+Still, you can test what happens when the primary Master or a RegionServer disappears, by killing the processes and watching the logs.</p>
+</div>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<h1 id="_架构" class="sect0"><a class="anchor" href="#_架构"></a>架构</h1>
+<div class="sect1">
+<h2 id="arch.comps"><a class="anchor" href="#arch.comps"></a>14. HBase 组件</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>从物理角度来看，HBase有三种类型的服务器组成Maser/Slave结构。
+RegionServer 提供数据的读和写，当访问数据时，客户端直接和RegionServer通信。
+Region分配，DDL语句操作则由HBase Master(HMaster)来处理。而作为HDFS的Zookeeper组件则用来维护HBase集群的状态。</p>
+</div>
+<div class="paragraph">
+<p>RegionServer管理的数据最终以文件的形式存储在HDFS上。RegionServer通过和HDFS DataNode协作，使得数据本地化(把数据推到靠近需要的位置)。因此HBase发生写操作时，是将数据写入本地，但是一旦Region被移走，则需要等待 compaction 操作后才能实现本地化。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_arch.png" alt="hbase arch">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="arch.region"><a class="anchor" href="#arch.region"></a>15. Regions</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>HBase 表依据行键按照水平划分到多个"Regions"中。一个region包含的起止行键的所有行信息。多个Region分到到集群中的某一个节点上，称为"RegionServer"，"RegionServer" 处理数据的读写操作。一个RegionSever可以包含1000个左右的Region。
+每个region默认1GB大小。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_regions.png" alt="hbase regions">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="arch.hmaster"><a class="anchor" href="#arch.hmaster"></a>16. HBase Master</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>HBase Master用来处理Region分配，DDL语句执行。
+一个master用来：</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>和RegionServer协同</p>
+<div class="ulist">
+<ul>
+<li>
+<p>启动时分配region，恢复或均衡负载时重新分配region</p>
+</li>
+<li>
+<p>监控集群内所有的RegionServer实例（监听来自Zookeeper的通知）</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>管理功能</p>
+<div class="ulist">
+<ul>
+<li>
+<p>创建，删除，更新表的功能接口</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_hmaster.png" alt="hbase hmaster">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_zookeeper_协调者"><a class="anchor" href="#_zookeeper_协调者"></a>17. Zookeeper: 协调者</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>HBase使用Zookeeper充当集群的分布式协调者用来维护服务状态。Zookeeper维护哪些服务是在线可用的，哪些是离线或不可用的，同时发出通知。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_zookeeper.png" alt="hbase zookeeper">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_各组件如何协同"><a class="anchor" href="#_各组件如何协同"></a>18. 各组件如何协同</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Zookeeper用来协调和共享集群中个成员组件的状态。RegionServer和活跃HMaster通过会话连接到Zookeeper。
+Zookeeper通过心跳为活跃会话维护短暂节点。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_together.png" alt="hbase together">
+</div>
+</div>
+<div class="paragraph">
+<p>每个RegionServer创建一个短暂节点。HMaster监控这些节点用来发现有效的RegionServer服务器，同时监控这些节点用户发现失效的节点。
+HMaster采用竞争方式创建短暂节点，Zookeeper检测到第一个短暂节点后，选择它为唯一活跃Master节点。活跃的HMaster发送心跳给Zookeeper，Zookeeper据此来判断HMaster是否失效。非活跃HMaster监听活跃HMaster失败的消息。</p>
+</div>
+<div class="paragraph">
+<p>如果一个RegionServer或者活跃HMaster不再发送心跳，那么会话就会过期，同时对应的短暂节点会被删除。监听者会收到删除节点的通知。非活跃HMaster监听到活跃HMaster失效后，它变成为活跃HMaster。</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_hbase首次读写"><a class="anchor" href="#_hbase首次读写"></a>19. HBase首次读写</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>HBase有一个特别的表，名为 <code>META</code> ，它记录了集群中region的位置信息。而Zookeeper则用来存储 <code>META</code> 表的位置信息。</p>
+</div>
+<div class="paragraph">
+<p>客户端首次向HBase服务发起读写请求过程如下：</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>客户端从Zookeeper处获得拥有 <code>META</code> 表的RegionServer。</p>
+</li>
+<li>
+<p>客户端查询 <code>.META.</code> 服务获得拥有它想查询的记录范围数据的RegionServer。客户端存储 <code>META</code> 表的位置信息。</p>
+</li>
+<li>
+<p>从对应的RegionServer获得记录</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>对于以后的查询，客户端使用缓存来获得 <code>META</code> 表的位置以及之前记录的位置，因此它不再需要去查询 <code>META</code> 表。除非因为region被移走或者HMaster失效，那么客户端需要重新发起查询并更新缓存。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_rw.png" alt="hbase rw">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_hbase_meta_表"><a class="anchor" href="#_hbase_meta_表"></a>20. HBase META 表</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>META 表保存系统所中所有的region列表</p>
+</li>
+<li>
+<p>META表类似一个B树</p>
+</li>
+<li>
+<p>META表结构如下：</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Key: region start key,region id</p>
+</li>
+<li>
+<p>Values: RegionServer</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_meta.png" alt="hbase meta">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_regionserver_组件"><a class="anchor" href="#_regionserver_组件"></a>21. RegionServer 组件</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>一个RegionSever运行在HDFS的DataNode上，拥有以下组件：</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>WAL: 预写日志(Write Ahead Log, WAL)是一个文件，用来存储哪些还没有来得及之持久化的数据；用户服务崩溃是数据恢复。</p>
+</li>
+<li>
+<p>BlockCache: 读缓存。在内存中存储那些频繁读取的数据。采取LRU(Least Reccent Used)算法进行数据淘汰。</p>
+</li>
+<li>
+<p>MemStore: 写缓存。存储那些还没有写入到磁盘的数据。每个Region的每个列族有一个MemStore。</p>
+</li>
+<li>
+<p>HFile: HFile以键值对格式存储记录到磁盘上。</p>
+</li>
+</ul>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_regionservercomps.png" alt="hbase regionservercomps">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_hbase_写步骤"><a class="anchor" href="#_hbase_写步骤"></a>22. HBase 写步骤</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>当客户端发起一个Put请求时，首先写WAL。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_write1.png" alt="hbase write1">
+</div>
+</div>
+<div class="paragraph">
+<p>一旦数据写入到WAL，它会保存到MemStore上。然后put请求收到写入确认的消息。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_write2.png" alt="hbase write2">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_memstore"><a class="anchor" href="#_memstore"></a>23. MemStore</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>MemStore在内存中存储排序的键值对数据，它和保存在HFile上对应的文件是相同的。每个列族有一个MemStore。当有新数据进来时，MemStore会更新排序。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_memstore.png" alt="hbase memstore">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_hbase_region_flush"><a class="anchor" href="#_hbase_region_flush"></a>24. HBase Region Flush</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>当MemStore积累了足够多的数据后，整个数据会写入到一个新的HFile文件中，并保存到HDFS上。每个列族HBase使用多个HFile来存储数据。这些文件总是在MemStore刷入到磁盘时创建。</p>
+</div>
+<div class="paragraph">
+<p>这就是HBase的列族为什么有数量限制的一个原因。每一个列族一个MemStore，当一个满了，就刷到磁盘上。它也保存了最后写入的序列数，这样系统就知道到目前为止持久化了设么。</p>
+</div>
+<div class="paragraph">
+<p>最大的序列数作为一个元数据字段保存在HFile里，用来反射持久化在哪里结束以及从哪里继续。当一个region启动时，它读取序列数并当做新的Edit的序列数。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_regionflush.png" alt="hbase regionflush">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_hbase_hfile"><a class="anchor" href="#_hbase_hfile"></a>25. HBase HFile</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>存储在HFile文件的里的数据包含了已排序的键值对。当MemStore累计了足够数据时，整个排序的键值对数据会写入存储在HDFS上的新HFile文件，这些是一个顺序写操作，因此很快。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_hfile.png" alt="hbase hfile">
+</div>
+</div>
+<div class="paragraph">
+<p>一个HFile文件包含一个多层索引，这使得HBase无需获取整个文件就可以找到需要的数据。多层索引类似一颗B+树：</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>键值对按升序存储</p>
+</li>
+<li>
+<p>索引指针通过行键指向键值，他们封装在64K的块里。</p>
+</li>
+<li>
+<p>每一个块有自己的叶子索引</p>
+</li>
+<li>
+<p>每个块的最后一个key保存在中间索引上</p>
+</li>
+<li>
+<p>根索引指向中间索引</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>文件尾部指向元数据块。尾部同时还包含了比如布隆(bloom)过滤和时间范围等信息。布隆过滤协助跳过哪些没有包含特定行键的文件。时间范围信息对跳过哪些不在时间范围之内的查询起到帮助作用。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_hfilearch.png" alt="hbase hfilearch">
+</div>
+</div>
+<div class="paragraph">
+<p>HFile的索引在打开HFile时加入到内存中，并一直保存，这使得查询性能更高。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_hfileindex.png" alt="hbase hfileindex">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_hbase_读合并"><a class="anchor" href="#_hbase_读合并"></a>26. HBase 读合并</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>我们已经知道，行记录的键值对可能在多个位置，行单元保存在HFile文件里。MemStore存储了最近更新的单元。而BlockCache则有最近读取的单元。那么，当读取以一个整行记录时，系统是如何协调这些组件来返回一个完整的且最新的记录呢？答案是读合并(Read Merge)，读合并使用以下步骤来合并来自HFile、MemStore、BlockCache的键值数据：</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>首先，扫描器查找BlockCache里的行单元数据</p>
+</li>
+<li>
+<p>接着，扫描器查询MemStore，这里包含了最近的更改</p>
+</li>
+<li>
+<p>如果扫描器没有在MemStore和BlockCache都没有找到行单元信息，那么HBase将使用BlockCache索引以及布隆过滤来加载HFile文件到内存中，HFile应该包含了需要查询的数据。</p>
+</li>
+</ol>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_readmerge1.png" alt="hbase readmerge1">
+</div>
+</div>
+<div class="paragraph">
+<p>按照上面的讨论，我们知道每个MemStore可能有多个HFile文件，那就意味着当读时，则需要查询多个文件，这可能导致性能低下，这种情况我们称为读放大(read amplification)。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_readmerge2.png" alt="hbase readmerge2">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_hbase_合并"><a class="anchor" href="#_hbase_合并"></a>27. HBase 合并</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>HBase 自动把抓取多个小HFile文件，然后合并写入到几个更大的HFile文件里。这个过程我们称为小合并(Minor Compaction)。小合并减少了HFile文件的数量，提升了查询性能。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_minorcompact.png" alt="hbase minorcompact">
+</div>
+</div>
+<div class="paragraph">
+<p>与小合并相对应的是大合并(Major Compaction)，它指的把在一个region上的属于一个列族的所有HFile文件合并成一个大的HFile文件，在这个过程中，它会丢弃已经删除的或过期的单元，这提升了读取性能；然后，因为大合并需要重写所有的HFile文件，因此在这个过程中，会有大量的磁盘I/O和网络传输发生。这我们称为写放大(write amplification)。</p>
+</div>
+<div class="paragraph">
+<p>大合并可以设置为定期启动运行。考虑到写放大效应，大合并一般设置在周末或夜晚进行。
+大合并同时也会把那些在远程节点的数据抓取到本地节点上来。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_majorcompact.png" alt="hbase majorcompact">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_region_切分"><a class="anchor" href="#_region_切分"></a>28. Region 切分</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>一开始，每个表只有一个region。随着region的膨胀，它切分成两个子region。该过程完成迅速，因为系统知识简单的为新region创建两个引用文件，每个只持有原始region一半的内容。</p>
+</div>
+<div class="paragraph">
+<p>RegionServer通过在父region内创建切分目录来完成。之后，它会关闭该region，这样它就不再接受任何请求。</p>
+</div>
+<div class="paragraph">
+<p>然后RegionSever开始准备生成新的子region（多线程），通过在切分目录内设置必要的文件结构来完成。其中包括新的region目录以及引用文件。如果该过程成功完成，它就会把两个新的region目录移到表目录中。 META 表会更新更新，指明该region已经被切分，以及子region分别的名称和位置等信息，这就避免了它被意外的重新打开。</p>
+</div>
+<div class="paragraph">
+<p>现在两个子region已经就绪，同时将会被同一个RegionSever并行打开。现在需要更新META表，将这两个region作为可用region对待&#8212;&#8203;看起来就像是完全独立的一样。</p>
+</div>
+<div class="paragraph">
+<p>原始region最终会被清除，意味着它会从META表中删除，磁盘上它的所有文件也会被删除。最后，HMaster会收到该切分的通知，通过负载均衡等将这些新的region移动到其他服务器上。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_regionsplit.png" alt="hbase regionsplit">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_读负载均衡"><a class="anchor" href="#_读负载均衡"></a>29. 读负载均衡</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Region切分最初发生在同一个RegionServer上，但处于负载均衡的目的，HMastre会把新的region移动到其他服务器上。这就导致RegionSever需要从远程HDFS节点上获取数据，知道大合并把这些数据文件移到本地节点。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_readhb.png" alt="hbase readhb">
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_数据复制"><a class="anchor" href="#_数据复制"></a>30. 数据复制</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>HBase的数据复制依赖于HDFS的数据副本功能。HDFS会复制WAL以及HFile块。当数据写入到HDFS时，本地会写一份拷贝，然后复制到第二个节点，然后复制一份拷贝到本地后，接着复制到第三个节点。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/hbase_datarep.png" alt="hbase datarep">
+</div>
+</div>
+</div>
+</div>
+<h1 id="datamodel" class="sect0"><a class="anchor" href="#datamodel"></a>数据模型</h1>
+<div class="openblock partintro">
+<div class="content">
+<div class="paragraph">
+<p>HBase 以“表”为结构组织数据，表有”行“和”列“，这和关系数据库(RDBMS)的相关术语相重叠，但是他们并不相似，你可以认为HBase是一个多维有序map。</p>
+</div>
+<div class="dlist">
+<div class="title">HBase 数据模型相关术语</div>
+<dl>
+<dt class="hdlist1">表</dt>
+<dd>
+<p>HBase的表包含有多行。表名的数据类型为string。</p>
+</dd>
+<dt class="hdlist1">行</dt>
+<dd>
+<p> HBase中的行是有行键(row key)以及一个或多个列及对应的列值组成。 行依据行键按照字母排序。行键没有数据类型，以byte[](字节组)存储。
+基于上述原因，行键的设计非常重要。</p>
+</dd>
+<dt class="hdlist1">Column</dt>
+<dd>
+<p>HBase中的列有列族(column family)以及列限定符(column qualifier)组成，列族和列限定符用`:`分隔。A</p>
+</dd>
+<dt class="hdlist1">列族(Column Family)</dt>
+<dd>
+<p>行中数据以列族分组。各行数据拥有的列族必须相同。但是并不 是每个列族中都需要有数据。列族名的数据类型为string。</p>
+</dd>
+<dt class="hdlist1">列限定符(Column Qualifier)</dt>
+<dd>
+<p>列限定符附加到列族后面用来提供某一块数据的索引。
+假设列族为 <code>content</code>,一个列限定符可以是 <code>content:html</code> ，另外可以是 <code>content:pdf</code> 。
+尽管列族是创建表是就固定好了的，但是列限定符确实可变的，而且不要求所有行有相同的列限定符。</p>
+</dd>
+<dt class="hdlist1">单元格(Cell)</dt>
+<dd>
+<p>单元格是行、列族以及列限定符的组合。单元格中存储的数据成为单元格的值，该值包含一个时间戳，用来表达值的版本</p>
+</dd>
+<dt class="hdlist1">时间戳(Timestamp)</dt>
+<dd>
+<p>单元格的值可以有不同版本。各个版本由版本号区分。默认版本号 为单元格值被写入时的时间戳。</p>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="conceptual.view"><a class="anchor" href="#conceptual.view"></a>31. 逻辑模型</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>HBase可以理解为是一个稀疏的、长期存储的、多维度的和排序的映射表，表中的每一行可以有不同的列。与关系型数据库不同，关系型数据库要求表在创建时明确定义列以及列的数据类型，而HBase的同一个表的记录可以有不同的列。</p>
+</div>
+<div class="paragraph">
+<p>HBase中最基本的单位是列，一个列或多列构成了行，行有行键，每一行的行键都是唯一的，相同行键的插入操作被认为是对同一行的操作，也就是说如果做了两次写入操作，而行键是同一个，那么后面的操作可以认为是对改行的某些列的更新操作。</p>
+</div>
+<div class="paragraph">
+<p>HBase中的一个表有果敢行，每行有很多列，列中的值有多个版本，每个版本的值称为一个单元格，每个单元存储的是不同时刻该列的值。</p>
+</div>
+<div class="paragraph">
+<p>以下表为例，表名为 <code>webtable</code> ，包含了三个列族：<code>contents</code> , <code>anchor</code> 和 <code>people</code> 。在该实例中，列族 <code>anchor</code> 有两个列( <code>anchor:cssnsi.com</code> 和 <code>anchor:my.look.ca</code>)，列族 <code>contents</code> 只有一个列 <code>contents:html</code> ，列族 <code>people</code> 也仅有一个列 <code>people:author</code> 。</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 1. 表 <code>webtable</code></caption>
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 20%;">
+<col style="width: 20%;">
+<col style="width: 20%;">
+<col style="width: 20%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">行键(RowKey)</th>
+<th class="tableblock halign-left valign-top">时间戳(TimeStamp)</th>
+<th class="tableblock halign-left valign-top">列族 <code>contents</code></th>
+<th class="tableblock halign-left valign-top">列族 <code>anchor</code></th>
+<th class="tableblock halign-left valign-top">列族 <code>people</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"com.cnn.www"</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">t9</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">anchor:cnnsi.com = "CNN"</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"com.cnn.www"</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">t8</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">anchor:my.look.ca = "CNN.com"</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"com.cnn.www"</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">t6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">contents:html = "&lt;html&gt;&#8230;&#8203;"</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"com.cnn.www"</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">t5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">contents:html = "&lt;html&gt;&#8230;&#8203;"</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"com.cnn.www"</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">t3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">contents:html = "&lt;html&gt;&#8230;&#8203;"</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>表中单元格为空的并不占空间，实际上在HBase空的单元格并不存在。这使得HBase看上去是一个“稀疏表”。用表格的方式来描述HBase只是一种方法，我们也可以用别的方式来描述，比如JSON格式。</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-json" data-lang="json">{
+  "com.cnn.www": {
+    contents: {
+      t6: contents:html: "&lt;html&gt;..."
+      t5: contents:html: "&lt;html&gt;..."
+      t3: contents:html: "&lt;html&gt;..."
+    }
+    anchor: {
+      t9: anchor:cnnsi.com = "CNN"
+      t8: anchor:my.look.ca = "CNN.com"
+    }
+    people: {}
+  }
+  "com.example.www": {
+    contents: {
+      t5: contents:html: "&lt;html&gt;..."
+    }
+    anchor: {}
+    people: {
+      t5: people:author: "John Doe"
+    }
+  }
+}</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="physical.view"><a class="anchor" href="#physical.view"></a>32. 物理模型</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>虽然在逻辑模型中，表可以被看成一个稀疏的行的集合。但在物理上，表是按照列分开存储的。HBase的列是按照列族分组的, HFile是面向列的，存放行的不同列的物理文件，一个列族的数据存放在多个HFile中，族中的是一个列族的数据会被同一个Region管理，物理上存放在一起。这种物理上存储的不同可以从下面的物理视图中直观可以看出.</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 2. 列族 <code>anchor</code></caption>
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">行键</th>
+<th class="tableblock halign-left valign-top">时间戳</th>
+<th class="tableblock halign-left valign-top">列族 <code>anchor</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"com.cnn.www"</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">t9</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>anchor:cnnsi.com = "CNN"</code></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"com.cnn.www"</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">t8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>anchor:my.look.ca = "CNN.com"</code></p></td>
+</tr>
+</tbody>
+</table>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 3. 列族 <code>contents</code></caption>
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">行键</th>
+<th class="tableblock halign-left valign-top">时间戳</th>
+<th class="tableblock halign-left valign-top">列族 <code>contents:</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"com.cnn.www"</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">t6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">contents:html = "&lt;html&gt;&#8230;&#8203;"</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"com.cnn.www"</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">t5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">contents:html = "&lt;html&gt;&#8230;&#8203;"</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"com.cnn.www"</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">t3</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">contents:html = "&lt;html&gt;&#8230;&#8203;"</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>在上面的逻辑模型中，空的单元格在物理上是不存储的，因此，若一个请求为要获取t8时间上的 <code>contents:html</code> ，他的结果就是空。相类似，若请求为获取t9时间的 <code>anchor:my.look.ca</code> ，结果也为空。但是，如果不指明时间，将会返回最新时间的行。比如如果要获取行键为 <code>com.cnn.www</code> 的各列的值，如果没有指明时间戳，返回的结果是t6下的 <code>contents:html</code> ， t9下的 <code>anchor:cnnsi.com</code> 和t8下的 <code>anchor:my.look.ca</code> 所对应的值。</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_表"><a class="anchor" href="#_表"></a>33. 表</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>在HBase中数据以表的形式存储。使用表的主要原因是把某些列组织起来一些访问，同一个表中的数据通常是相关的，通过列族进一步把一些列组织在一起进行访问。</p>
+</div>
+<div class="paragraph">
+<p>HBase 列式存储允许用户存储大量的信息到相同的表中，而在RDBMS模型中，大量信息则需要切分成多个表存储。通常的数据库规范不适合HBase，因此HBase中表的数量相对较少。</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_行键"><a class="anchor" href="#_行键"></a>34. 行键</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>行键，集Rowkey，是HBase中最为重要的概念之一。行键是不可分割的字节数组。行键按照字典排序由低到高存储在表中，以一个空的数组来标识表空间的起始或者结尾。下面的例子展示了行键的排列规则。</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase(main):002:0&gt; scan 'test1'
+ROW              COLUMN+CELL
+ r1              column=cf1:c1, timestamp=499999999999999999, value=v1
+ r1              column=cf1:c2, timestamp=499999999999999999, value=v2
+ r1              column=cf2:c3, timestamp=499999999999999999, value=v3 <i class="conum" data-value="1"></i><b>(1)</b>
+ r11             column=cf1:c1, timestamp=1467705199706, value=kkkk 		<i class="conum" data-value="2"></i><b>(2)</b>
+ r2              column=cf1:c1, timestamp=111111, value=v1						<i class="conum" data-value="3"></i><b>(3)</b>
+ r2              column=cf2:c3, timestamp=111111, value=v3
+ r4              column=cf1:c1, timestamp=111111, value=v1
+ r4              column=cf1:c2, timestamp=111111, value=v2
+ r4              column=cf2:c3, timestamp=111111, value=v3
+3 row(s) in 0.3650 seconds</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>注意&lt;1&gt;,&lt;2&gt;和&lt;3&gt;的排序，在字典序中，数据按照二进制字节从左至右逐一对比形成最终的次序。因为 <code>r1</code> 小于 <code>r2</code> 所有，无论 <code>r1</code> 后面是否有字符，都会排在 <code>r2</code> 的前面。</p>
+</div>
+<div class="paragraph">
+<p>在HBase中行键是唯一的索引，为了高效检索数据，应该仔细设计行键以获得最高的查询性能：首先行键被冗余存储，所以长度不宜过长，过长的行键会占用大量的空间同时会降低检索效率；其次行键应该尽量分布均匀，这样不会产生热点现象；最后是行键唯一原则，必须在设计上保证其唯一性。</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="columnfamily"><a class="anchor" href="#columnfamily"></a>35. 列族</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>HBase中的列族是一些列的集合。一个列族中所有列成员有着相同的前缀。</p>
+</div>
+<div class="paragraph">
+<p>在物理上，一个列族的成员在文件系统上是存储在一起的。因为存储优化都只针对列族级别的，这就意味着，一个列族的所有成员是通过相同的方式访问的。</p>
+</div>
+<div class="paragraph">
+<p>在创建表时至少要指定一个列族，新的列族可以随后按需、动态加入，但是修改列族需要先停用表。应该把经常一起查询的列放在一个列族中，合理划分列族将减少查询时加载到缓存的数据，提高查询的效率，但也不要有太多的列族，因为跨列族访问是非常低效的。</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_单元格"><a class="anchor" href="#_单元格"></a>36. 单元格</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>HBase中的单元格由 <em>{行键, 列族, 列限定符, 时间戳}</em> 来唯一确定。单元格的内容是不可分割的字节数组。每个单元格保存着同一份数据的多个版本。不同时间版本的数据按照时间顺序倒序排列。时间戳是64位的整数，可以由客户端在写入数据时赋值，也可以由RegionServer自动赋值。</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_数据模型的操作"><a class="anchor" href="#_数据模型的操作"></a>37. 数据模型的操作</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>HBase对数据模型的4个主要操作为Get, Put, Scan, 和 Delete。通过对HTable实例进行操作，用户可以完成向HBase存储和检索数据，以及删除无效数据之类的操作。</p>
+</div>
+<div class="paragraph">
+<p>所有修改数据的操作都要保证行级别的原子性，多个而客户端或线程对同一行的读写操作都不会影响该行数据的原子性，那么多到最新的数据，要么等待系统允许写入改行的修改。</p>
+</div>
+<div class="paragraph">
+<p>创建HTable实例是有代价的。每个实例都需要扫描META表，以检查该表是否存在，是否可用。此外还有一些其他操作，这些检查和操作导致实例调用非常耗时。因此，推荐用户只创建一次HTable实例，而且是每个线程创建一个，如果用户需要使用多个HTable实例，应考虑使用HTablePool类，它可以复用多个HTable实例。</p>
+</div>
+<div class="sect2">
+<h3 id="_get"><a class="anchor" href="#_get"></a>37.1. Get</h3>
+<div class="paragraph">
+<p>读(Get)操作是指从客户端API中获取已存储数据的防范。HTable类提供了 <code>{get()}</code> 方法，同时还有与之对应的Get类，Get操作返回一行或者多行数据。</p>
+</div>
+<div class="paragraph">
+<p>当使用 <code>get()</code> 方法获取数据时，HBase返回的结果包含所有匹配的单元格数据，这些数据被封装在一个Result实例中返回给用户。用Result类提供的方法，可以从服务器端获取匹配指定行的特定返回值。这些值包括列族、列限定符和时间戳等。</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_put"><a class="anchor" href="#_put"></a>37.2. Put</h3>
+<div class="paragraph">
+<p>写(Put)操作要么向表增加新行(如果行键是新的)，要么更新行（行键如果存在）。可以一次向表插入一行数据，也可以一次操作一个集合，同时向表中写入多行数据。</p>
+</div>
+<div class="paragraph">
+<p>Put操作每次都会发起一次到服务器的RPC操作，如果有大量的数据要写入到表中，就会有数千次RPC操作，这样效率很低。HBase客户端有一个缓冲区，负责将数据批量的仅通过一次RPC操作发送给服务端，这样可以大大提高写入性能，默认客户端写缓冲区是关闭的，需要显示打开该选项。</p>
+</div>
+<div class="paragraph">
+<p>当一个Put集合提交到服务端时，可能会出现部分成功部分失败的情况，失败的数据会被保存到缓存区中进行重试。</p>
+</div>
+<div class="paragraph">
+<p>HBase还提供了一个 <code>compare-and-set</code> 操作，这个操作先进行检查，条件满足后再执行，这个操作对于行是原子性的。</p>
+</div>
+<div class="paragraph">
+<p>HBase没有Update操作，是通过Put操作来完成数据的修改。</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="scan"><a class="anchor" href="#scan"></a>37.3. Scan</h3>
+<div class="paragraph">
+<p>扫描(Scan)操作通过迭代器方式返回多行数据，可以通过指定 <code>startRow</code> 和 <code>endRow</code> 参数来指定扫描器读取 HBase 表的起始行键以及结束行键。</p>
+</div>
+<div class="paragraph">
+<p>在创建 Scan 实例之后，您可以增加更多的限定条件来读取特定的行。</p>
+</div>
+<div class="paragraph">
+<p>扫描操作执行后将获得的数据封装在ResultScanner实例中。下面的代码展示了Scan的基本用法。</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">public static final byte[] CF = "cf".getBytes();
+public static final byte[] ATTR = "attr".getBytes();
+...
+
+Table table = ...      // instantiate a Table instance
+
+Scan scan = new Scan();
+scan.addColumn(CF, ATTR);
+scan.setRowPrefixFilter(Bytes.toBytes("row"));
+ResultScanner rs = table.getScanner(scan);
+try {
+  for (Result r = rs.next(); r != null; r = rs.next()) {
+    // process result...
+  }
+} finally {
+  rs.close();  // always close the ResultScanner!
+}</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_delete"><a class="anchor" href="#_delete"></a>37.4. Delete</h3>
+<div class="paragraph">
+<p>删除(Delete)用于从表中删除数据，HTable除了提供delete()方法外，还有一个与之相对应的Delete类，用户可以通过多种方法限定要删除的列。</p>
+</div>
+<div class="paragraph">
+<p>与关系型数据库的Delete操作不同，HBase的Delete操作可以指定删除某个列族或者某个列，或者指定某个时间戳，删除比这个时间早的数据。</p>
+</div>
+<div class="paragraph">
+<p>HBase的Delete操作并不会真正的从磁盘删除数据。而是通过创建墓碑(tombstones)标志进行处理。这些墓碑标记的值和小于该时间版本的单元格在大合并(Major Compact)时被清除。</p>
+</div>
+</div>
+</div>
+</div>
+<h1 id="shell" class="sect0"><a class="anchor" href="#shell"></a>HBase Shell 基本命令</h1>
+<div class="openblock partintro">
+<div class="content">
+<div class="paragraph">
+<p>HBase Shell 是一个 <a href="http://jruby.org">(J)Ruby</a> 的IRB程序，内置了针对HBase的命令。</p>
+</div>
+<div class="paragraph">
+<p>要运行HBase shell，在安装有HBase的服务器上，切换到 <code>hbase</code> 账号，执行下面的命令即可：</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">$ hbase shell</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>打 <code>help</code>  并按回车键，可以看到一系列的命令以及命令选项。在 Shell 里执行命令需要注意以下几点：</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>所有名字，比如表名，列族名，列名都必须使用单引号进行引用，比如 'table1', 'cf1','cf1:col1'。</p>
+</li>
+<li>
+<p>创建和修改表的配置时使用的是Ruby Hashes，比如 <code>{'key1' &#8658; 'value1','key2' &#8658; 'value2', &#8230;&#8203;}</code> 。它需要用一对花括号('{}')表明整个对象的开始和结尾，每对key-value之间通过逗号分隔，key-value之间用 <code>&#8658;</code> 关联。</p>
+</li>
+<li>
+<p>如果想输入二进制的数值，需要使用双引号("")进行引用，并且采取16进制表示，比如：</p>
+<div class="literalblock">
+<div class="content">
+<pre>get 'table1', "key\x04\x05"
+get 'table1', "key\002\005"
+get 'table1', "key\xef\xba", 'cf1:', "\x02\04"</pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>HBase Shell 基本命令可以大致分为以下几类：</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>表管理命令</p>
+</li>
+<li>
+<p>数据操作命令</p>
+</li>
+<li>
+<p>命名空间(namespace)相关命令</p>
+</li>
+<li>
+<p>通用命令</p>
+</li>
+<li>
+<p>授权命令</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>如果想了解某个详细的命令的细节，可以输入 <code>help '&lt;command&gt;'</code> ，比如想知道创建表的命令 <code>create</code> 的详细用法，可以这样查看</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase(main):001:0&gt; help 'create'
+Creates a table. Pass a table name, and a set of column family
+specifications (at least one), and, optionally, table configuration.
+Column specification can be a simple string (name), or a dictionary
+(dictionaries are described below in main help output), necessarily
+including NAME attribute.
+Examples:
+
+Create a table with namespace=ns1 and table qualifier=t1
+  hbase&gt; create 'ns1:t1', {NAME =&gt; 'f1', VERSIONS =&gt; 5}
+
+  ...
+
+  hbase&gt; create 't1', 'f1', {NUMREGIONS =&gt; 15, SPLITALGO =&gt; 'HexStringSplit'}
+  hbase&gt; create 't1', 'f1', {NUMREGIONS =&gt; 15, SPLITALGO =&gt; 'HexStringSplit', REGION_REPLICATION =&gt; 2, CONFIGURATION =&gt; {'hbase.hregion.scan.loadColumnFamiliesOnDemand' =&gt; 'true'}}
+
+You can also keep around a reference to the created table:
+
+  hbase&gt; t1 = create 't1', 'f1'
+
+Which gives you a reference to the table named 't1', on which you can then
+call methods.</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_表管理命令"><a class="anchor" href="#_表管理命令"></a>38. 表管理命令</h2>
+<div class="sectionbody">
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+可以在HBase Shell 中执行 <code>help 'ddl'</code> 来查看相关帮助
+</td>
+</tr>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_list"><a class="anchor" href="#_list"></a>38.1. list</h3>
+<div class="paragraph">
+<p>list 命令列出Hbase中的表，可以传递一个正则表达式的表名参数用于过滤输出，比如：</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">hbase&gt; list
+hbase&gt; list 'abc.*'
+hbase&gt; list 'ns:abc.*'
+hbase&gt; list 'ns:.*'</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_create"><a class="anchor" href="#_create"></a>38.2. create</h3>
+<div class="paragraph">
+<p>创建一个表，传递表名以及至少一个列族，同时也可以在创建时设置表配置项以及列配置。</p>
+</div>
+<div class="paragraph">
+<p>创建一个在命名空间为 <code>ns1</code> 的表，表限定符为 <code>t1</code></p>
+</div>
+<div class="paragraph">
+<p><code>hbase&gt; create 'ns1:t1', {NAME&#8658; 'f1' ,VERSIONS &#8658; 5}</code></p>
+</div>
+<div class="paragraph">
+<p>在默认命名空间创建名为 <code>t1</code> 的表</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>  hbase&gt; create 't1', {NAME =&gt; 'f1'}, {NAME =&gt; 'f2'}, {NAME =&gt; 'f3'}
+  hbase&gt; # 上述例子可以用下面的简单表达法实现:
+  hbase&gt; create 't1', 'f1', 'f2', 'f3'
+  hbase&gt; create 't1', {NAME =&gt; 'f1', VERSIONS =&gt; 1, TTL =&gt; 2592000, BLOCKCACHE =&gt; true}
+  hbase&gt; create 't1', {NAME =&gt; 'f1', CONFIGURATION =&gt; {'hbase.hstore.blockingStoreFiles' =&gt; '10'}}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>表配置选项可以写在创建表的最后，比如：</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; create 'ns1:t1', 'f1', SPLITS =&gt; ['10', '20', '30', '40']
+hbase&gt; create 't1', 'f1', SPLITS =&gt; ['10', '20', '30', '40']
+hbase&gt; create 't1', 'f1', SPLITS_FILE =&gt; 'splits.txt', OWNER =&gt; 'johndoe'
+hbase&gt; create 't1', {NAME =&gt; 'f1', VERSIONS =&gt; 5}, METADATA =&gt; { 'mykey' =&gt; 'myvalue' }
+hbase&gt; # Optionally pre-split the table into NUMREGIONS, using
+hbase&gt; # SPLITALGO ("HexStringSplit", "UniformSplit" or classname)
+hbase&gt; create 't1', 'f1', {NUMREGIONS =&gt; 15, SPLITALGO =&gt; 'HexStringSplit'}
+hbase&gt; create 't1', 'f1', {NUMREGIONS =&gt; 15, SPLITALGO =&gt; 'HexStringSplit', REGION_REPLICATION =&gt; 2, CONFIGURATION =&gt; {'hbase.hregion.scan.loadColumnFamiliesOnDemand' =&gt; 'true'}}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>还可以在创建表的同时“抓住”表句柄</p>
+</div>
+<div class="paragraph">
+<p><code>hbase&gt; t1 = create 't', 'f1'</code></p>
+</div>
+<div class="paragraph">
+<p>之后，可以直接使用 <code>t1</code> 来引用该表</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_describe"><a class="anchor" href="#_describe"></a>38.3. describe</h3>
+<div class="paragraph">
+<p>Describe命令用来描述一个表的基本信息，比如：</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; describe 't1'
+hbase&gt; describe 'ns1:t1'</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>也可以使用 <code>desc</code> 缩写命令完成同样的功能</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_disable_和_disable_all"><a class="anchor" href="#_disable_和_disable_all"></a>38.4. disable 和 disable_all</h3>
+<div class="paragraph">
+<p>Disable命令用来禁止表，大部分情况下，当我们需要修改表的列族或者删除表时，需要先禁用表。</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; disable 't1'
+hbase&gt; disable 'ns1:t1'</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>如果我们想一次性禁用一批表，则可以使用 <code>disable_all</code> 这个高效命令，它接受正则表达式作为表参数。</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; disable_all 't.*'
+hbase&gt; disable_all 'ns:t.*'
+hbase&gt; disable_all 'ns:.*'</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_enable_和_enable_all"><a class="anchor" href="#_enable_和_enable_all"></a>38.5. enable 和 enable_all</h3>
+<div class="paragraph">
+<p>和 <code>disable</code> 命令相反， <code>enabled</code> 是启用表，两者语法类似。</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; enable 't1'
+hbase&gt; enable 'ns1:t1'</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>与此相对应的，也有一个一次性启用一批表的命令，<code>enabled_all</code> 也是接受正规表达式作为表参数</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; enable_all 't.*'
+hbase&gt; enable_all 'ns:t.*'
+hbase&gt; enable_all 'ns:.*'</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_drop_和_drop_all"><a class="anchor" href="#_drop_和_drop_all"></a>38.6. drop 和 drop_all</h3>
+<div class="paragraph">
+<p>Drop命令用来删除一个表，删除的表必须先用 <code>disable</code> 命令禁用</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; drop 't1'
+hbase&gt; drop 'ns1:t1'</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>同样的，如果想一次性删除一批表，则可以使用 <code>drop_all</code> 命令。</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; drop_all 't.*'
+hbase&gt; drop_all 'ns:t.*'
+hbase&gt; drop_all 'ns:.*'</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_exists"><a class="anchor" href="#_exists"></a>38.7. exists</h3>
+<div class="paragraph">
+<p>查看表是否存在</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; exists 't1'
+hbase&gt; exists 'ns1:t1'</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_is_disabled_和_is_enabled"><a class="anchor" href="#_is_disabled_和_is_enabled"></a>38.8. is_disabled 和 is_enabled</h3>
+<div class="paragraph">
+<p><code>is_disabled</code> 和 <code>is_enabled</code> 分别用来判断表是否禁用或是否启动，其语法类似：</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; is_disabled 't1'
+hbase&gt; is_disabled 'ns1:t1'
+hbase&gt; is_enabled 't1'
+hbase&gt; is_enabled 'ns1:t1'</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_show_filter"><a class="anchor" href="#_show_filter"></a>38.9. show_filter</h3>
+<div class="paragraph">
+<p><code>show_filter</code> 用来列出HBase中已有的过滤器。</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; show_filters
+
+	ColumnPrefixFilter
+	TimestampsFilter
+	PageFilter
+	...
+	KeyOnlyFilter</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_alter"><a class="anchor" href="#_alter"></a>38.10. alter</h3>
+<div class="paragraph">
+<p>Alter用来修改表。如果 <code>hbase.online.schema.update.enable</code> 参数设置为False的话，则执行该命令之前必须禁用表。否则可以直接修改表。</p>
+</div>
+<div class="paragraph">
+<p>表修改可能会导致表无法使用，因此建议修改现在测试环境测试通过后，然后在生产环境进行。</p>
+</div>
+<div class="paragraph">
+<p>可以通过 <code>alter</code> 命令来增减、修改或删除列族，也可以修改表配置项。对列族的修改语法和 <code>create</code> 创建表时类似。列族规范可以是名字字符串，也可以是或带 <code>NAME</code> 属性的字典。</p>
+</div>
+<div class="paragraph">
+<p>比如，为了修改表 <code>t1</code> 中的列族 <code>f1</code> 的最大单元最大版本(VERSIONS)为5，那么可以这么做：</p>
+</div>
+<div class="paragraph">
+<p><code>hbase&gt; alter 't1', NAME &#8658; 'f1', VERSIONS &#8658; 5</code></p>
+</div>
+<div class="paragraph">
+<p>我们也可以同时修改好几个列族：</p>
+</div>
+<div class="paragraph">
+<p><code>hbase&gt; alter 't1', 'f1', {NAME &#8658; 'f2', IN_MEMORY &#8658; true}, {NAME &#8658; 'f3', VERSIONS &#8658; 5}</code></p>
+</div>
+<div class="paragraph">
+<p>如果要删除一个列族，下面两个命令都可以完成</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; alter 'ns1:t1', NAME =&gt; 'f1', METHOD =&gt; 'delete'
+hbase&gt; alter 'ns1:t1', 'delete' =&gt; 'f1'</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>我们还可以改变表级属性，比如 <code>MAX_FILESIZE</code> , <code>READONLY</code> , <code>MEMSTORE_FLUSHSIZE</code> , <code>DURABILITY</code> 等。
+比如我们想修改一个表的region最大大小为128MB，则可以执行下面的命令：</p>
+</div>
+<div class="paragraph">
+<p><code>hbase&gt; alter 't1', MAX_FILESIZE &#8658; '134217728'</code></p>
+</div>
+<div class="paragraph">
+<p>我们可以通过设置表协处理器来给表增加一个协处理器：</p>
+</div>
+<div class="paragraph">
+<p><code>hbase&gt; alter 't1',
+    'coprocessor'&#8658;'hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2'</code></p>
+</div>
+<div class="paragraph">
+<p>同样的，我们还可以删除表级属性：</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; alter 't1', METHOD =&gt; 'table_att_unset', NAME =&gt; 'MAX_FILESIZE'
+hbase&gt; alter 't1', METHOD =&gt; 'table_att_unset', NAME =&gt; 'coprocessor$1'</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>可以在一个命令里对多个列族以及表的属性就行修改：</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; alter 't1', { NAME =&gt; 'f1', VERSIONS =&gt; 3 },
+   { MAX_FILESIZE =&gt; '134217728' }, { METHOD =&gt; 'delete', NAME =&gt; 'f2' },
+   OWNER =&gt; 'johndoe', METADATA =&gt; { 'mykey' =&gt; 'myvalue' }</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_alter_async_和_alter_status"><a class="anchor" href="#_alter_async_和_alter_status"></a>38.11. alter_async 和 alter_status</h3>
+<div class="paragraph">
+<p><code>alter_async</code> 和 <code>alter</code> 语法相同,但是语义和 <code>alter</code> 略有不同。<code>alter_async</code> 指令可 以立即返回,而 <code>alter</code> 需要等到所有的region都更新完成后才会返回。而要查看更新期间所 有regions的更新进度, 可以使用 <code>alter_status</code> 命令。</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_数据操作命令"><a class="anchor" href="#_数据操作命令"></a>39. 数据操作命令</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>数据操作命令可以通过 <code>help 'dml'</code> 来获得帮助。</p>
+</div>
+<div class="sect2">
+<h3 id="_count"><a class="anchor" href="#_count"></a>39.1. count</h3>
+<div class="paragraph">
+<p>count 命令用来统计一个表中的行数。该命令耗时很长(实际上是运行 <code>$HADOOP_HOME/bin/hadoop jar
+hbase.jar rowcount</code> 命令，这会产生MR任务)，可以通过设置 CACHE 参数来增加每次获取的行数, 从而加速该命令的执行. 还可 以指定查询到多少行显示一次 count 结果, 默认值是1000行, 可以通过 INTERVAL 参数进行修改。</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; count 'ns1:t1'
+hbase&gt; count 't1'
+hbase&gt; count 't1', INTERVAL =&gt; 100000
+hbase&gt; count 't1', CACHE =&gt; 1000
+hbase&gt; count 't1', INTERVAL =&gt; 10, CACHE =&gt; 1000</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_delete_2"><a class="anchor" href="#_delete_2"></a>39.2. delete</h3>
+<div class="paragraph">
+<p>删除指定表以及列族和列的一个单元格，同时还可以指定时间戳。假设要删除表名为 <code>t1</code> ，行键为 <code>r1</code> 以及列为 <code>c1</code> ，且时间戳为 <code>ts1</code> 的单元格，那么可以执行下面任何一个操作：</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; delete 'ns1:t1', 'r1', 'c1', ts1
+hbase&gt; delete 't1', 'r1', 'c1', ts1
+hbase&gt; delete 't1', 'r1', 'c1', ts1, {VISIBILITY=&gt;'PRIVATE|SECRET'}</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_deleteall"><a class="anchor" href="#_deleteall"></a>39.3. deleteall</h3>
+<div class="paragraph">
+<p><code>deleteall</code> 删除指定行的所有单元，也可以传递一个时间戳参数，比如：</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; deleteall 'ns1:t1', 'r1'
+hbase&gt; deleteall 't1', 'r1'
+hbase&gt; deleteall 't1', 'r1', 'c1'
+hbase&gt; deleteall 't1', 'r1', 'c1', ts1
+hbase&gt; deleteall 't1', 'r1', 'c1', ts1, {VISIBILITY=&gt;'PRIVATE|SECRET'}</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_get_2"><a class="anchor" href="#_get_2"></a>39.4. get</h3>
+<div class="paragraph">
+<p>获得行或单元格内容；接受表名、行以及可选的包含列、时间戳、时间范围的字典参数。例子如下：</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; get 'ns1:t1', 'r1'
+hbase&gt; get 't1', 'r1'
+hbase&gt; get 't1', 'r1', {TIMERANGE =&gt; [ts1, ts2]}
+hbase&gt; get 't1', 'r1', {COLUMN =&gt; 'c1'}
+hbase&gt; get 't1', 'r1', {COLUMN =&gt; ['c1', 'c2', 'c3']}
+hbase&gt; get 't1', 'r1', {COLUMN =&gt; 'c1', TIMESTAMP =&gt; ts1}
+hbase&gt; get 't1', 'r1', {COLUMN =&gt; 'c1', TIMERANGE =&gt; [ts1, ts2], VERSIONS =&gt; 4}
+hbase&gt; get 't1', 'r1', {COLUMN =&gt; 'c1', TIMESTAMP =&gt; ts1, VERSIONS =&gt; 4}
+hbase&gt; get 't1', 'r1', {FILTER =&gt; "ValueFilter(=, 'binary:abc')"}
+hbase&gt; get 't1', 'r1', 'c1'
+hbase&gt; get 't1', 'r1', 'c1', 'c2'
+hbase&gt; get 't1', 'r1', ['c1', 'c2']
+hbase&gt; get 't1', 'r1', {COLUMN =&gt; 'c1', ATTRIBUTES =&gt; {'mykey'=&gt;'myvalue'}}
+hbase&gt; get 't1', 'r1', {COLUMN =&gt; 'c1', AUTHORIZATIONS =&gt; ['PRIVATE','SECRET']}
+hbase&gt; get 't1', 'r1', {CONSISTENCY =&gt; 'TIMELINE'}
+hbase&gt; get 't1', 'r1', {CONSISTENCY =&gt; 'TIMELINE', REGION_REPLICA_ID =&gt; 1}</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_put_2"><a class="anchor" href="#_put_2"></a>39.5. put</h3>
+<div class="paragraph">
+<p>将值填入到&lt;表，行，列&gt;指定的单元格中，同时可以指定时间戳。</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; put 'ns1:t1', 'r1', 'c1', 'value'  <i class="conum" data-value="1"></i><b>(1)</b>
+hbase&gt; put 't1', 'r1', 'c1', 'value'			<i class="conum" data-value="1"></i><b>(1)</b>
+hbase&gt; put 't1', 'r1', 'c1', 'value', ts1 <i class="conum" data-value="2"></i><b>(2)</b>
+hbase&gt; put 't1', 'r1', 'c1', 'value', {ATTRIBUTES=&gt;{'mykey'=&gt;'myvalue'}}  <i class="conum" data-value="3"></i><b>(3)</b>
+hbase&gt; put 't1', 'r1', 'c1', 'value', ts1, {ATTRIBUTES=&gt;{'mykey'=&gt;'myvalue'}}  <i class="conum" data-value="3"></i><b>(3)</b>
+hbase&gt; put 't1', 'r1', 'c1', 'value', ts1, {VISIBILITY=&gt;'PRIVATE|SECRET'}   <i class="conum" data-value="3"></i><b>(3)</b></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>把 'value' 填入到表为&#8217;t1'，行键为&#8217;r1'，列为&#8217;c1' 指定的单元格中</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>同 &lt;1&gt; ，只是显示的指定该单元格值的时间戳为 ts1</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>通 &lt;1&gt; 和 &lt;2&gt; ，在添加额外的属性</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_scan"><a class="anchor" href="#_scan"></a>39.6. scan</h3>
+<div class="paragraph">
+<p>扫描指定的表，批量获取表中的数据。表名作为必选参数，可选参数为扫描器规范。
+扫描器规范可以包括以下参数中的一个或多个：</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>TIMERANGE</p>
+</li>
+<li>
+<p>FILTER</p>
+</li>
+<li>
+<p>LIMIT</p>
+</li>
+<li>
+<p>STARTROW</p>
+</li>
+<li>
+<p>STOPROW</p>
+</li>
+<li>
+<p>ROWPREFIXFILTER</p>
+</li>
+<li>
+<p>TIMESTAMP</p>
+</li>
+<li>
+<p>MAXLENGTH</p>
+</li>
+<li>
+<p>COLUMNS</p>
+</li>
+<li>
+<p>CACHE</p>
+</li>
+<li>
+<p>RAW</p>
+</li>
+<li>
+<p>VERSIONS</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>如果没有指定列，则会扫描所有的列。</p>
+</div>
+<div class="paragraph">
+<p>过滤器可以使用两种方式来指定：</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>使用一个过滤字符串</p>
+</li>
+<li>
+<p>使用过滤的JAVA包名</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>以下是 <code>scan</code> 的一些例子：</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; scan 'hbase:meta'
+hbase&gt; scan 'hbase:meta', {COLUMNS =&gt; 'info:regioninfo'}
+hbase&gt; scan 'ns1:t1', {COLUMNS =&gt; ['c1', 'c2'], LIMIT =&gt; 10, STARTROW =&gt; 'xyz'}
+hbase&gt; scan 't1', {COLUMNS =&gt; ['c1', 'c2'], LIMIT =&gt; 10, STARTROW =&gt; 'xyz'}
+hbase&gt; scan 't1', {COLUMNS =&gt; 'c1', TIMERANGE =&gt; [1303668804, 1303668904]}
+hbase&gt; scan 't1', {REVERSED =&gt; true}
+hbase&gt; scan 't1', {ROWPREFIXFILTER =&gt; 'row2', FILTER =&gt; "
+  (QualifierFilter (&gt;=, 'binary:xyz')) AND (TimestampsFilter ( 123, 456))"}
+hbase&gt; scan 't1', {FILTER =&gt;
+  org.apache.hadoop.hbase.filter.ColumnPaginationFilter.new(1, 0)}
+hbase&gt; scan 't1', {CONSISTENCY =&gt; 'TIMELINE'}
+For setting the Operation Attributes
+hbase&gt; scan 't1', { COLUMNS =&gt; ['c1', 'c2'], ATTRIBUTES =&gt; {'mykey' =&gt; 'myvalue'}}
+hbase&gt; scan 't1', { COLUMNS =&gt; ['c1', 'c2'], AUTHORIZATIONS =&gt; ['PRIVATE','SECRET']}
+hbase&gt; scan 't1', {COLUMNS =&gt; ['c1', 'c2'], CACHE_BLOCKS =&gt; false} <i class="conum" data-value="1"></i><b>(1)</b>
+hbase&gt; scan 't1', {RAW =&gt; true, VERSIONS =&gt; 10}  <i class="conum" data-value="2"></i><b>(2)</b></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>这里有一个高级附加选项&#8201;&#8212;&#8201;CACHE_BLOCKS&#8201;&#8212;&#8201;用来指定块缓存是打开(如果设置为true) 还是关闭(如果设置为false)</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>RAW 也是一个高级选项，用来指示扫描器是否返回所有的单元格（包括标记为删除和未收集已删除单元格）。该选项不能喝 COLUMNS 联合使用。默认该参数为 false</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_truncate_和_truncate_preserve"><a class="anchor" href="#_truncate_和_truncate_preserve"></a>39.7. truncate 和 truncate_preserve</h3>
+<div class="paragraph">
+<p>truncate 类似 delete, 但该命令会立即删除表中所有的数据以及region的划分. 它的内 部实现是将指定的表下线, 删除, 并重建. 如果只想立即删除表中所有的数据而不想丢掉原来 的region划分, 需要使用 truncate_preserve。</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_get_counter"><a class="anchor" href="#_get_counter"></a>39.8. get_counter</h3>
+<div class="paragraph">
+<p>根据指定的&lt;表，行，列&gt;统计单元格数量</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>hbase&gt; get_counter 'ns1:t1', 'r1', 'c1'
+hbase&gt; get_counter 't1', 'r1', 'c1</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="hbase.shell.noninteractive"><a class="anchor" href="#hbase.shell.noninteractive"></a>40. HBase Shell in OS Scripts</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>You can use the HBase shell from within operating system script interpreters like the Bash shell which is the default command interpreter for most Linux and UNIX distributions.
+The following guidelines use Bash syntax, but could be adjusted to work with C-style shells such as csh or tcsh, and could probably be modified to work with the Microsoft Windows script interpreter as well. Submissions are welcome.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+Spawning HBase Shell commands in this way is slow, so keep that in mind when you are deciding when combining HBase operations with the operating system command line is appropriate.
+</td>
+</tr>
+</table>
+</div>
+<div class="exampleblock">
+<div class="title">Example 1. Passing Commands to the HBase Shell</div>
+<div class="content">
+<div class="paragraph">
+<p>You can pass commands to the HBase Shell in non-interactive mode (see <a href="#hbase.shell.noninteractive">hbase.shell.noninteractive</a>) using the <code>echo</code> command and the <code>|</code> (pipe) operator.
+Be sure to escape characters in the HBase commands which would otherwise be interpreted by the shell.
+Some debug-level output has been truncated from the example below.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">$ echo "describe 'test1'" | ./hbase shell -n
+
+Version 0.98.3-hadoop2, rd5e65a9144e315bb0a964e7730871af32f5018d5, Sat May 31 19:56:09 PDT 2014
+
+describe 'test1'
+
+DESCRIPTION                                          ENABLED
+ 'test1', {NAME =&gt; 'cf', DATA_BLOCK_ENCODING =&gt; 'NON true
+ E', BLOOMFILTER =&gt; 'ROW', REPLICATION_SCOPE =&gt; '0',
+  VERSIONS =&gt; '1', COMPRESSION =&gt; 'NONE', MIN_VERSIO
+ NS =&gt; '0', TTL =&gt; 'FOREVER', KEEP_DELETED_CELLS =&gt;
+ 'false', BLOCKSIZE =&gt; '65536', IN_MEMORY =&gt; 'false'
+ , BLOCKCACHE =&gt; 'true'}
+1 row(s) in 3.2410 seconds</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To suppress all output, echo it to <em>/dev/null:</em></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">$ echo "describe 'test'" | ./hbase shell -n &gt; /dev/null 2&gt;&amp;1</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="exampleblock">
+<div class="title">Example 2. Checking the Result of a Scripted Command</div>
+<div class="content">
+<div class="paragraph">
+<p>Since scripts are not designed to be run interactively, you need a way to check whether your command failed or succeeded.
+The HBase shell uses the standard convention of returning a value of <code>0</code> for successful commands, and some non-zero value for failed commands.
+Bash stores a command&#8217;s return value in a special environment variable called <code>$?</code>.
+Because that variable is overwritten each time the shell runs any command, you should store the result in a different, script-defined variable.</p>
+</div>
+<div class="paragraph">
+<p>This is a naive script that shows one way to store the return value and make a decision based upon it.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">#!/bin/bash
+
+echo "describe 'test'" | ./hbase shell -n &gt; /dev/null 2&gt;&amp;1
+status=$?
+echo "The status was " $status
+if ($status == 0); then
+    echo "The command succeeded"
+else
+    echo "The command may have failed."
+fi
+return $status</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_checking_for_success_or_failure_in_scripts"><a class="anchor" href="#_checking_for_success_or_failure_in_scripts"></a>40.1. Checking for Success or Failure In Scripts</h3>
+<div class="paragraph">
+<p>Getting an exit code of <code>0</code> means that the command you scripted definitely succeeded.
+However, getting a non-zero exit code does not necessarily mean the command failed.
+The command could have succeeded, but the client lost connectivity, or some other event obscured its success.
+This is because RPC commands are stateless.
+The only way to be sure of the status of an operation is to check.
+For instance, if your script creates a table, but returns a non-zero exit value, you should check whether the table was actually created before trying again to create it.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_read_hbase_shell_commands_from_a_command_file"><a class="anchor" href="#_read_hbase_shell_commands_from_a_command_file"></a>41. Read HBase Shell Commands from a Command File</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>You can enter HBase Shell commands into a text file, one command per line, and pass that file to the HBase Shell.</p>
+</div>
+<div class="exampleblock">
+<div class="title">Example 3. Example Command File</div>
+<div class="content">
+<div class="listingblock">
+<div class="content">
+<pre>create 'test', 'cf'
+list 'test'
+put 'test', 'row1', 'cf:a', 'value1'
+put 'test', 'row2', 'cf:b', 'value2'
+put 'test', 'row3', 'cf:c', 'value3'
+put 'test', 'row4', 'cf:d', 'value4'
+scan 'test'
+get 'test', 'row1'
+disable 'test'
+enable 'test'</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="exampleblock">
+<div class="title">Example 4. Directing HBase Shell to Execute the Commands</div>
+<div class="content">
+<div class="paragraph">
+<p>Pass the path to the command file as the only argument to the <code>hbase shell</code> command.
+Each command is executed and its output is shown.
+If you do not include the <code>exit</code> command in your script, you are returned to the HBase shell prompt.
+There is no way to programmatically check each individual command for success or failure.
+Also, though you see the output for each command, the commands themselves are not echoed to the screen so it can be difficult to line up the command with its output.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">$ ./hbase shell ./sample_commands.txt
+0 row(s) in 3.4170 seconds
+
+TABLE
+test
+1 row(s) in 0.0590 seconds
+
+0 row(s) in 0.1540 seconds
+
+0 row(s) in 0.0080 seconds
+
+0 row(s) in 0.0060 seconds
+
+0 row(s) in 0.0060 seconds
+
+ROW                   COLUMN+CELL
+ row1                 column=cf:a, timestamp=1407130286968, value=value1
+ row2                 column=cf:b, timestamp=1407130286997, value=value2
+ row3                 column=cf:c, timestamp=1407130287007, value=value3
+ row4                 column=cf:d, timestamp=1407130287015, value=value4
+4 row(s) in 0.0420 seconds
+
+COLUMN                CELL
+ cf:a                 timestamp=1407130286968, value=value1
+1 row(s) in 0.0110 seconds
+
+0 row(s) in 1.5630 seconds
+
+0 row(s) in 0.4360 seconds</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_passing_vm_options_to_the_shell"><a class="anchor" href="#_passing_vm_options_to_the_shell"></a>42. Passing VM Options to the Shell</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>You can pass VM options to the HBase Shell using the <code>HBASE_SHELL_OPTS</code> environment variable.
+You can set this in your environment, for instance by editing <em>~/.bashrc</em>, or set it as part of the command to launch HBase Shell.
+The following example sets several garbage-collection-related variables, just for the lifetime of the VM running the HBase Shell.
+The command should be run all on a single line, but is broken by the <code>\</code> character, for readability.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">$ HBASE_SHELL_OPTS="-verbose:gc -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCDateStamps \
+  -XX:+PrintGCDetails -Xloggc:$HBASE_HOME/logs/gc-hbase.log" ./bin/hbase shell</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_shell_tricks"><a class="anchor" href="#_shell_tricks"></a>43. Shell Tricks</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_table_variables"><a class="anchor" href="#_table_variables"></a>43.1. Table variables</h3>
+<div class="paragraph">
+<p>HBase 0.95 adds shell commands that provides jruby-style object-oriented references for tables.
+Previously all of the shell commands that act upon a table have a procedural style that always took the name of the table as an argument.
+HBase 0.95 introduces the ability to assign a table to a jruby variable.
+The table reference can be used to perform data read write operations such as puts, scans, and gets well as admin functionality such as disabling, dropping, describing tables.</p>
+</div>
+<div class="paragraph">
+<p>For example, previously you would always specify a table name:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>hbase(main):000:0&gt; create ‘t’, ‘f’
+0 row(s) in 1.0970 seconds
+hbase(main):001:0&gt; put 't', 'rold', 'f', 'v'
+0 row(s) in 0.0080 seconds
+
+hbase(main):002:0&gt; scan 't'
+ROW                                COLUMN+CELL
+ rold                              column=f:, timestamp=1378473207660, value=v
+1 row(s) in 0.0130 seconds
+
+hbase(main):003:0&gt; describe 't'
+DESCRIPTION                                                                           ENABLED
+ 't', {NAME =&gt; 'f', DATA_BLOCK_ENCODING =&gt; 'NONE', BLOOMFILTER =&gt; 'ROW', REPLICATION_ true
+ SCOPE =&gt; '0', VERSIONS =&gt; '1', COMPRESSION =&gt; 'NONE', MIN_VERSIONS =&gt; '0', TTL =&gt; '2
+ 147483647', KEEP_DELETED_CELLS =&gt; 'false', BLOCKSIZE =&gt; '65536', IN_MEMORY =&gt; 'false
+ ', BLOCKCACHE =&gt; 'true'}
+1 row(s) in 1.4430 seconds
+
+hbase(main):004:0&gt; disable 't'
+0 row(s) in 14.8700 seconds
+
+hbase(main):005:0&gt; drop 't'
+0 row(s) in 23.1670 seconds
+
+hbase(main):006:0&gt;</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Now you can assign the table to a variable and use the results in jruby shell code.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>hbase(main):007 &gt; t = create 't', 'f'
+0 row(s) in 1.0970 seconds
+
+=&gt; Hbase::Table - t
+hbase(main):008 &gt; t.put 'r', 'f', 'v'
+0 row(s) in 0.0640 seconds
+hbase(main):009 &gt; t.scan
+ROW                           COLUMN+CELL
+ r                            column=f:, timestamp=1331865816290, value=v
+1 row(s) in 0.0110 seconds
+hbase(main):010:0&gt; t.describe
+DESCRIPTION                                                                           ENABLED
+ 't', {NAME =&gt; 'f', DATA_BLOCK_ENCODING =&gt; 'NONE', BLOOMFILTER =&gt; 'ROW', REPLICATION_ true
+ SCOPE =&gt; '0', VERSIONS =&gt; '1', COMPRESSION =&gt; 'NONE', MIN_VERSIONS =&gt; '0', TTL =&gt; '2
+ 147483647', KEEP_DELETED_CELLS =&gt; 'false', BLOCKSIZE =&gt; '65536', IN_MEMORY =&gt; 'false
+ ', BLOCKCACHE =&gt; 'true'}
+1 row(s) in 0.0210 seconds
+hbase(main):038:0&gt; t.disable
+0 row(s) in 6.2350 seconds
+hbase(main):039:0&gt; t.drop
+0 row(s) in 0.2340 seconds</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>If the table has already been created, you can assign a Table to a variable by using the get_table method:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>hbase(main):011 &gt; create 't','f'
+0 row(s) in 1.2500 seconds
+
+=&gt; Hbase::Table - t
+hbase(main):012:0&gt; tab = get_table 't'
+0 row(s) in 0.0010 seconds
+
+=&gt; Hbase::Table - t
+hbase(main):013:0&gt; tab.put ‘r1’ ,’f’, ‘v’
+0 row(s) in 0.0100 seconds
+hbase(main):014:0&gt; tab.scan
+ROW                                COLUMN+CELL
+ r1                                column=f:, timestamp=1378473876949, value=v
+1 row(s) in 0.0240 seconds
+hbase(main):015:0&gt;</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The list functionality has also been extended so that it returns a list of table names as strings.
+You can then use jruby to script table operations based on these names.
+The list_snapshots command also acts similarly.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>hbase(main):016 &gt; tables = list(‘t.*’)
+TABLE
+t
+1 row(s) in 0.1040 seconds
+
+=&gt; #&lt;#&lt;Class:0x7677ce29&gt;:0x21d377a4&gt;
+hbase(main):017:0&gt; tables.map { |t| disable t ; drop  t}
+0 row(s) in 2.2510 seconds
+
+=&gt; [nil]
+hbase(main):018:0&gt;</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="__em_irbrc_em"><a class="anchor" href="#__em_irbrc_em"></a>43.2. <em>irbrc</em></h3>
+<div class="paragraph">
+<p>Create an <em>.irbrc</em> file for yourself in your home directory.
+Add customizations.
+A useful one is command history so commands are save across Shell invocations:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">$ more .irbrc
+require 'irb/ext/save-history'
+IRB.conf[:SAVE_HISTORY] = 100
+IRB.conf[:HISTORY_FILE] = "#{ENV['HOME']}/.irb-save-history"</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>See the <code>ruby</code> documentation of <em>.irbrc</em> to learn about other possible configurations.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_log_data_to_timestamp"><a class="anchor" href="#_log_data_to_timestamp"></a>43.3. LOG data to timestamp</h3>
+<div class="paragraph">
+<p>To convert the date '08/08/16 20:56:29' from an hbase log into a timestamp, do:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>hbase(main):021:0&gt; import java.text.SimpleDateFormat
+hbase(main):022:0&gt; import java.text.ParsePosition
+hbase(main):023:0&gt; SimpleDateFormat.new("yy/MM/dd HH:mm:ss").parse("08/08/16 20:56:29", ParsePosition.new(0)).getTime() =&gt; 1218920189000</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To go the other direction:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>hbase(main):021:0&gt; import java.util.Date
+hbase(main):022:0&gt; Date.new(1218920189000).toString() =&gt; "Sat Aug 16 20:56:29 UTC 2008"</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To output in a format that is exactly like that of the HBase log format will take a little messing with <a href="http://download.oracle.com/javase/6/docs/api/java/text/SimpleDateFormat.html">SimpleDateFormat</a>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="tricks.pre-split"><a class="anchor" href="#tricks.pre-split"></a>43.4. Pre-splitting tables with the HBase Shell</h3>
+<div class="paragraph">
+<p>You can use a variety of options to pre-split tables when creating them via the HBase Shell <code>create</code> command.</p>
+</div>
+<div class="paragraph">
+<p>The simplest approach is to specify an array of split points when creating the table. Note that when specifying string literals as split points, these will create split points based on the underlying byte representation of the string. So when specifying a split point of '10', we are actually specifying the byte split point '\x31\30'.</p>
+</div>
+<div class="paragraph">
+<p>The split points will define <code>n+1</code> regions where <code>n</code> is the number of split points. The lowest region will contain all keys from the lowest possible key up to but not including the first split point key.
+The next region will contain keys from the first split point up to, but not including the next split point key.
+This will continue for all split points up to the last. The last region will be defined from the last split point up to the maximum possible key.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">hbase&gt;create 't1','f',SPLITS =&gt; ['10','20',30']</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In the above example, the table 't1' will be created with column family 'f', pre-split to four regions. Note the first region will contain all keys from '\x00' up to '\x30' (as '\x31' is the ASCII code for '1').</p>
+</div>
+<div class="paragraph">
+<p>You can pass the split points in a file using following variation. In this example, the splits are read from a file corresponding to the local path on the local filesystem. Each line in the file specifies a split point key.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">hbase&gt;create 't14','f',SPLITS_FILE=&gt;'splits.txt'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The other options are to automatically compute splits based on a desired number of regions and a splitting algorithm.
+HBase supplies algorithms for splitting the key range based on uniform splits or based on hexadecimal keys, but you can provide your own splitting algorithm to subdivide the key range.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java"># create table with four regions based on random bytes keys
+hbase&gt;create 't2','f1', { NUMREGIONS =&gt; 4 , SPLITALGO =&gt; 'UniformSplit' }
+
+# create table with five regions based on hex keys
+hbase&gt;create 't3','f1', { NUMREGIONS =&gt; 5, SPLITALGO =&gt; 'HexStringSplit' }</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As the HBase Shell is effectively a Ruby environment, you can use simple Ruby scripts to compute splits algorithmically.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java"># generate splits for long (Ruby fixnum) key range from start to end key
+hbase(main):070:0&gt; def gen_splits(start_key,end_key,num_regions)
+hbase(main):071:1&gt;   results=[]
+hbase(main):072:1&gt;   range=end_key-start_key
+hbase(main):073:1&gt;   incr=(range/num_regions).floor
+hbase(main):074:1&gt;   for i in 1 .. num_regions-1
+hbase(main):075:2&gt;     results.push([i*incr+start_key].pack("N"))
+hbase(main):076:2&gt;   end
+hbase(main):077:1&gt;   return results
+hbase(main):078:1&gt; end
+hbase(main):079:0&gt;
+hbase(main):080:0&gt; splits=gen_splits(1,2000000,10)
+=&gt; ["\000\003\r@", "\000\006\032\177", "\000\t'\276", "\000\f4\375", "\000\017B&lt;", "\000\022O{", "\000\025\\\272", "\000\030i\371", "\000\ew8"]
+hbase(main):081:0&gt; create 'test_splits','f',SPLITS=&gt;splits
+0 row(s) in 0.2670 seconds
+
+=&gt; Hbase::Table - test_splits</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note that the HBase Shell command <code>truncate</code> effectively drops and recreates the table with default options which will discard any pre-splitting.
+If you need to truncate a pre-split table, you must drop and recreate the table explicitly to re-specify custom split options.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_debug"><a class="anchor" href="#_debug"></a>43.5. Debug</h3>
+<div class="sect3">
+<h4 id="_shell_debug_switch"><a class="anchor" href="#_shell_debug_switch"></a>43.5.1. Shell debug switch</h4>
+<div class="paragraph">
+<p>You can set a debug switch in the shell to see more output&#8201;&#8212;&#8201;e.g.
+more of the stack trace on exception&#8201;&#8212;&#8201;when you run a command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">hbase&gt; debug &lt;RETURN&gt;</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_debug_log_level"><a class="anchor" href="#_debug_log_level"></a>43.5.2. DEBUG log level</h4>
+<div class="paragraph">
+<p>To enable DEBUG level logging in the shell, launch it with the <code>-d</code> option.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-bash" data-lang="bash">$ ./bin/hbase shell -d</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_commands"><a class="anchor" href="#_commands"></a>43.6. Commands</h3>
+<div class="sect3">
+<h4 id="_count_2"><a class="anchor" href="#_count_2"></a>43.6.1. count</h4>
+<div class="paragraph">
+<p>Count command returns the number of rows in a table.
+It&#8217;s quite fast when configured with the right CACHE</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-java" data-lang="java">hbase&gt; count '&lt;tablename&gt;', CACHE =&gt; 1000</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The above count fetches 1000 rows at a time.
+Set CACHE lower if your rows are big.
+Default is to fetch one row at a time.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="footer">
+<div id="footer-text">
+Version 1<br>
+Last updated 2016-07-10 17:38:13 CST
+</div>
+</div>
+</body>
+</html>

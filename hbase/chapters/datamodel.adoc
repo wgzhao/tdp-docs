@@ -1,0 +1,220 @@
+[[datamodel]]
+= 数据模型 =
+
+
+HBase 以“表”为结构组织数据，表有”行“和”列“，这和关系数据库(RDBMS)的相关术语相重叠，但是他们并不相似，你可以认为HBase是一个多维有序map。 
+
+.HBase 数据模型相关术语
+
+表::
+  HBase的表包含有多行。表名的数据类型为string。
+
+行::
+  HBase中的行是有行键(row key)以及一个或多个列及对应的列值组成。 行依据行键按照字母排序。行键没有数据类型，以byte[](字节组)存储。
+	基于上述原因，行键的设计非常重要。
+
+Column::
+  HBase中的列有列族(column family)以及列限定符(column qualifier)组成，列族和列限定符用`:`分隔。A 
+
+列族(Column Family)::
+  行中数据以列族分组。各行数据拥有的列族必须相同。但是并不 是每个列族中都需要有数据。列族名的数据类型为string。
+
+列限定符(Column Qualifier)::
+  列限定符附加到列族后面用来提供某一块数据的索引。
+  假设列族为 `content`,一个列限定符可以是 `content:html` ，另外可以是 `content:pdf` 。 
+  尽管列族是创建表是就固定好了的，但是列限定符确实可变的，而且不要求所有行有相同的列限定符。
+
+单元格(Cell)::
+  单元格是行、列族以及列限定符的组合。单元格中存储的数据成为单元格的值，该值包含一个时间戳，用来表达值的版本
+	
+时间戳(Timestamp)::
+  单元格的值可以有不同版本。各个版本由版本号区分。默认版本号 为单元格值被写入时的时间戳。
+	
+
+
+[[conceptual.view]]
+== 逻辑模型 == 
+
+HBase可以理解为是一个稀疏的、长期存储的、多维度的和排序的映射表，表中的每一行可以有不同的列。与关系型数据库不同，关系型数据库要求表在创建时明确定义列以及列的数据类型，而HBase的同一个表的记录可以有不同的列。
+
+HBase中最基本的单位是列，一个列或多列构成了行，行有行键，每一行的行键都是唯一的，相同行键的插入操作被认为是对同一行的操作，也就是说如果做了两次写入操作，而行键是同一个，那么后面的操作可以认为是对改行的某些列的更新操作。
+
+HBase中的一个表有果敢行，每行有很多列，列中的值有多个版本，每个版本的值称为一个单元格，每个单元存储的是不同时刻该列的值。
+
+以下表为例，表名为 `webtable` ，包含了三个列族：`contents` , `anchor` 和 `people` 。在该实例中，列族 `anchor` 有两个列( `anchor:cssnsi.com` 和 `anchor:my.look.ca`)，列族 `contents` 只有一个列 `contents:html` ，列族 `people` 也仅有一个列 `people:author` 。
+
+.表 `webtable`
+[cols="1,1,1,1,1", frame="all", options="header"]
+|===
+|行键(RowKey) |时间戳(TimeStamp)  |列族 `contents` |列族 `anchor`|列族 `people`
+|"com.cnn.www" |t9    | |anchor:cnnsi.com = "CNN"   |
+|"com.cnn.www" |t8    | |anchor:my.look.ca = "CNN.com" |
+|"com.cnn.www" |t6  | contents:html = "<html>..."    | |
+|"com.cnn.www" |t5  | contents:html = "<html>..."    | |
+|"com.cnn.www" |t3  | contents:html = "<html>..."    | |
+|"com.example.www"| t5  | contents:html = "<html>..."   | people:author = "John Doe"
+|===
+
+表中单元格为空的并不占空间，实际上在HBase空的单元格并不存在。这使得HBase看上去是一个“稀疏表”。用表格的方式来描述HBase只是一种方法，我们也可以用别的方式来描述，比如JSON格式。
+
+[source,json]
+----
+{
+  "com.cnn.www": {
+    contents: {
+      t6: contents:html: "<html>..."
+      t5: contents:html: "<html>..."
+      t3: contents:html: "<html>..."
+    }
+    anchor: {
+      t9: anchor:cnnsi.com = "CNN"
+      t8: anchor:my.look.ca = "CNN.com"
+    }
+    people: {}
+  }
+  "com.example.www": {
+    contents: {
+      t5: contents:html: "<html>..."
+    }
+    anchor: {}
+    people: {
+      t5: people:author: "John Doe"
+    }
+  }
+}
+----
+
+[[physical.view]]
+== 物理模型 ==
+
+虽然在逻辑模型中，表可以被看成一个稀疏的行的集合。但在物理上，表是按照列分开存储的。HBase的列是按照列族分组的, HFile是面向列的，存放行的不同列的物理文件，一个列族的数据存放在多个HFile中，族中的是一个列族的数据会被同一个Region管理，物理上存放在一起。这种物理上存储的不同可以从下面的物理视图中直观可以看出.
+
+.列族 `anchor`
+[cols="1,1,1", frame="all", options="header"]
+|===
+|行键 | 时间戳 |列族 `anchor`
+|"com.cnn.www" |t9  |`anchor:cnnsi.com = "CNN"`
+|"com.cnn.www" |t8  |`anchor:my.look.ca = "CNN.com"`
+|===
+
+
+.列族 `contents`
+[cols="1,1,1", frame="all", options="header"]
+|===
+|行键 |时间戳  |列族 `contents:`
+|"com.cnn.www" |t6  |contents:html = "<html>..."
+|"com.cnn.www" |t5  |contents:html = "<html>..."
+|"com.cnn.www" |t3  |contents:html = "<html>..."
+|===
+
+在上面的逻辑模型中，空的单元格在物理上是不存储的，因此，若一个请求为要获取t8时间上的 `contents:html` ，他的结果就是空。相类似，若请求为获取t9时间的 `anchor:my.look.ca` ，结果也为空。但是，如果不指明时间，将会返回最新时间的行。比如如果要获取行键为 `com.cnn.www` 的各列的值，如果没有指明时间戳，返回的结果是t6下的 `contents:html` ， t9下的 `anchor:cnnsi.com` 和t8下的 `anchor:my.look.ca` 所对应的值。
+
+== 表 == 
+
+在HBase中数据以表的形式存储。使用表的主要原因是把某些列组织起来一些访问，同一个表中的数据通常是相关的，通过列族进一步把一些列组织在一起进行访问。
+
+HBase 列式存储允许用户存储大量的信息到相同的表中，而在RDBMS模型中，大量信息则需要切分成多个表存储。通常的数据库规范不适合HBase，因此HBase中表的数量相对较少。
+
+
+== 行键 == 
+
+行键，集Rowkey，是HBase中最为重要的概念之一。行键是不可分割的字节数组。行键按照字典排序由低到高存储在表中，以一个空的数组来标识表空间的起始或者结尾。下面的例子展示了行键的排列规则。
+............................................................................
+hbase(main):002:0> scan 'test1'
+ROW              COLUMN+CELL
+ r1              column=cf1:c1, timestamp=499999999999999999, value=v1
+ r1              column=cf1:c2, timestamp=499999999999999999, value=v2
+ r1              column=cf2:c3, timestamp=499999999999999999, value=v3 //<1>
+ r11             column=cf1:c1, timestamp=1467705199706, value=kkkk 		//<2>
+ r2              column=cf1:c1, timestamp=111111, value=v1						//<3>
+ r2              column=cf2:c3, timestamp=111111, value=v3
+ r4              column=cf1:c1, timestamp=111111, value=v1
+ r4              column=cf1:c2, timestamp=111111, value=v2
+ r4              column=cf2:c3, timestamp=111111, value=v3
+3 row(s) in 0.3650 seconds
+............................................................................
+
+注意<1>,<2>和<3>的排序，在字典序中，数据按照二进制字节从左至右逐一对比形成最终的次序。因为 `r1` 小于 `r2` 所有，无论 `r1` 后面是否有字符，都会排在 `r2` 的前面。
+
+在HBase中行键是唯一的索引，为了高效检索数据，应该仔细设计行键以获得最高的查询性能：首先行键被冗余存储，所以长度不宜过长，过长的行键会占用大量的空间同时会降低检索效率；其次行键应该尽量分布均匀，这样不会产生热点现象；最后是行键唯一原则，必须在设计上保证其唯一性。
+
+
+[[columnfamily]]
+== 列族 ==
+HBase中的列族是一些列的集合。一个列族中所有列成员有着相同的前缀。
+
+在物理上，一个列族的成员在文件系统上是存储在一起的。因为存储优化都只针对列族级别的，这就意味着，一个列族的所有成员是通过相同的方式访问的。
+
+在创建表时至少要指定一个列族，新的列族可以随后按需、动态加入，但是修改列族需要先停用表。应该把经常一起查询的列放在一个列族中，合理划分列族将减少查询时加载到缓存的数据，提高查询的效率，但也不要有太多的列族，因为跨列族访问是非常低效的。
+
+
+== 单元格
+
+HBase中的单元格由 _{行键, 列族, 列限定符, 时间戳}_ 来唯一确定。单元格的内容是不可分割的字节数组。每个单元格保存着同一份数据的多个版本。不同时间版本的数据按照时间顺序倒序排列。时间戳是64位的整数，可以由客户端在写入数据时赋值，也可以由RegionServer自动赋值。
+
+== 数据模型的操作
+
+HBase对数据模型的4个主要操作为Get, Put, Scan, 和 Delete。通过对HTable实例进行操作，用户可以完成向HBase存储和检索数据，以及删除无效数据之类的操作。
+
+所有修改数据的操作都要保证行级别的原子性，多个而客户端或线程对同一行的读写操作都不会影响该行数据的原子性，那么多到最新的数据，要么等待系统允许写入改行的修改。
+
+创建HTable实例是有代价的。每个实例都需要扫描META表，以检查该表是否存在，是否可用。此外还有一些其他操作，这些检查和操作导致实例调用非常耗时。因此，推荐用户只创建一次HTable实例，而且是每个线程创建一个，如果用户需要使用多个HTable实例，应考虑使用HTablePool类，它可以复用多个HTable实例。
+
+
+=== Get
+
+读(Get)操作是指从客户端API中获取已存储数据的防范。HTable类提供了 `{get()}` 方法，同时还有与之对应的Get类，Get操作返回一行或者多行数据。
+
+当使用 `get()` 方法获取数据时，HBase返回的结果包含所有匹配的单元格数据，这些数据被封装在一个Result实例中返回给用户。用Result类提供的方法，可以从服务器端获取匹配指定行的特定返回值。这些值包括列族、列限定符和时间戳等。
+
+=== Put
+
+写(Put)操作要么向表增加新行(如果行键是新的)，要么更新行（行键如果存在）。可以一次向表插入一行数据，也可以一次操作一个集合，同时向表中写入多行数据。
+
+Put操作每次都会发起一次到服务器的RPC操作，如果有大量的数据要写入到表中，就会有数千次RPC操作，这样效率很低。HBase客户端有一个缓冲区，负责将数据批量的仅通过一次RPC操作发送给服务端，这样可以大大提高写入性能，默认客户端写缓冲区是关闭的，需要显示打开该选项。
+
+当一个Put集合提交到服务端时，可能会出现部分成功部分失败的情况，失败的数据会被保存到缓存区中进行重试。
+
+HBase还提供了一个 `compare-and-set` 操作，这个操作先进行检查，条件满足后再执行，这个操作对于行是原子性的。
+
+HBase没有Update操作，是通过Put操作来完成数据的修改。
+
+[[scan]]
+=== Scan
+
+扫描(Scan)操作通过迭代器方式返回多行数据，可以通过指定 `startRow` 和 `endRow` 参数来指定扫描器读取 HBase 表的起始行键以及结束行键。
+
+在创建 Scan 实例之后，您可以增加更多的限定条件来读取特定的行。
+
+扫描操作执行后将获得的数据封装在ResultScanner实例中。下面的代码展示了Scan的基本用法。
+
+[source,java]
+----
+
+public static final byte[] CF = "cf".getBytes();
+public static final byte[] ATTR = "attr".getBytes();
+...
+
+Table table = ...      // instantiate a Table instance
+
+Scan scan = new Scan();
+scan.addColumn(CF, ATTR);
+scan.setRowPrefixFilter(Bytes.toBytes("row"));
+ResultScanner rs = table.getScanner(scan);
+try {
+  for (Result r = rs.next(); r != null; r = rs.next()) {
+    // process result...
+  }
+} finally {
+  rs.close();  // always close the ResultScanner!
+}
+----
+
+
+=== Delete
+
+删除(Delete)用于从表中删除数据，HTable除了提供delete()方法外，还有一个与之相对应的Delete类，用户可以通过多种方法限定要删除的列。
+
+与关系型数据库的Delete操作不同，HBase的Delete操作可以指定删除某个列族或者某个列，或者指定某个时间戳，删除比这个时间早的数据。
+
+HBase的Delete操作并不会真正的从磁盘删除数据。而是通过创建墓碑(tombstones)标志进行处理。这些墓碑标记的值和小于该时间版本的单元格在大合并(Major Compact)时被清除。
