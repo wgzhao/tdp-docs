@@ -1,0 +1,13 @@
+= 主题文件
+Doc Writer <doc.writer@asciidoctor.org>
+
+
+include::hive-concept.adoc[]
+
+include::hive-started.adoc[]
+
+include::hive-ddl.adoc[]
+
+include::hive-dml.adoc[]
+
+include::hive-udf.adoc[]

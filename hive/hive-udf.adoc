@@ -1,0 +1,427 @@
+[[hive_udf]]
+== Hive 自定义函数 ==
+
+Hive 支持一系列函数，这些函数包括内建的普通函数（UDF），内建的聚合函数（UDAF），内建的表生成函数（UDTF）等。
+
+=== 内建函数 ===
+
+==== 数学函数 ====
+
+以下是 Hive 内置的数学函数，这些函数在参数为空的情况，大部分返回为空。
+
+|======
+|返回类型 | 函数名（注册名） | 描述
+
+|DOUBLE  | round(DOUBLE a) | 返回 a 的四舍五入整数的浮点数
+
+|DOUBLE  | round(DOUBLE a, INT d) | 返回 a 的四舍五入数，小数点位数不超过 d 位
+
+|DOUBLE  | bround(DOUBLE a)   | 返回针对 a 的高斯舍入或银行家算法舍入方式的值，比如 bround(2.5) = 2,bround(3.5) = 4
+
+|BIGINT  | bround(DOUBLE a, INT d)  | 返回针对 a 的高斯舍入或银行家算法舍入方式的值，小数点后最多保留 d 位。比如 bround(8.25,1) = 8.2,bround(8.35,1) = 8.4
+
+|BIGINT  | floor(DOUBLE a )  | 返回不大于 a 的最大整数，即地板取整
+
+|BIGINT  | ceil(DOUBLE a),celling(DOUBLE a) | 返回不小于 a 的最小证书，即天花板取整
+
+|DOUBLE  | rand(),rand(INT seed)  | 返回0到1之间的随机数，也可以指定随机种子 seed
+
+|DOUBLE  | exp(DOUBLE a),exp(DECIMAL a)  | 返回 e^a 的结果，其中 e 为自然对数
+
+|DOUBLE  | ln(DOUBLE a), ln(DECIMAL a)   | 返回以自然对数 e 为底,数 a 的对数值
+
+|DOUBLE | log10(DOUBLE a), log10(DECIMAL a) | 返回以10为底的数 a 的对数值
+
+|DOUBLE |log2(DOUBLE a), log2(DECIMAL a) | 返回以10为底的数 a 的对数值
+
+|DOUBLE |log(DOUBLE base,DOUBLE a), log2(DECIMAL base,DECIMAL a) | 返回以base为底的数 a 的对数值
+
+|DOUBLE |pow(DOUBLE a, DOUBLE p), power(DOUBLE a, DOUBLE p) | 返回 a^p 的值
+
+|DOUBLE  |sqrt(DOUBLE a), sqrt(DECIMAL a)  | 返回 a 的平方根值
+
+|STRING  | bin(BIGINT a)   |  返回数 a 的二进制格式，比如 bin(12) 返回 1100
+
+|STRING  |hex(BIGINT a) hex(STRING a) hex(BINARY a)  | 如果参数是整数或二进制数，该函数返回其字符串形式的十六进制数。如果参数是字符串，则
+函数把每个字符转为十六进制数然后返回。比如 hex(23) = '17' , hex('23') = '3233'
+
+|BINARY  |unhex(STRING a)  | hex 函数的反函数，把每一对字符当做十六进制翻译，然后转为字节码，比如 unhex('3233') = 23
+
+|STRING  | conv(BIGINT num, INT from_base, INT to_base), conv(STRING num, INT from_base, INT to_base) | 进制转换函数把 num 从 from_base 进制转为 to_base 进制，比如 conv(12,16,2) = '10010', conv('12',16,2) = '10010'
+
+|DOUBLE  | abs(DOUBLE a)  | 返回 a 的绝对值
+
+| INT/DOUBLE | pmod(INT a, INT b), pmod(DOUBLE a, DOUBLE b) | 返回 a 模 b 的结果
+
+|DOUBLE | sin(DOUBLE a), sin(DECIMAL a)  | 返回 a 的正弦值，a 为弧度值
+
+|DOUBLE | asin(DOUBLE a), asin(DECIMAL a)  | 计算 a 的反正弦函数，如果 -1 ≤ a ≤ 1,否则返回 NULL
+
+|DOUBLE  |cos(DOUBLE a), cos(DECIMAL a)   |  返回 a 的余弦值
+
+|DOUBLE  |acos(DOUBLE a), acos(DECIMAL a)  | 返回 a 的反余弦值，如果 -1 ≤ a ≤ 1,否则返回 NULL
+
+|DOUBLE  |tan(DOUBLE a), tan(DECIMAL a)   | 返回 a 的正切值
+
+|DOUBLE  |atan(DOUBLE a), atan(DECIMAL a)   | 返回 a 的反正切值
+
+|DOUBLE  |degrees(DOUBLE a), degrees(DECIMAL a) | 把 a 从弧度制转为角度值，比如 degrees(3.14159267) = 180.0
+
+|DOUBLE  |radians(DOUBLE a), radians(DOUBLE a)  | 把 a 从角度值转为弧度制，比如 radians(90) = 1.570
+
+|INT /DOUBLE | positive(INT a), positive(DOUBLE a) | 返回 a
+
+|INT /DOUBLE | negative(INT a), negative(DOUBLE a) | 返回 -a
+
+|DOUBLE/INT  |sign(DOUBLE a), sign(DECIMAL a)  | 如果a 为正数，返回1.0，如果为负数返回-1.0，否则返回0.0
+
+|DOUBLE  | e()  | 返回自然对数值(2.718281828459045)
+
+|DOUBLE  | pi()  | 返回圆周率值(3.141592653589793)
+
+|BIGINT  |factorial(INT a)  | 返回 a 的阶乘结果，a 的取值范围为[0,20]
+
+|DOUBLE	 |cbrt(DOUBLE a)  | 返回 a 的立方根
+
+|INT/BIGINT |shiftleft(TINYINT|SMALLINT|INT a, INT b),shiftleft(BIGINT a, INT b)  | 返回 a 位左移2位的结果
+
+|INT/BIGINT |shiftright(TINYINT|SMALLINT|INT a, INT b),shiftright(BIGINT a, INT b)  | 返回 a 位右移2位的结果
+
+|INT/BIGINT |shiftrightunsigned(TINYINT|SMALLINT|INT a, INT b),shiftrightunsigned(BIGINT a, INT b)  | 返回 a 位右移2位的无符号数结果
+
+|T       |	greatest(T v1, T v2, ...)  | 返回所有参数中数值最大的值
+
+|T       |	least(T v1, T v2, ...)  | 返回所有参数中数值最小的值
+
+|======
+
+==== 集合函数  ====
+
+|======
+| 返回类型  | 函数名    | 说明
+
+| int   | size(Map<K,V>)  | 返回 map 类型的元素个数
+
+| int  | size(Array<T>)  | 返回 array 类型的元素个数
+
+| array<K>  | map_keys(Map<K,V>)  | 返回 map 的键无序集合
+
+| array<K>  | map_values(Map<K,V>)  | 返回 map 的值无序集合
+
+| boolean  | array_contains(Array<T>,value) | 如果数组 T 包含值 value，返回为TRUE
+
+| array<T>  | stor_array(Array<T>)  | 对数组 T 进行自然升序排列后返回
+
+|======
+
+==== 类型转换函数 ====
+
+|======
+| 返回类型  | 函数名    | 说明
+
+| binary  | binary(string|binary)  | 把参数转为二进制数
+
+| <type>  | cast(expre as <type>)  | 把表达式 expr 转为 type 类型，比如 cast('1' as BIGINT) 的结果是整数1，如果转换失败，返回 NULL
+
+|======
+
+==== 日期函数  ====
+
+|======
+| 返回类型  | 函数名    | 说明
+
+|string |from_unixtime(bigint unixtime[, string format]) | 把 unix 时间戳转为字符串时间表达形式，比如 from_unixtime(1425115821) = '2015-02-28 17:30:21'
+
+|bigint  | unix_timestamp()  | 获得当前 unix 时间戳，单位为秒
+
+|bigint  | unix_timestamp(string date)  | 转换指定日期的 unix 时间戳，date 格式为 yyyy-MM-dd HH:mm:ss，转换失败则返回为0
+
+|string  | to_date(string timestamp)  | 返回指定时间的日期部分，比如 to_date('2015-02-28 17:30:21') = '2015-02-28'
+
+|int     | year(string date)   | 返回日期或者时间戳的年份
+
+|int    | month(string date)  | 返回日期的月份
+
+|int    | day(string date),dayofmonth(date)  | 返回日期的天
+
+|int    | hour(string date)  | 返回日期的小时部分值
+
+|int    | minute(string date)  | 返回日期的分钟部分值
+
+|int    | second(string date)  | 返回日期的秒钟部分值
+
+|int    | weekofyears(string date)  | 返回指定日期属于当年的第几周
+
+|int    | datediff(string enddate,string startdate)  | 返回两个日期相差的天数，比如 datediff('2015-10-12','2015-9-3') = 39
+
+|string | date_add(string startdate,int days)  | 返回在 startdate 日期后 days 天的日期，比如 date_add('2015-9-3',39) = '2015-10-12'
+
+|string | date_sub(string startdate,int days) | 返回 startdate 日期前 days 天的日期，比如 date_sub('2015-10-12',39) = '2015-09-03'
+
+|timestamp | from_utc_timestamp(timestamp,string timezone) | 假定给出的时间戳是 UTC 时区，转换为 timezone 时区后返回，比如 from_utc_timestamp('2015-10-12 00:00:00','CST') =  '2015-10-11 19:00:00.0'
+
+|timestamp | to_utc_timestamp(timestamp,string timezone) | 假定给出的时间戳以及timezone 时区转为 UTC 时区值返回，比如 to_utc_timestamp('2015-10-12 00:00:00','CST') =  '2015-10-12 05:00:00.0'
+
+|date | current_date | 返回当前日期
+
+|timestamp | current_timestamp | 返回当前日期的时间戳
+
+|string  | add_month(string startdate,int months)  | 返回 startdate 日期后 months 月的日期
+
+|string  | last_day(string date)   | 返回日期属于月份的最后一天的日期，比如 last_day('2015-10-12') = '2015-10-31'
+
+|string	 |next_day(string start_date, string day_of_week) | 返回晚于 start_date，但不早于 day_of_week 给定的星期的日期，day_of_week 可以使用2字母，3字母或星期全拼表达，比如 next_day('2015-10-23','TU') = '2015-10-27' ，2015-10-23 是星期五，比这个时间晚，但不要超过 TU 也即是星期二，所以是2015-10-27，这天是星期二
+
+|string  | trunc(string date,string format)  | 清空 date 日期的 format 部分后的所有时间，然后返回。比如 trunc('2015-12-23','MM') = '2015-12-01',trunc('2015-12-23','YYYY') = '2015-01-01'
+
+|double  | month_between(date1,date2)  | 返回两个日期相差的月份值，比如 months_between('2015-12-20','2015-09-12') =  3.25806452, months_between('2015-09-20','2015-12-20') = -3.0
+
+|string  | date_format(date/timestamp/strings,string format) | 把时间转为指定的格式，format 支持的格式为 Java SimpleDateFormat 格式，可以参考link:https://docs.oracle.com/javase/7/docs/api/java/text/SimpleDateFormat.html[SimpleDateFormat]
+
+|======
+
+==== 额外函数 ====
+
+|======
+| 返回类型  | 函数名    | 说明
+
+| T  | if(boolean testCondition, T valueTrue,T valueFalseorNull)  | 如果条件 testCondition 为真，返回 valueTrue，否则返回 valueFalseorNull
+
+|boolean | isnull(a)  | 如果 a 为 NULL，返回真，否则返回假
+
+|boolean  | isnotnull(a) | 如果 a 不为 NULL，返回真，否则返回假
+
+| T    | nvl(T value, T default_value)  | 如果 value 值为空则返回 default_value，否则返回 value 值
+
+| T  | coalesce(T v1, T v2, ...)   | 如果不为空，返回第一个 v 的值，否则如果所有的 v 都是 NUll，则返回 NULL
+
+| T  | CASE a WHEN b THEN c [WHEN d THEN e]* [ELSE f] END | 当 a = b ，返回 c；当 a = d，返回 e；否则返回 f
+
+| T  | CASE WHEN a THEN b [WHEN c THEN d]* [ELSE e] END  | 当 a = true，返回 b； 当 c = true，返回 d；否则返回 e
+
+| T  | nullif(a,b)   | 如果 a = b ，返回 NULL；否则返回 a。是 CASE WHEN a = b then NULL else a 简洁表示法
+
+|======
+
+==== 字符串函数 ====
+
+|======
+| 返回类型  | 函数名    | 说明
+
+| string | base64(binary bin) | 把二进制数 bin 转为 base64编码
+
+|string  | chr(bigint\|double A) | 返回 A 等价的 ascii 字符，如果 A 大于256,则返回 chr(A % 256) 的结果。比如: chr(88) =  "X".
+
+| string | concat(string\|binary A, string\|binary B...) | 返回按参数顺序拼接后的字符串，比如 concat('foo', 'bar') =  'foobar'.
+
+| string | concat_ws(string SEP, string A, string B...) | 类似 concat() , 但可以把拼接的分隔符自定义为 SEP.
+
+| string | concat_ws(string SEP, array<string>) | 类似 concat_ws() , 只是参数形式为数组
+
+| string | decode(binary bin, string charset) | 把第一个参数按照给定的字符集 charset 进行解码 (字符集可以为 'US-ASCII', 'ISO-8859-1', 'UTF-8', 'UTF-16BE', 'UTF-16LE', 'UTF-16'). 任意参数为空，返回结果为空。
+
+| string | format_number(number x, int d) | 格式化数字 x 为类似 `#,###,###.##` 的格式。d 为小数位个数，如果 d 为0 ，则没有小数部分。比如 format_number(34523454,2) = '4,523,454.00', format_number(34523454) = '4,523,454'
+
+| string | get_json_object(string json_string, string path) | 从一个 json 字符串中，根据给定的json 路径 path 提取出对应的 json 对象。如果给定的 json 字符串无效，则返回 NULL。 注意: json path 只能能包含 [0-9a-z_] 这些字符, 不包括大写字符或特殊字符。同时不能以数字开头。
+
+| string | lower(string A) lcase(string A) | 返回给定字符 A 的所有小写形式的字符串。比如， lower('fOoBaR') = 'foobar'.
+
+| string | lpad(string str, int len, string pad) | 返回用 pad 字符左侧填充字符串 str 到长度为 len 的字符串。比如 lpad('abc',4,'*') = '*abc'。
+
+| string | ltrim(string A) | 返回截取掉字符串 A 左侧的空白字符后的字符串。 ltrim(' foobar ') =  'foobar '.
+
+| string | parse_url(string urlString, string partToExtract [, string keyToExtract]) | 从给定的 URL 字符串中返回特定的部分。partToExtract 的有效值包括 HOST, PATH, QUERY, REF, PROTOCOL, AUTHORITY, FILE, 和 USERINFO. 比如 parse_url('http://facebook.com/path1/p.php?k1=v1&amp;k2=v2#Ref1', 'HOST') = 'facebook.com'. 另外，查询部分的提取，可以通过指定第三个参数 keyToExtract 来获取。 比如， parse_url('http://facebook.com/path1/p.php?k1=v1&amp;k2=v2#Ref1', 'QUERY', 'k1') = 'v1'.
+
+| string | printf(String format, Obj... args) | 返回按照 printf 函数风格格式化的字符换。
+
+| string | regexp_extract(string subject, string pattern, int index) | 从字符串 subject 中按给定的正规表式 pattern 来提取字符串。 参数 index 表示提取匹配的哪个部分。regexp_extract('foothebar', 'foo(.*?)(bar)', 2) = 'bar'
+
+| string | regexp_replace(string INITIAL_STRING, string PATTERN, string REPLACEMENT) | 用 REPLACEMENT 按照正规表达式 PATTERN 的规则对字符串进行 INITIAL_STRING 匹配替换，然后返回替换后的字符串。比如， regexp_replace("foobar", "oo\|ar", "") = 'fb'
+
+| string | repeat(string str, int n) | 返回字符串 str 重复 n 的结果
+
+|string  | replace(string A, string OLD, string NEW)  | 返回用 NEW 替代字符串 A 所有包含字符串 OLD 后的字符串。  比如:  replace("ababab", "abab", "Z") =  "Zab".
+
+| string | reverse(string A) | 返回字符串 A 的反序字符串
+
+| string | rpad(string str, int len, string pad) | 返回用 pad 右侧填充字符串 str 到长度为 len 后的字符串。比如：rpad('abc',4,'*') = 'abc*'
+
+| string | rtrim(string A) | 返回接去掉字符串 A 的所有右侧空白字符后的字符。 比如： rtrim(' foobar ') = ' foobar'.
+
+| string | space(int n) | 返回 n 个空格的字符
+
+| string | substr(string\|binary A, int start), substring(string\|binary A, int start) | 返回字符串 A 的字串。参数 start 表示从什么位置开始截取，注意：位置从1开始计数。比如： substr('foobar', 4) = 'bar'
+
+| string | substr(string\|binary A, int start, int len),substring(string\|binary A, int start, int len) | 返回从字符串 A 截取从位置 start 开始长度为 len 的字串。比如： substr('foobar', 4, 1) = 'b'
+
+|string | substring_index(string A, string delim, int count) | 返回字符串 A 出现界定符 delim 之前的所有字符。如果参数 count 是正数，表示从左边开始数起，到 delim 出现次数不超过 count 之前的字符串都返回。如果是负数，则从右往左数起。 Substring_index 是区分大小写的。 比如: substring_index('www.apache.org', '.', 2) = 'www.apache', substring_index('www.apache.org', '.', -2) = 'apache.org'
+
+| string | translate(string\|char\|varchar input, string\|char\|varchar from, string\|char\|varchar to) | 翻译字符串 input，把 input 中出现在 from 里的字符都用对应 to 里的字符替换，然后返回。其功能类似于 PostgreSQL  里的link:http://www.postgresql.org/docs/9.1/interactive/functions-string.html[翻译函数]，任意参数为空，则返回的结果为空。 比如 translate('abcd','ab','AB') = 'ABcd'
+
+| string | trim(string A) | 返回去掉字符串 A 的左右侧空白字符后的字符串。比如： trim(' foobar ') = 'foobar'
+
+| string | upper(string A) ucase(string A) | 返回字符串 A 的大写形式。比如：upper('fOoBaR') = 'FOOBAR'.
+
+|string | initcap(string A) | 返回字符串 A 的每个单词首字符大写后的字符串。比如 initcap('to be ,or not to be,that\'s a question') = ' To Be ,or Not To Be,that\'s A Question'
+
+|string | soundex(string A) | 返回字符串的语音表示法结果。比如： soundex('Miller') =  M460.
+
+| map<string,string> | str_to_map(text[, delimiter1, delimiter2]) | 把文本 text 按照两个界定符 delimiter1 和 delimiter2 来分割成 key-value 对。界定符 Delimiter1 用来分割文本为每一个 K-V
+ 字符对，界定符 Delimiter2 用来把 K-V 字符对分割成 K-V 对。比如：str_to_map('one=1,two=2,three=3',',','=') = {"three":"3","one":"1","two":"2"}
+
+| int | ascii(string str) | 返回字符串 str 的第一个字符的 ascii 码。比如： ascii('abc') = 97
+
+| int | find_in_set(string str, string strList) | 返回字符串 str 在字符串 strList 第一次出现的位置。strList 是一个逗号分隔的字符串列表。任意参数为 NULL，则返回为 NULL，如果第一个参数包含逗号(,—)，则返回0。比如： find_in_set('ab', 'abc,b,ab,c,def') =  3，find_in_set('ab,', 'abc,b,ab,c,def')  = 0
+
+| int | instr(string str, string substr) | 返回字符串 substr 首次出现在字符串 str 的位置。任意参数为 NULL，则返回为 NULL。如果字符没有找到，则返回为0。注意：这里字符串的索引从1而不是从0开始
+
+| int | length(string A) | 返回字符串 A 的长度
+
+| int | locate(string substr, string str[, int pos]) | 返回字符串 str 的 pos 位置后首次出现 substr 的位置。如果没有自定 pos，则从头开始
+
+|int | levenshtein(string A, string B) |返回两个字符串的  Levenshtein 距离。 比如： levenshtein('kitten', 'sitting') =  3.
+
+| boolean | in_file(string str, string filename) | 如果字符串 str 作为整行出现在字符串 filename 中，返回真。
+
+| binary | encode(string src, string charset) | 使用指定的的字符集 charset 编码字符串 src 为二进制格式。 (字符集可以为 'US-ASCII', 'ISO-8859-1', 'UTF-8', 'UTF-16BE', 'UTF-16LE', 'UTF-16'). 任意参数为NULL，则返回 NULL。
+
+| binary | unbase64(string str) | 返回对字符串 str 进行 base64 解码后的字节码。
+
+|======
+
+.get_json_object
+当前对 JSON path 的支持如下：
+
+* $: 根对象
+* .: 子操作符
+* []: 针对数组的子操作符
+* *: 针对[]的通配符
+
+以下方法不支持：
+* : 空字符串作为 key
+* .. : 递归下降
+* @ : 当前对象、元素
+* () : 脚本表达式
+* ?() : 过滤（脚本）表达式
+* [,] : 联合操作符
+* [start:end.step] : 数组分片操作符
+
+假定一个 json 字符串如下：
+[source,json]
+----
+{"store":
+  {"fruit":[{"weight":8,"type":"apple"},{"weight":9,"type":"pear"}],
+   "bicycle":{"price":19.95,"color":"red"}
+  },
+ "email":"amy@only_for_json_udf_test.net",
+ "owner":"amy"
+}
+----
+以下是针对该 json 串的一些操作示例：
+[source,sql]
+----
+hive> SELECT get_json_object(src_json.json, '$.owner') FROM src_json;
+amy
+
+hive> SELECT get_json_object(src_json.json, '$.store.fruit\[0]') FROM src_json;
+{"weight":8,"type":"apple"}
+
+hive> SELECT get_json_object(src_json.json, '$.non_exist_key') FROM src_json;
+NULL
+----
+
+==== 其他函数 ====
+
+|======
+| 返回类型  | 函数名    | 说明
+
+|varies | java_method(class,method[,arg1[,arg2...]])  | 等同于 reflect
+
+|varies | reflect(class,method[,arg1[,arg2...]])  | 调用 java 方法
+
+|int  | hash(a1[,a2..]) | 返回参数的 hash 值
+
+|string | current_user()  | 返回当前用户名
+
+|string | current_database() | 返回当前正在使用的数据库名
+
+|string | md5(string\|binary) | 计算参数的MD5值，返回的结果为32位长度的字符串，如果参数为 NULL，则返回结果为 NULL。比如 md5('abc') = '900150983cd24fb0d6963f7d28e17f72'
+
+|string | sha1(string\|binary),sha(string\|binary) | 计算参数的 SHA-1 数字摘要结果。比如： sha1('abc') = 'a9993e364706816aba3e25717850c26c9cd0d89d'
+
+|binary | aes_encrypt(string\|binary input,string\|binary key) | 使用 AES 算法对参数 input 加密并返回加密结果。key 的长度必须为128，192或256位。如果任意参数为 NULL 或者 key 的长度不符合定义则返回的结果为 NULL。比如 base64(aes_encrypt('hello','1234567890123456')) = '67fHA+Z12z2jlwOLTBeCPA=='
+
+|binary | aes_decrypt(string\|binary input,string\|binary key) | 使用 AES 算法对参数 input 解密并返回解密结果。key 的长度必须为128，192或256位。如果任意参数为 NULL 或者 key 的长度不符合定义则返回的结果为 NULL。比如 aes_decrypt(unbase64('67fHA+Z12z2jlwOLTBeCPA=='),'1234567890123456') = 'hello'
+
+|======
+
+=== 内建的聚合函数 ===
+以下是 Hive 当前支持的内建聚合函数(Built-in Aggregate Functions,a.k.a UDAF)
+
+|======
+| 返回类型  | 函数名    | 说明
+
+|bigint | count(\*),count(expr),count(distinct expr[,expr...]) | count(\*) - 统计返回行的总数，包含行为空的情况; count(expr) -- 返回符合表达式 expr 的行的总数；count(distinct expr[,expr...]) 返回符合表达 expr 的去重记录数
+
+|double | sum(col),sum(distinct col) | 计算指定字段的累加结果，如果指定了 distinct 关键字，则对字段 col 去重后再计算
+
+|double | avg(col),avg(distinct col) | 计算指定字段的平均值，如果指定了 distinct 关键字，则对字段 col 去重后再计算
+
+|double | min(col)  | 计算字段 col 的最小值
+
+|double | max(col)  | 计算字段 col 的最大值
+
+|double | variance(col),var_pop(col) | 返回字段col 的方差值
+
+|double | var_samp(col)  | 返回字段 col 的无偏样本方差
+
+|double | stddev_pop(col) | 返回字段 col 的标准偏差
+
+|double | stddev_samp(col) | 返回字段 col 的无偏样本标准差
+
+|double | covar_pop(col1,col2) | 返回两个字段对的总体协方差
+
+|double | covar_samp(col1,col2) | 返回两个字段对的样本协方差
+
+|double | corr(col1,col2)  | 计算两个字段对的皮尔逊积矩相关系数
+
+|double | percentile(bigint col,p)  | 返回字段 col 的第 p 百分位数
+
+|array<double> | percentile(bigint col,array(p1,[,p2]...)) | 返回字段 col 的第p1,p2百分位数
+
+|double  | percentile_approx(double col,p[,B])  | 返回字段 col 的第 p 个百分位概述，参数 B 控制概数的精确度，值越大，产生的概述越好，默认 B 的值为10000。当字段 col 的去重个数小于 B 值时，该函数返回准确的百分位数。
+
+|array<double> | percentile_approx(bigint col,array(p1,[,p2]...)[,B]) | 返回字段 col 的第p1,p2个百分位概述,参数 B 的定义同上
+
+|array<struct{'x','y'}>  | histogram_numeric(col,b)  | 使用 b 非均匀间隔箱体计算字段 col 的直方图数据，输出结果为一组双精度(x,y)值的数组，分别对应箱体的中心点和箱高。
+
+|array  | collect_set(col)  |  返回字段 col 的去重数据后的集合
+
+|array  | collect_list(col) | 返回字段 col 中有重复数据的集合
+
+|integer | ntile(integer x) | 把一个有序分区分为 x 个成为桶的组里，在分区里，每一行记录对应一个桶的编号。这方便计算三分位数、四分位数、十分位数和百分位数等统计功能
+
+|======
+
+=== 内置的表生成函数 ===
+
+标准的用户定义函数,比如 concat() ，是接受单行记录输入，然后输出一个单行记录。与此想法，表生成函数(UDTF) 则是把一行记录转换为多行记录。
+
+|======
+| 返回类型  | 函数名    | 说明
+
+|N rows | explode(ARRAY) | 把数组的每一个元素当做一行输出
+
+|N rows | explode(MAP)   | 把 Map 的每一个 key-value 对当做一行记录输出，集中 key 和 value 分别形成一列
+
+|       | inline(ARRAY<struct[,struct]>) | 把一个结构数组导出到一个表里
+
+|Array type | explode(ARRAY<type> a)  | 对 a 的每一个元素当做一行输出
+
+|tuple  | parse_url_tuple(url,p1,p2,...) | 类似 parse_url()函数，不过是依据给出的 pattern，把对应的结果一次性输出到一个元组里。有效 pattern 名称为 HOST, PATH, QUERY, REF, PROTOCOL, AUTHORITY, FILE, USERINFO, QUERY:<KEY>
+
+|N rows | posexplode(ARRAY)  | 类似 explode() 函数，不过该函数的输出结果中包含了元素的下标位置，也就是输出的一个(pos,value) 组成的元组
+
+|N rows | stack(int n,v_1,v_2,...,v_k) | 把 v_1,v_2,...,v_k 个元素分到 n 行记录里，每一行有 k/n 个元素。n 必须是常数
+
+|======

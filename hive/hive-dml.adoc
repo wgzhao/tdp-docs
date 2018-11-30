@@ -1,0 +1,201 @@
+[[hive_dml]]
+== Hive DML ==
+
+=== 概述 ===
+本章描述 Hive 支持的基本 DML 语句，大致上和 Hive 的 RDBMS 语句类似，但也有其特殊的地方。
+
+=== 加载文件到表 ===
+
+Hive 并不支持加载数据到表时进行转换。加载操作只是纯粹的拷贝/移动数据文件到表对应的物理路径上
+
+.语法
+[source,sql]
+----
+LOAD DATA [LOCAL] INPATH 'filepath' [OVERWRITE] INTO TABLE tablename [PARTITION (partcol1=val1, partcol2=val2 ...)]
+----
+
+* _filepath_ 可以是：
+** 相对径路，比如 _project/data1_
+** 绝对路径，比如 _/user/hive/project/data1_
+** 完整的 URI 以及认证信息，比如 _hdfs://namenode:8020/user/hive/project/data1_
+* 加载的目标可以是表，也可以是分区，如果表是分区表，则需要指定是哪个分区
+* _filepath_ 可以是一个文件，也可以是一个目录，如果是后者，Hive 则把目录下的所有文件都加载到目标对象中
+* 如果关键字 LOCAL 指定的话，那么：
+** load 命令将在本地文件系统上寻找 _filepath_ ，如果 _filepath_ 是相对路径，则把用户的当前工作目录作为根目录，对于本地文件，用户可以使用 URI 方式来指定，比如 `file://data/project/data1`
+** load 命令会先把所有的文件拷贝到目标文件系统上（这里一般是 HDFS），而后把数据文件移动到表或分区对应的物理路径上
+* 如果没有指定关键字 LOCAL，Hive 或者使用 _filepath_ 的网站 URI（如果指定了 URI），或者使用以下规则：
+** 如果模式（scheme）或认证没有指定，Hive 将从 hadoop 的配置变量 `fs.default.name` 中获取 Namenode 的 URI 作为当前 _filepath_ 的 URI
+** 如果 _filepath_ 不是绝对路径，那么 Hive 用 _/user/<username>_ 作为绝对路径前缀
+** Hive 将移动 _filepath_ 指定的文件或目录到表或分区对一个的目录下
+* 如果指定了 OVERWRITE 关键字，那么目标表或分区的数据会先删除，然后再加载；否则数据文件追加到目标表或分区上
+** 注意，如果目标表或分区的数据文件名和要加载的数据文件名重名，那么原来的数据文件将会被替换
+
+.注意
+
+* _filepath_ 不能包含子目录
+* 如果没有指定 LOCAL 关键字，_filepath_ 所指定的文件或目录必须和表或分区在同一个文件系统上
+* Hive 对要加载的文件仅作做基本的检查，当前仅检查文件的格式是否和表或分区指定的存储相同
+
+=== 把查询结果插入数据到表 ===
+
+查询结果也可以插入到表中
+
+.语法
+[source,sql]
+----
+-- Standard syntax:
+INSERT OVERWRITE TABLE tablename1 [PARTITION (partcol1=val1, partcol2=val2 ...) [IF NOT EXISTS]] select_statement1 FROM from_statement;
+INSERT INTO TABLE tablename1 [PARTITION (partcol1=val1, partcol2=val2 ...)] select_statement1 FROM from_statement;
+INSERT INTO TABLE tablename1 [PARTITION (partcol1=val1, partcol2=val2 ...)] (z,y) select_statement1 FROM from_statement;
+
+-- Hive extension (multiple inserts):
+FROM from_statement
+INSERT OVERWRITE TABLE tablename1 [PARTITION (partcol1=val1, partcol2=val2 ...) [IF NOT EXISTS]] select_statement1
+[INSERT OVERWRITE TABLE tablename2 [PARTITION ... [IF NOT EXISTS]] select_statement2]
+[INSERT INTO TABLE tablename2 [PARTITION ...] select_statement2] ...;
+FROM from_statement
+INSERT INTO TABLE tablename1 [PARTITION (partcol1=val1, partcol2=val2 ...)] select_statement1
+[INSERT INTO TABLE tablename2 [PARTITION ...] select_statement2]
+[INSERT OVERWRITE TABLE tablename2 [PARTITION ... [IF NOT EXISTS]] select_statement2] ...;
+
+-- Hive extension (dynamic partition inserts):
+INSERT OVERWRITE TABLE tablename PARTITION (partcol1[=val1], partcol2[=val2] ...) select_statement FROM from_statement;
+INSERT INTO TABLE tablename PARTITION (partcol1[=val1], partcol2[=val2] ...) select_statement FROM from_statement;
+----
+
+.解释
+
+* INSERT OVERWRITE 会覆盖目标表或分区的数据
+* INSERT INTO 把数据追加到目标表或分区的最后，原来的数据不变
+* 多表插入是 Hive 的独有特性，从一个查询语句中，依据条件分支不同，将数据插入到不同的表中，不同的条件可以分别确定是采取 INSERT OVERWRITE 方式还是 INSERT INTO 方式
+* INSERT INTO 后面的表可以指定字段，比如 `INSERT INTO T (z, x, c1)`
+
+==== 动态分区插入 ====
+在动态分区插入中，用户可以只给出分区的部分规范，这意味着只需要在 PARTITION 子句中指定分区字段的名字，而分区字段的值是可选的。
+如果分区字段的值给定了，我们则成为静态插入，否则就是动态插入。每一个动态分区字段在后面的 select 语句中都有对应的输入字段。
+动态分区字段必须出现在 select 语句的最后，且多个动态分区字段的顺序必须和 PARTITION()子句中出现的字段顺序保持一致。
+
+与动态分区插入相关的配置参数和解释如下表：
+
+|====
+|配置参数 | 默认值 | 说明
+
+|hive.exec.dynamic.partition | true | 设置为 true 启用动态分区插入功能
+
+|hive.exec.dynamic.partition.mode | strict | 在 strict 模式下，用户必须指定至少一个静态分区，在 nonstrict 模式下，所有的分区都允许是动态分区插入
+
+|hive.exec.max.dynamic.partitions.pernode | 100 | 允许每个 mapper/reduce 节点最大的动态分区数量
+
+|hive.exec.max.dynamic.partitions | 1000 | 允许可以创建的最大动态分区数量
+
+|hive.exec.max.created.files | 100,000 | 在一个 MR 任务里可以创建的最大 HDFS 文件数
+
+|hive.error.on.empty.partition | false | 如果一个动态分区插入为空结果是否抛出异常
+
+|====
+
+.例子
+[source,sql]
+----
+FROM page_view_stg pvs
+INSERT OVERWRITE TABLE page_view PARTITION(dt='2015-06-08', country)
+       SELECT pvs.viewTime, pvs.userid, pvs.page_url, pvs.referrer_url, null, null, pvs.ip, pvs.cnt
+----
+上述语句中，country 分区字段为动态插入，对应的分区值由 select 语句的最后字段-- 这里是 pvs.cnt -- 来决定。
+
+=== 把查询结果写入文件系统 ===
+
+一个 SQL 的查询结果也可以直接写入到文件系统的目录中，其语法和结果写入到表类似。
+
+.语法
+[source,sql]
+----
+-- Standard syntax:
+INSERT OVERWRITE [LOCAL] DIRECTORY directory1
+  [ROW FORMAT row_format] [STORED AS file_format]
+  SELECT ... FROM ...
+
+-- Hive extension (multiple inserts):
+FROM from_statement
+INSERT OVERWRITE [LOCAL] DIRECTORY directory1 select_statement1
+[INSERT OVERWRITE [LOCAL] DIRECTORY directory2 select_statement2] ...
+
+row_format
+  : DELIMITED [FIELDS TERMINATED BY char [ESCAPED BY char]] [COLLECTION ITEMS TERMINATED BY char]
+        [MAP KEYS TERMINATED BY char] [LINES TERMINATED BY char]
+        [NULL DEFINED AS char]
+----
+
+.解释
+
+* 目录必须是完整的 URI。如果模式或认证没有指定，Hive 从 hadoop 的配置项 `fs.default.name` 中获取
+* 如果使用了 LOCAL 关键字，Hive 将数据写入到本地文件系统的目录上
+* 数据以文本格式写入到文件系统，字段之间用 ^A 分隔，记录之间用换行。如果字段不是基本类型，则这些字段的数据序列化成 JSON 格式
+
+=== 从 SQL 插入数据到表 ===
+
+INSERT ... VALUES 语句可以用来直接从 SQL 语句将数据插入到表中。
+
+.语法
+[source,sql]
+----
+-- Standard Syntax:
+INSERT INTO TABLE tablename [PARTITION (partcol1[=val1], partcol2[=val2] ...)] VALUES values_row [, values_row ...]
+
+Where values_row is:
+( value [, value ...] )
+where a value is either null or any valid SQL literal
+----
+
+.解释
+
+* 在 VALUES 子句中，表的每个字段的值都必须给出，标准 SQL 中，允许指定一部分字段然后进行插入，目前 Hive 还不支持这个特性
+* 该语法同样支持动态分区插入
+* 如果 Hive 启用了 ACID 特性，则插入采取自动提交特性，即每插入一行成功，则提交一次
+* 该语法不支持复杂类型（比如 array，map，struct，union）的插入
+
+.例子
+[source,sql]
+----
+CREATE TABLE students (name VARCHAR(64), age INT, gpa DECIMAL(3, 2))
+  CLUSTERED BY (age) INTO 2 BUCKETS STORED AS ORC;
+
+INSERT INTO TABLE students
+  VALUES ('fred flintstone', 35, 1.28), ('barney rubble', 32, 2.32);
+
+
+CREATE TABLE pageviews (userid VARCHAR(64), link STRING, came_from STRING)
+  PARTITIONED BY (datestamp STRING) CLUSTERED BY (userid) INTO 256 BUCKETS STORED AS ORC;
+
+INSERT INTO TABLE pageviews PARTITION (datestamp = '2015-09-23')
+  VALUES ('jsmith', 'mail.com', 'sports.com'), ('jdoe', 'mail.com', null);
+
+INSERT INTO TABLE pageviews PARTITION (datestamp)
+  VALUES ('tjohnson', 'sports.com', 'finance.com', '2015-09-23'), ('tlee', 'finance.com', null, '2015-09-21');
+----
+
+=== 更新 ===
+更新（Update）并不是一开始就被 Hive 支持的，而是在 Hive 0.14以后才增加的版本，要使用该功能，必须启用 ACID 特性。
+
+.语法
+[source,sql]
+----
+UPDATE tablename SET column = value [, column = value ...] [WHERE expression]
+----
+
+.解释
+
+* 更新的值必须是 Hive 支持的表达式，比如算术操作、UDF、cast、字符等都可以，但是子查询不支持
+* 只有匹配 WHERE 子句的行会被更新
+* 分区字段不能更新
+* 桶字段不能更新
+* 一旦更新操作完成，则会自动提交
+
+=== 删除 ===
+删除(Delete) 和更新操作一样，也需要在启动 ACID 特性下才支持。
+
+.语法
+[source,sql]
+----
+DELETE FROM tablename [WHERE expression]
+----

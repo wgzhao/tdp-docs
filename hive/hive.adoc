@@ -1,0 +1,41 @@
+= Hive 使用手册 =
+湖南天云魔方数据科技有限公司
+2015
+:corpname: 湖南天云魔方数据科技有限公司
+:corpshortname: 天云魔方
+:prodverbname: TCloudata Data Platform
+:prodshortname: TDP
+:prodver: 2.7
+:imagedir: ./images
+:stylesdir: ./styles
+:doctype: book
+:numbered:
+:icons: font
+:toc: left
+:toclevels: 2
+//active header and footer
+:pagenums:
+:docinfo:
+:docinfo1:
+:source-highlighter: pygments
+:keywords: TDP, Hadoop, bigdata, Spark
+//i18n
+:appendix-caption: 附录
+:chapter-label:
+:figure-caption: 图
+:table-caption: 表
+:lang: zh_cn
+:preface-title: 前言
+:toc-title: 目录
+:appendix-caption: 附录
+:orgname: 湖南天云魔方数据科技有限公司
+:last-update-label: 最后更新时间
+:front-cover-image: image:images/cover.pdf[width=1050,height=1600]
+
+include::hive-concept.adoc[]
+include::hive-started.adoc[]
+include::hive-ddl.adoc[]
+include::hive-dml.adoc[]
+include::hive-udf.adoc[]
+// include::hive-mapreduce.adoc[]
+include::hive-tuning.adoc[]

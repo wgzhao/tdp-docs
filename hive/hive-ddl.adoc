@@ -1,0 +1,696 @@
+== Hive DDL ==
+
+=== 概述 ===
+
+HiveQL DDL 语句包括以下内容：
+
+- CREATE DATABASE/SCHEMA, TABLE, VIEW, FUNCTION, INDEX
+- DROP DATABASE/SCHEMA, TABLE, VIEW, INDEX
+- TRUNCATE TABLE
+- ALTER DATABASE/SCHEMA, TABLE, VIEW
+- MSCK REPAIR TABLE (or ALTER TABLE RECOVER PARTITIONS)
+- SHOW DATABASES/SCHEMAS, TABLES, TBLPROPERTIES, PARTITIONS, FUNCTIONS, INDEX[ES], COLUMNS, CREATE TABLE
+- DESCRIBE DATABASE/SCHEMA, table_name, view_name
+
+除了 `SHOW PARTITIONS` 之外，PARTITIONS 语句可用于建表语句中。
+
+=== 关键字 ===
+
+.关键字
+----
+ADD,ADMIN,AFTER,ALL,ALTER,ANALYZE,AND,ARCHIVE,ARRAY,AS,ASC,AUTHORIZATION,BEFORE,BETWEEN,
+BIGINT,BINARY,BOOLEAN,BOTH,BUCKET,BUCKETS,BY,CASCADE,CASE,CAST,CHANGE,CHAR,CLUSTER,
+CLUSTERED,CLUSTERSTATUS,COLLECTION,COLUMN,COLUMNS,COMMENT,COMPACT,COMPACTIONS,COMPUTE,
+CONCATENATE,CONF,CONTINUE,CREATE,CROSS,CUBE,CURRENT,CURRENT_DATE,CURRENT_TIMESTAMP,CURSOR,
+DATA,DATABASE,DATABASES,DATE,DATETIME,DAY,DBPROPERTIES,DECIMAL,DEFERRED,DEFINED,DELETE,
+DELIMITED,DEPENDENCY,DESC,DESCRIBE,DIRECTORIES,DIRECTORY,DISABLE,DISTINCT,DISTRIBUTE,
+DOUBLE,DROP,ELEM_TYPE,ELSE,ENABLE,END,ESCAPED,EXCHANGE,EXCLUSIVE,EXISTS,EXPLAIN,EXPORT,
+EXTENDED,EXTERNAL,FALSE,FETCH,FIELDS,FILE,FILEFORMAT,FIRST,FLOAT,FOLLOWING,FOR,FORMAT,
+FORMATTED,FROM,FULL,FUNCTION,FUNCTIONS,GRANT,GROUP,GROUPING,HAVING,HOLD_DDLTIME,HOUR,
+IDXPROPERTIES,IF,IGNORE,IMPORT,IN,INDEX,INDEXES,INNER,INPATH,INPUTDRIVER,INPUTFORMAT,
+INSERT,INT,INTERSECT,INTERVAL,INTO,IS,ITEMS,JAR,JOIN,KEYS,KEY_TYPE,LATERAL,LEFT,LESS,
+LIKE,LIMIT,LINES,LOAD,LOCAL,LOCATION,LOCK,LOCKS,LOGICAL,LONG,MACRO,MAP,MAPJOIN,
+MATERIALIZED,MINUS,MINUTE,MONTH,MORE,MSCK,NONE,NOSCAN,NOT,NO_DROP,NULL,OF,OFFLINE,ON,
+OPTION,OR,ORDER,OUT,OUTER,OUTPUTDRIVER,OUTPUTFORMAT,OVER,OVERWRITE,OWNER,PARTIALSCAN,
+PARTITION,PARTITIONED,PARTITIONS,PERCENT,PLUS,PRECEDING,PRECISION (Hive 2.2.0+),
+PRESERVE,PRETTY,PRINCIPALS,PROCEDURE,PROTECTION,PURGE,RANGE,READ,READONLY,READS,REBUILD,
+RECORDREADER,RECORDWRITER,REDUCE,REGEXP,RELOAD,RENAME,REPAIR,REPLACE,RESTRICT,REVOKE,
+REWRITE,RIGHT,RLIKE,ROLE,ROLES,ROLLUP,ROW,ROWS,SCHEMA,SCHEMAS,SECOND,SELECT,SEMI,SERDE,
+SERDEPROPERTIES,SERVER,SET,SETS,SHARED,SHOW,SHOW_DATABASE,SKEWED,SMALLINT,SORT,SORTED,
+SSL,STATISTICS,STORED,STREAMTABLE,STRING,STRUCT,TABLE,TABLES,TABLESAMPLE,TBLPROPERTIES,
+TEMPORARY,TERMINATED,THEN,TIMESTAMP,TINYINT,TO,TOUCH,TRANSACTIONS,TRANSFORM,TRIGGER,TRUE,
+TRUNCATE,UNARCHIVE,UNBOUNDED,UNDO,UNION,UNIONTYPE,UNIQUEJOIN,UNLOCK,UNSET,UNSIGNED,UPDATE,
+URI,USE,USER,USING,UTC,UTCTIMESTAMP,VALUES,VALUE_TYPE,VARCHAR,VIEW,WHEN,WHERE,WHILE,
+WINDOW,WITH,YEAR
+----
+
+.非保留关键字
+----
+ADD,ADMIN,AFTER,ANALYZE,ARCHIVE,ASC,BEFORE,BUCKET,BUCKETS,CASCADE,CHANGE,CLUSTER,
+CLUSTERED,CLUSTERSTATUS,COLLECTION,COLUMNS,COMMENT,COMPACT,COMPACTIONS,COMPUTE,
+CONCATENATE,CONTINUE,DATA,DATABASES,DATETIME,DAY,DBPROPERTIES,DEFERRED,DEFINED,
+DELIMITED,DEPENDENCY,DESC,DIRECTORIES,DIRECTORY,DISABLE,DISTRIBUTE,ELEM_TYPE,ENABLE,
+ESCAPED,EXCLUSIVE,EXPLAIN,EXPORT,FIELDS,FILE,FILEFORMAT,FIRST,FORMAT,FORMATTED,
+FUNCTIONS,HOLD_DDLTIME,HOUR,IDXPROPERTIES,IGNORE,INDEX,INDEXES,INPATH,INPUTDRIVER,
+INPUTFORMAT,ITEMS,JAR,KEYS,KEY_TYPE,LIMIT,LINES,LOAD,LOCATION,LOCK,LOCKS,LOGICAL,LONG,
+MAPJOIN,MATERIALIZED,MINUS,MINUTE,MONTH,MSCK,NOSCAN,NO_DROP,OFFLINE,OPTION,OUTPUTDRIVER,
+OUTPUTFORMAT,OVERWRITE,OWNER,PARTITIONED,PARTITIONS,PLUS,PRETTY,PRINCIPALS,PROTECTION,
+PURGE,READ,READONLY,REBUILD,RECORDREADER,RECORDWRITER,REGEXP (Hive 0.x.x and 1.x.x),
+RELOAD,RENAME,REPAIR,REPLACE,RESTRICT,REWRITE,RLIKE (Hive 0.x.x and 1.x.x),ROLE,ROLES,
+SCHEMA,SCHEMAS,SECOND,SEMI,SERDE,SERDEPROPERTIES,SERVER,SETS,SHARED,SHOW,SHOW_DATABASE,
+SKEWED,SORT,SORTED,SSL,STATISTICS,STORED,STREAMTABLE,STRING,STRUCT,TABLES,TBLPROPERTIES,
+TEMPORARY,TERMINATED,TINYINT,TOUCH,TRANSACTIONS,UNARCHIVE,UNDO,UNIONTYPE,UNLOCK,UNSET,
+UNSIGNED,URI,USE,UTC,UTCTIMESTAMP,VALUE_TYPE,VIEW,WHILE,YEAR
+----
+
+.保留关键字
+----
+ALL,ALTER,AND,ARRAY,AS,AUTHORIZATION,BETWEEN,BIGINT,BINARY,BOOLEAN,BOTH,BY,CASE,CAST,
+CHAR,COLUMN,CONF,CREATE,CROSS,CUBE,CURRENT,CURRENT_DATE,CURRENT_TIMESTAMP,CURSOR,
+DATABASE,DATE,DECIMAL,DELETE,DESCRIBE,DISTINCT,DOUBLE,DROP,ELSE,END,EXCHANGE,EXISTS,
+EXTENDED,EXTERNAL,FALSE,FETCH,FLOAT,FOLLOWING,FOR,FROM,FULL,FUNCTION,GRANT,GROUP,
+GROUPING,HAVING,IF,IMPORT,IN,INNER,INSERT,INT,INTERSECT,INTERVAL,INTO,IS,JOIN,LATERAL,
+LEFT,LESS,LIKE,LOCAL,MACRO,MAP,MORE,NONE,NOT,NULL,OF,ON,OR,ORDER,OUT,OUTER,OVER,
+PARTIALSCAN,PARTITION,PERCENT,PRECEDING,PRESERVE,PROCEDURE,RANGE,READS,REDUCE,
+REGEXP (Hive 2.0.0 onward),REVOKE,RIGHT,RLIKE (Hive 2.0.0 onward),ROLLUP,ROW,ROWS,
+SELECT,SET,SMALLINT,TABLE,TABLESAMPLE,THEN,TIMESTAMP,TO,TRANSFORM,TRIGGER,TRUE,
+TRUNCATE,UNBOUNDED,UNION,UNIQUEJOIN,UPDATE,USER,USING,VALUES,VARCHAR,WHEN,WHERE,
+WINDOW,WITH
+----
+
+=== 数据库定义 ===
+.创建数据库
+[source,sql]
+----
+CREATE (DATABASE|SCHEMA) [IF NOT EXISTS] database_name
+  [COMMENT database_comment]
+  [LOCATION hdfs_path]
+  [WITH DBPROPERTIES (property_name=property_value, ...)];
+----
+这里的 DATABASE 和 SCHEMA 是等价的。
+
+.删除数据库
+[source,sql]
+----
+DROP (DATABASE|SCHEMA) [IF EXISTS] database_name [RESTRICT|CASCADE];
+----
+默认情况下，删除数据库采取 RESTRICT 模式，也就是当该数据库下还有表时，删除数据库将会失败。如果确定要删除含有表的数据库，使用 `DROP DATABASE ... CASCADE` 语句。
+
+.修改数据库
+[source,sql]
+----
+ALTER (DATABASE|SCHEMA) database_name SET DBPROPERTIES (property_name=property_value, ...);
+
+ALTER (DATABASE|SCHEMA) database_name SET OWNER [USER|ROLE] user_or_role;
+----
+目前针对数据库的元数据修改仅限上面两种形式。
+
+=== 表定义 ===
+==== 创建表 ====
+表的创建语句如下：
+[source,sql]
+----
+CREATE [TEMPORARY] [EXTERNAL] TABLE [IF NOT EXISTS] [db_name.]table_name
+  [(col_name data_type [COMMENT col_comment], ...)]
+  [COMMENT table_comment]
+  [PARTITIONED BY (col_name data_type [COMMENT col_comment], ...)]
+  [CLUSTERED BY (col_name, col_name, ...) [SORTED BY (col_name [ASC|DESC], ...)] INTO num_buckets BUCKETS]
+  [SKEWED BY (col_name, col_name, ...)
+     ON ((col_value, col_value, ...), (col_value, col_value, ...), ...)
+     [STORED AS DIRECTORIES]
+  [
+   [ROW FORMAT row_format]
+   [STORED AS file_format]
+     | STORED BY 'storage.handler.class.name' [WITH SERDEPROPERTIES (...)]
+  ]
+  [LOCATION hdfs_path]
+  [TBLPROPERTIES (property_name=property_value, ...)]
+  [AS select_statement];
+
+CREATE [TEMPORARY] [EXTERNAL] TABLE [IF NOT EXISTS] [db_name.]table_name
+  LIKE existing_table_or_view_name
+  [LOCATION hdfs_path];
+
+data_type
+  : primitive_type
+  | array_type
+  | map_type
+  | struct_type
+  | union_type
+
+primitive_type
+  : TINYINT
+  | SMALLINT
+  | INT
+  | BIGINT
+  | BOOLEAN
+  | FLOAT
+  | DOUBLE
+  | DOUBLE PRECISION
+  | STRING
+  | BINARY
+  | TIMESTAMP
+  | DECIMAL
+  | DECIMAL(precision, scale)
+  | DATE
+  | VARCHAR
+  | CHAR
+
+array_type
+  : ARRAY < data_type >
+
+map_type
+  : MAP < primitive_type, data_type >
+
+struct_type
+  : STRUCT < col_name : data_type [COMMENT col_comment], ...>
+
+union_type
+   : UNIONTYPE < data_type, data_type, ... >
+
+row_format
+  : DELIMITED [FIELDS TERMINATED BY char [ESCAPED BY char]] [COLLECTION ITEMS TERMINATED BY char]
+        [MAP KEYS TERMINATED BY char] [LINES TERMINATED BY char]
+        [NULL DEFINED AS char]
+  | SERDE serde_name [WITH SERDEPROPERTIES (property_name=property_value, property_name=property_value, ...)]
+
+file_format:
+  : SEQUENCEFILE
+  | TEXTFILE
+  | RCFILE
+  | ORC
+  | PARQUET
+  | AVRO
+  | INPUTFORMAT input_format_classname OUTPUTFORMAT output_format_classname
+----
+
+`CREATE TABLE` 创建一个给定名字的数据库表。如果表名或试图名已经存在，就会显示异常。可以使用 `IF NOT EXISTS` 语句来改掉这种错误。
+
+* 表名和字段名不区分大小写，但是 SerDe 以及属性名却分大小写
+* 表和字段注释为字符串（单引号）
+* `TBLPROPERTIES` 子语句允许你使用key-value形式来自定义表的元数据信息。同时也预定义了一些表属性，比如 `last_modified_user`, `last_modified_time` 这些属性
+由 Hive 自动添加和管理，其他预定义的属性有：
+** TBLPROPERTIES ("comment"="table_comment")
+** TBLPROPERTIES ("hbase.table.name"="table_name") – see HBase Integration.
+** TBLPROPERTIES ("immutable"="true") or ("immutable"="false") in release 0.13.0+ (HIVE-6406) – see Inserting Data into Hive Tables from Queries.
+** TBLPROPERTIES ("orc.compress"="ZLIB") or ("orc.compress"="SNAPPY") or ("orc.compress"="NONE") and other ORC properties – see ORC Files.
+** TBLPROPERTIES ("transactional"="true") or ("transactional"="false") in release 0.14.0+, the default is "false" – see Hive Transactions.
+** TBLPROPERTIES ("NO_AUTO_COMPACTION"="true") or ("NO_AUTO_COMPACTION"="false"), the default is "false" – see Hive Transactions.
+** TBLPROPERTIES ("compactor.mapreduce.map.memory.mb"="mapper_memory") – see Hive Transactions.
+** TBLPROPERTIES ("compactorthreshold.hive.compactor.delta.num.threshold"="threshold_num") – see Hive Transactions.
+** TBLPROPERTIES ("compactorthreshold.hive.compactor.delta.pct.threshold"="threshold_pct") – see Hive Transactions.
+** TBLPROPERTIES ("auto.purge"="true") or ("auto.purge"="false") in release 1.2.0+ (HIVE-9118) – see Drop Table and Drop Partitions.
+** TBLPROPERTIES ("EXTERNAL"="TRUE") in release 0.6.0+ (HIVE-1329) – Change a managed table to an external table and vice versa for "FALSE".
+* 如果要指定表名所在的数据库，一种方式是先用 `USE <DATABASE>` 语句切换到数据库，然后使用 `CREATE` 语句创建表。或者直接使用 `CREATE database_name.table_name` 的方式。默认情况下，当前数据库为_default_
+
+.Row Format,Storage Format,and SerDe
+我们可以使用自定义的 SerDe 或者原生的 SerDe 创建表。如果没有指定 ROW FORMAT 或者指定了ROW FORMAT DELIMITED，则使用原生的 SerDe。我们可以使用 DELIMITED 子语句来获取带分隔的文件，使用 'ESCAPED BY' 来指定转义字符(比如 ESCAPED BY '\t')。可以使用 'NULL DEFINED' 语句自定义 NULL 格式（默认是 '\N'）。使用 'SERDE' 子语句可以创建自定义的 SerDe。
+
+如果希望数据以纯文本形式保存，可以使用 STORED AS TEXTFILE。除非配置项 `hive.default.fileformat` 的参数有不同设置，否则 TEXTFILE 是默认文件格式。
+
+如果希望数据压缩存放，可以使用 STORED AS SEQUENCEFILE。
+
+如果希望数据以 ORC 文件格式存放，使用 STORED AS ORC。
+
+针对需要使用正规表达式来分隔数据字段的，可以使用 ROW FORMAT SERDE。我们在link:hive-started.adoc[Hive快速入门]的最后演示了这种使用方法。
+
+在 file_format 里使用 INPUTFORMAT 和  OUTPUTFORMAT 时需分别指定 InputFormat 和 OutputFormat 的类。比如，`org.apache.hadoop.hive.contrib.fileformat.base64.Base64TextInputFormat`。如果想使用 LZO 压缩的话，使用 'INPUTFORMAT "com.hadoop.mapred.DeprecatedLzoTextInputFormat" OUTPUTFORMAT "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"'
+
+如果想使用 Parquet 列存储的话，使用 STORED AS PARQUET
+
+使用 STORED AS AVRO 保存为 Avro 格式文件
+
+如果要修改 SerDe 或者 TBLPROPERTIES 属性，使用 ALTER TABLE 语句。
+
+.分区表
+分区表通过 PARTITIONED BY 子语句创建。一个表可以有一个或多个分区字段，在物理数据存储上，是按照分区字段进行目录分层的。分区表同时可以使用 CLUSTER BY 子语句进行分桶。这种方式某些特定的查询可以提升效率。
+
+
+如果创建分区时遇到这样的错误：“FAILED: Error in semantic analysis: Column repeated in partitioning columns,” 这意味着你要指定的分区字段已经包含在表定义里面了。分区表字段是一个虚假字段，它并不包含在表定义自身里，但是该字段不能和表定义里的字段重名。
+
+比如，假设你的原始非分区表定义如下：
+[source,sql]
+----
+id  int,
+sdate date,
+name varchar
+----
+现在，你想按照日期来进行分区，那么 "sdate" 字段就需要从表定义从移出作为分区字段，如果你想保留数据格式不变，那么可以用别的字段的名字来代替现在的 "sdate" 字段名字。比如
+[source,sql]
+----
+create table table_name (
+  id                int,
+  dtDontQuery       string,
+  name              string
+)
+partitioned by (date string)
+----
+现在，你可以使用 `where date = '....'` 来进行查询，表的第二个字段 dtDontQuery 会保留原始数据。
+
+下面是创建一个分区表的另外一个例子：
+[source,sql]
+----
+CREATE TABLE page_view(viewTime INT, userid BIGINT,
+     page_url STRING, referrer_url STRING,
+     ip STRING COMMENT 'IP Address of the User')
+ COMMENT 'This is the page view table'
+ PARTITIONED BY(dt STRING, country STRING)
+ STORED AS SEQUENCEFILE;
+----
+上面的语句创建了名为 page_view 的表，包含了 viewTime, userid, page_url, referrer_url, ip 5个字段（ip 字段还包含注释）。该表用了两个字段做分区，同时使用SEQUENCE存储格式。大数据文件的字段分隔符号为 `ctrl-A`，记录分隔为换行。
+
+[source,sql]
+----
+CREATE TABLE page_view(viewTime INT, userid BIGINT,
+     page_url STRING, referrer_url STRING,
+     ip STRING COMMENT 'IP Address of the User')
+ COMMENT 'This is the page view table'
+ PARTITIONED BY(dt STRING, country STRING)
+ ROW FORMAT DELIMITED
+   FIELDS TERMINATED BY '\001'
+STORED AS SEQUENCEFILE;
+----
+上面的语句创建的表和之前创建的 page_view 等价。
+
+.外部表
+EXTERNAL 关键字允许我们使用 LOCATION 来指定表的数据文件位置，而不是用默认的位置。比如我们已经有了数据，需要在该数据上创建一个对应的表，就可以使用这种方式。
+当我们删除一个外部表时，表的数据**不会**被删除，这是它和和非外部表（管理表）的最大区别。
+
+一个外部表的数据位置可以指向HDFS的任何目录。
+
+[source,sql]
+----
+CREATE EXTERNAL TABLE page_view(viewTime INT, userid BIGINT,
+     page_url STRING, referrer_url STRING,
+     ip STRING COMMENT 'IP Address of the User',
+     country STRING COMMENT 'country of origination')
+ COMMENT 'This is the staging page view table'
+ ROW FORMAT DELIMITED FIELDS TERMINATED BY '\054'
+ STORED AS TEXTFILE
+ LOCATION '<hdfs_location>';
+----
+上述语句依然是创建 page_view 表，与之前的创表语句不同的是，这里我们指定了数据文件的存放位置，不是默认使用 ' hive.metastore.warehouse.dir' 里所定义的路径。
+
+.Create Table As Select(CTAS)
+表也可以通过查询语句的方式来创建。这种创建方式是原始的，这意味着表在创建成功之前是看不到看表的。
+
+CTAS分为两部分，SELECT支持HiveQL的部分SELECT语句。而CREATE部分允许定义表的一些其他属性，比如SerDe。
+
+CTAS 有以下限制：
+
+* 创建的表不能有分区
+* 创建的表不能是外部表
+* 创建的表不能有桶定义
+
+[source,sql]
+----
+CREATE TABLE new_key_value_store
+   ROW FORMAT SERDE "org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe"
+   STORED AS RCFile
+   AS
+SELECT (key % 1024) new_key, concat(key, value) key_value_pair
+FROM key_value_store
+SORT BY new_key, key_value_pair;
+----
+上述语句创建名为 new_key_value_store 的表，表的字段包含 new_key, key_value_pair 两个。如果在 SELECT 语句中不指定字段别名，则表的字段会自动命名为 _col0, _col1。
+
+.Create Table Like
+和 CTAS 不同的是，Like 允许拷贝一个已经存在的表的定义（但不拷贝数据），下面的创建语句是完全匹配原表的，而不仅仅是表名。新创建的表不包含数据。
+[source,sql]
+----
+CREATE TABLE empty_key_value_store
+LIKE key_value_store;
+----
+
+.Bucketed Sorted Tables
+[source,sql]
+----
+CREATE TABLE page_view(viewTime INT, userid BIGINT,
+     page_url STRING, referrer_url STRING,
+     ip STRING COMMENT 'IP Address of the User')
+ COMMENT 'This is the page view table'
+ PARTITIONED BY(dt STRING, country STRING)
+ CLUSTERED BY(userid) SORTED BY(viewTime) INTO 32 BUCKETS
+ ROW FORMAT DELIMITED
+   FIELDS TERMINATED BY '\001'
+   COLLECTION ITEMS TERMINATED BY '\002'
+   MAP KEYS TERMINATED BY '\003'
+ STORED AS SEQUENCEFILE;
+----
+ 上面的语句，创建名为 page_view 的表，表按 userid 分桶，每个桶里的数据按照 viewTime 的升序存储。这种方式查询 userid 和 viewTime 时效率会很高。 MAP KEYS 和 COLLECTION ITEMS 关键字是定义字段里列表结构(list)和映射结构(map)的成员存储分隔符。
+
+CLUSTERED BY 和 SORTED BY 创建语句并不影响数据是如何插入到表里的，它仅仅影响数据如何读。
+这意味着当我们插入数据时要仔细考虑，要指定和桶数量一致的reducer的数量，查询时使用 CLUSTERED BY 和 SORTED BY 语句。
+
+==== 删除表 ====
+
+[source,sql]
+----
+DROP TABLE [IF EXISTS] table_name [PURGE];
+----
+
+DROP TABLE 删除表的表定义以及表数据，实际上表的数据实际上移到 _.Trash/Current_ 目录下（如果配置了 Trash 的话，PURGE 不支持该功能），但是表定义则会彻底丢失。
+
+当删除一个外部表时（EXTERNAL）,仅仅删除表的表定义，数据并不会删除。
+
+当删除一个被视图(view)引用的表时，并不会给出警告（视图定义存在，但已无意义，需要人工删除或者重新创建）
+
+如果用户误删除了一个表，可以在用户的 _.Trash/Current_ 目录下找到表数据，你只需重新创建表定义，然后把数据移动到表的数据目录即可恢复表。
+
+如果删除表时指定了 PURGE 关键字，则表的数据并不会进入 _.Trash/Current_ 目录，而是直接删除。因此需要谨慎使用该关键字。
+
+==== 清空表 ====
+[source,sql]
+----
+ TRUNCATE TABLE table_name [PARTITION partition_spec];
+
+partition_spec:
+  : (partition_column = partition_col_value, partition_column = partition_col_value, ...)
+----
+从一个表或者分区了删除所有的记录，如果开启了 Trash 模式，则这些数据会移动到 Trash 里。如果对外部表执行 TRUNCATE 操作会抛出异常。
+
+=== 修改表/分区/字段 ===
+==== 修改表 ====
+
+.重命名
+[source,sql]
+----
+ALTER TABLE table_name RENAME TO new_table_name;
+----
+该语句将表的名字修改为新的表名
+
+.修改表属性
+[source,sql]
+----
+ALTER TABLE table_name SET TBLPROPERTIES table_properties;
+
+table_properties:
+  : (property_name = property_value, property_name = property_value, ... )
+----
+上述语句可以修改、增加一个表的元数据信息，当前 last_modified_user, last_modified_time 两个属性不能自定义，需由 Hive 来自动管理，用户可以自行定义元数据信息。
+这些信息可以通过 DESCRIBE EXTENDED TABLE 来查看。
+
+.修改表注释
+[source,sql]
+----
+ALTER TABLE table_name SET TBLPROPERTIES ('comment' = new_comment);
+----
+
+.增加SerDe属性
+[source,sql]
+----
+ALTER TABLE table_name [PARTITION partition_spec] SET SERDE serde_class_name [WITH SERDEPROPERTIES serde_properties];
+
+ALTER TABLE table_name [PARTITION partition_spec] SET SERDEPROPERTIES serde_properties;
+
+serde_properties:
+  : (property_name = property_value, property_name = property_value, ... )
+----
+这些数据可以修改表的SerDe或用户定义的针对SerDe对象的元数据。
+
+这些 SerDe 信息通过 Hive 初始化序列器和反序列器传递进来。因此用户可以存储任意自定义的SerDe需要的信息。
+
+NOTE:: _property_name_ 和 _property_value_ 都需要引号。
+
+例子：
+[source,sql]
+----
+ALTER TABLE table_name SET SERDEPROPERTIES ('field.delim' = ',');
+----
+
+.修改表存储属性
+[source,sql]
+----
+ALTER TABLE table_name CLUSTERED BY (col_name, col_name, ...) [SORTED BY (col_name, ...)]
+  INTO num_buckets BUCKETS;
+----
+上述语句修改表的物理存储属性。
+
+NOTE:: 这些命令仅修改 Hive 的元数据，并不是重新组织和重新格式化已经存在的数据，用户要注意将实际的数据层结构和元数据定义的结构相匹配。
+
+==== 修改分区 ====
+ALTER TABLE 语句的 PARTITION 子语句可以增加、重命名、交换（移动）、删除、归档分区。
+
+.增加分区
+[source,sql]
+----
+ALTER TABLE table_name ADD [IF NOT EXISTS] PARTITION partition_spec
+  [LOCATION 'location1'] partition_spec [LOCATION 'location2'] ...;
+
+partition_spec:
+  : (partition_column = partition_col_value, partition_column = partition_col_value, ...)
+----
+
+ALTER TABLE ADD PARTITION 语句可以在一个表上增加一个分区，如果分区值是字符串，需要用引号。分区的物理位置(location)不是包含了数据文件的目录。（ADD PARTITION 只是改变了表的元数据，并没有加载数据。如果该分区的物理位置不存在数据，那么任何查询都会返回空）。如果分区已经存在，则显示异常。
+
+Hive 允许在单个 ALTER 语句里同时增加多个分区，比如下面这样：
+[source,sql]
+----
+ALTER TABLE page_view ADD PARTITION (dt='2015-08-08', country='us') location '/path/to/us/part150808'
+                          PARTITION (dt='2015-08-09', country='us') location '/path/to/us/part150809';
+----
+
+.重命名分区
+[source,sql]
+----
+ALTER TABLE table_name PARTITION partition_spec RENAME TO PARTITION partition_spec;
+----
+该语句可以用来修改分区字段的值，该语句可以用到的地方是，比如一个分区表随着时间的推进，对分区的字段有了一个标准，用该语句可以把原来老的分区进行标准化。
+
+.交换分区
+分区可以在量表之间交换（移动）
+[source,sql]
+----
+ALTER TABLE table_name_1 EXCHANGE PARTITION (partition_spec) WITH TABLE table_name_2;
+-- multiple partitions
+ALTER TABLE table_name_1 EXCHANGE PARTITION (partition_spec, partition_spec2, ...) WITH TABLE table_name_2;
+----
+上面的语句允许你把一个表的分区数据移动到另外一个有着相同表模式的表中。
+
+.恢复分区
+Hive 在它的元数据库里设一个表存储分区信息。如果一个表的新分区是通过把数据增加到 HDFS 上（比如 hadoop dfs -put 来上传数据），那么元数据并不知道有这样的一个分区存在，除非你使用 ALTER TABLE _table_name_ ADD PARTITION 命令来显式的增加分区。
+
+不过，我们也可以通过运行带修复方式的元数据库检查命令：
+[source,sql]
+----
+MSCK REPAIR TABLE table_name;
+----
+告诉元数据库把那些已经物理存在，但还没有记录在元数据库中的分区全部增加进来。
+
+如果存在大量的没有记录在元数据库中的分区，那么尽可能使用批量模式来运行上述命令，以防止出现 OOM 的情况。可以通过配置 _hive.msck.repair.batch.size_ 参数来实现这个功能，该参数默认值是0，意味着一次性可以扫描所有的分区。
+
+如果分区的数据目录存在不允许的字符，则上述命令会抛出异常。可以配置 _hive.msck.path.validation_ 参数来修改默认行为：
+
+* skip 跳过这些目录
+* ignore 无论如何都创建该分区，但是不保证能正常使用
+
+.删除分区
+[source,sql]
+----
+ALTER TABLE table_name DROP [IF EXISTS] PARTITION partition_spec[, PARTITION partition_spec, ...]
+  [IGNORE PROTECTION] [PURGE];
+----
+
+上面的语句会删除表的一个或多个分区，它将从 Hive 元数据库中删除分区信息以及把 HDFS 上数据目录移动到 _.Trash/Current_ 目录（如果配置了 Trash 功能），如果指定到了 PURGE 参数，则直接删除数据文件。
+
+如果删除的分区不存在，则抛出异常。
+
+.归档/解档分区
+[source,sql]
+----
+ALTER TABLE table_name ARCHIVE PARTITION partition_spec;
+ALTER TABLE table_name UNARCHIVE PARTITION partition_spec;
+----
+归档是把一个分区下的所有文件打包成一个 Hadoop 归档结构(HAR)。值得注意的是，归档模式并不做压缩，因此并不是减少文件的大小，它减少的是文件的数量。可以类比本地文件系统的 tar 的非压缩使用。
+
+==== 修改字段 ====
+.更改字段名/类型/位置/注释
+[source,sql]
+----
+ALTER TABLE table_name [PARTITION partition_spec] CHANGE [COLUMN] col_old_name col_new_name column_type
+  [COMMENT col_comment] [FIRST|AFTER column_name] [CASCADE|RESTRICT];
+----
+该语句可以改变一个字段的名字、数据类型、注释或位置或者他们的任意组合。该语句同样也对分区有效。
+
+下面一些使用的例子
+[source,sql]
+----
+CREATE TABLE test_change (a int, b int, c int);
+
+// First change column a s name to a1.
+ALTER TABLE test_change CHANGE a a1 INT;
+
+// Next change column a1 name to a2, its data type to string, and put it after column b.
+ALTER TABLE test_change CHANGE a1 a2 STRING AFTER b;
+// The new table structure is:  b int, a2 string, c int.
+
+// Then change column c  name to c1, and put it as the first column.
+ALTER TABLE test_change CHANGE c c1 INT FIRST;
+// The new table structure is:  c1 int, b int, a2 string.
+
+// Add a comment to column a1
+ALTER TABLE test_change CHANGE a1 a1 INT COMMENT 'this is column a1';
+----
+
+.增加/替换字段
+[source,sql]
+----
+ALTER TABLE table_name
+  [PARTITION partition_spec]
+  ADD|REPLACE COLUMNS (col_name data_type [COMMENT col_comment], ...)
+  [CASCADE|RESTRICT]
+----
+ADD COLUMNS 子句可以增加一个字段到表中，字段位于所有表的最后，但是在分区之前。
+
+REPLACE COLUMNS 删除表中所有的字段然后重新增加指定的字段，该子语句仅针对原生 SerDe 属性的表有效（DynamicSerDe, MetadataTypedColumnsetSerDe, LazySimpleSerDe 和 ColumnarSerDe），REPLACE COLUMNS 也可以用来删除字段，比如 `ALTER TABLE test_change REPLACE COLUMNS (a int, b int);` 就会删除原表字段 c
+
+=== SHOW ===
+
+SHOW 包含了一系列子语句，用来查询数据库、表、分区等的元数据信息
+
+[[show_databases]]
+==== Show Databases ====
+[source,sql]
+----
+SHOW (DATABASES|SCHEMAS) [LIKE 'identifier_with_wildcards'];
+----
+SHOW DATABASES|SCHEMAS 列出在元数据库中存储的所有数据库，这里 DATABASE 和 SCHEMA 是等价的。
+
+可选的 LIKE 子句可以使用正规表达式来过滤数据库，不过表示通配符的只要能还是用表示任意字符的 '*' 和表示选择的 '|'。
+比如， ' employees','emp*','emp*|*ees' 都可以匹配名为 'employees' 的数据库。
+
+==== Show Tables/Partitions/Indexes ====
+.显示数据库
+[source,sql]
+----
+SHOW TABLES [IN database_name] ['identifier_with_wildcards'];
+----
+SHOW TABLES 列出当前数据库下的所有表以及视图（或者用 IN 子句显式指定数据库），也可以使用正规表达式方式来过滤表和视图，表达式使用方式见 link::[show_databases]
+
+.显示分区
+[source,sql]
+----
+SHOW PARTITIONS table_name;
+----
+SHOW PARTITIONS 按字母排序列出指定表的所有已经存在的分区。
+
+我们也可以通过指定分区规格来过滤分区结果，下面是几个例子
+[source,sql]
+----
+SHOW PARTITIONS table_name PARTITION(ds='2010-03-03');
+SHOW PARTITIONS table_name PARTITION(hr='12');
+SHOW PARTITIONS table_name PARTITION(ds='2010-03-03', hr='12');
+----
+
+.扩展显示表/分区
+[source,sql]
+----
+SHOW TABLE EXTENDED [IN|FROM database_name] LIKE 'identifier_with_wildcards' [PARTITION(partition_spec)];
+----
+SHOW TABLE EXTENDED 列出所有匹配的表的信息，这些信息除了表的基本信息外，还包括系统信息，比如totalNumberFiles, totalFileSize, maxFileSize, minFileSize,lastAccessTime, and lastUpdateTime。如果指定了分区，则是显示分区的系统信息而不是表的系统信息。
+
+注意，如果指定了表分区，那么指定表时不能使用正规表达式。
+
+以下是使用例子
+[source,sql]
+----
+hive>show table extended like sample_07;
+tab_name
+tableName:sample_07
+owner:hive
+location:hdfs://localhost:8020/apps/hive/warehouse/sample_07
+inputformat:org.apache.hadoop.mapred.TextInputFormat
+outputformat:org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+columns:struct columns { string code, string description, i32 total_emp, i32 salary}
+partitioned:false
+partitionColumns:
+totalNumberFiles:1
+totalFileSize:46055
+maxFileSize:46055
+minFileSize:46055
+lastAccessTime:1473765425609
+lastUpdateTime:1473765437939
+
+15 rows selected (0.095 seconds)
+----
+
+.显示表属性
+[source,sql]
+----
+SHOW TBLPROPERTIES tblname;
+SHOW TBLPROPERTIES tblname("foo");
+----
+第一个语句列出表 tblname 的所有属性，每行一个。第二个语句列出表 tblname 的属性 foo 的值。
+
+.显示创建表
+[source,sql]
+----
+SHOW CREATE TABLE ([db_name.]table_name|view_name);
+----
+SHOW CREATE TABLE 语句显示创建表或视图(CREATE TABLE)的语句，以下是例子：
+[source,sql]
+----
+hive> show create table sample_07;
+CREATE TABLE `sample_07`(
+  `code` string,
+  `description` string,
+  `total_emp` int,
+  `salary` int)
+ROW FORMAT DELIMITED
+  FIELDS TERMINATED BY '\t'
+STORED AS INPUTFORMAT
+  'org.apache.hadoop.mapred.TextInputFormat'
+OUTPUTFORMAT
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  'hdfs://localhost:8020/apps/hive/warehouse/sample_07'
+TBLPROPERTIES (
+  'numFiles'='1',
+  'numRows'='0',
+  'rawDataSize'='0',
+  'totalSize'='46055',
+  'transient_lastDdlTime'='1473765438')
+19 rows selected (0.26 seconds)
+----
+
+==== 显示字段 ====
+[source,sql]
+----
+SHOW COLUMNS (FROM|IN) table_name [(FROM|IN) db_name];
+----
+SHOW COLUMNS 显示一个表的所有字段信息，包括分区字段
+
+==== 显示函数 ====
+[source,sql]
+----
+SHOW FUNCTIONS LIKE "a.*"
+----
+列出所有匹配的用户自定义和内置的函数名称。
+
+=== Describe ===
+
+.描述数据库
+[source,sql]
+----
+DESCRIBE DATABASE [EXTENDED] db_name;
+DESCRIBE SCHEMA [EXTENDED] db_name;
+----
+DESCRIBE DATABASE 显示数据库的名字，注释，在文件系统上的路径，EXTENDED 可以显示数据库的属性。
+
+.描述表/视图/字段
+#有两种语法来描述描述表/视图/字段，取决于你是否指定了数据库。#
+
+如果数据库没有指定，可选的字段信息跟在表后，中间用点(.)连接，语法如下：
+[source,sql]
+----
+DESCRIBE [EXTENDED|FORMATTED]
+  table_name[.col_name ( [.field_name] | [.'$elem$'] | [.'$key$'] | [.'$value$'] )* ];
+----
+
+如果指定了数据库，那么字段和表之间用空格连接
+[source,sql]
+----
+DESCRIBE [EXTENDED|FORMATTED]
+  [db_name.]table_name[ col_name ( [.field_name] | [.'$elem$'] | [.'$key$'] | [.'$value$'] )* ];
+----
+DESCRIBE 列出指定表的字段信息，包括分区字段。如果指定了 EXTENDED 关键字，还会显示表的元数据信息，Thrift 序列化格式，通常用于调试。

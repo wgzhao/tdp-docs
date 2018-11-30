@@ -1,0 +1,390 @@
+[[hive-getting-started]]
+== Hive 快速入门 ==
+
+本章给大家介绍 Hive 的基本使用，使得 Hive 的使用者能够快速了解和基本使用 Hive。
+
+[[running-hive]]
+=== 运行 Hive ===
+
+Hive 使用 Hadoop，因此：
+
+* 你必须配置了Hadoop，或
+* 导出环境变量 `HADOOP_HOME=<hadoop-install-dir>`
+
+如果你已经安装 TDP 产品，则只需要登录到任意一台服务器，然后切换到 `hive` 账号即可直接使用。
+运行 Hive 有几种方式：
+
+1. Hive Cli
+2. HiveServer2/Beeline
+3. HCatalog
+
+下面分别介绍
+
+[[running-hive-cli]]
+==== 运行 Hive Cli ====
+
+这是最常见，也是最简单的使用 Hive 的方式，启用 Hive 服务的账号（一般是 `hive`)，执行运行下面的命令即可：
+
+`$HIVE_HOME/bin/hive`
+
+[[running-hiveserver2-and-beeline]]
+==== 运行 HiveServer2 和 Beeline ====
+
+Beeline 连接到 HiveServer2 服务来和 Hive 进行交互，因此运行 Beeline 之前需要知道 HiveServer2 的服务器地址以及端口（默认为10000）。Beeline 是替代即将废弃的 HiveCli 的连接工具，它支持安全配置以及多用户连接。
+其连接方式如下：
+
+`$HIVE_HOME/bin/beeline -u jdbc:hive2://$HS2_HOST:$HS2_PORT`
+
+上述 HS2_HOST 和 HS2_PORT 分别指 HiveServer2 的服务器地址和端口，假定你的 HiveServer2 在 `tdp2.tcloudata.com` 上，是使用默认端口，则实际连接方式为：
+
+`$HIVE_HOME/bin/beeline -u jdbc:hive2://tdp2.tcloudata.com:10000`
+
+[[running-hcatalog]]
+==== 运行 HCatalog ====
+HCatalog 是 Hive 和其他组件(比如HBase)集成的桥梁接口，其他组件工作 HCatalog 接口可以直接访问 Hive 的数据而不关心 Hive 的配置。运行 HCatalog 的方式如下：
+
+`$HIVE_HOME/hcatalog/bin/hcat`
+
+[[runtime-configuration]]
+=== 运行时配置 ===
+
+Hive 查询实际上是执行 map-reduce 过程，因此我们可以通过控制 Hadoop 的配置变量来控制查询的某些行为。
+HiveCLI 和 Beeline 命令 `SET` 可以设置 Hadoop （或 Hive）的配置变量，比如：
+[source,sql]
+----
+beeline> SET mapred.job.tracker=myhost.mycompany.com:50030;
+beeline> SET -v;
+----
+后者显示当前的所有配置，如果没有 '-v' 选项，则仅显示和 Hadoop 配置不同的选项。
+
+[[hive-mapred-local-mode]]
+=== Hive MapReduce 以及本地模式 ===
+
+对绝大部分查询而言，Hive 编译器均生成 map-reduce任务，这些任务然后提交给下面变量指定的 Map-Reduce 集群。
+`mapred.job.tracker`。
+
+通常一个 map-reduce 集群会有多个节点，Hadoop 也提供了一个不错的选项使得任务可以运行在本地节点上。这对于数据量不大的情况下是非常有帮助的--这种情况下，本地运行因为不需要提交到集群然后分配任务，因此执行效率有明显的区别。
+反过来说，对于大数据集而言，因为本地模式只有一个 reducer 进程，因此处理起来就会非常慢。
+
+如果想运行本地模式，配置下面的选项即可。
+
+[source,sql]
+----
+hive> SET mapreduce.framework.name=local;
+----
+另外， `mapred.local.dir` 应该指向本地机器的某一个目录（比如 _/tmp/<username>/mapred/local_），否则的话，该方式将会产生异常。
+
+另外，Hive 也支持自动运行在本地的方式，也就是 Hive 将依据执行的任务不同规模来确定该任务是否采取本地模式运行。
+与此相关的选项包括 `hive.exec.mode.local.auto`，`hive.exec.mode.local.auto.inputbytes.max` 以及
+`hive.exec.mode.local.auto.task.max`
+
+[source,sql]
+----
+hive> SET hive.exec.mode.local.auto=false;
+----
+注意，这个特性默认是关闭的。如果启动，Hive 将会分析每一个 map-reduce 任务的大小，然后如果满足下面的阈值，则运行为本地模式。
+* 任务的总输入大小比 `hive.exec.mode.local.auto.inputbytes.max` 的值小（默认是128MB)
+* map 任务的总数量小于 `hive.exec.mode.local.auto.tasks.max` 的值小（默认是4）
+* reduce 的总数量必须为0或1
+
+
+[[hive-logging]]
+=== Hive 日志 ===
+
+Hive 使用 log4j 来记录日志。默认情况下，CLI 运行 Hive 时日志不会打印在终端。从 Hive 0.13.0 起，默认的日志级别是 `WARN`。
+日志保存在 _/tmp/<user.name>/hive.log_ 下。
+
+如果想配置不同的目录，在 `hive-log4j.properties` 里配置 `hive.log.dir` 选项，注意配置的目录权限有粘滞位（`chmod 1777 <dir>`）
+[source,ini]
+----
+hive.log.dir=<other_location>
+----
+
+如果你希望日志打印在终端，增加下面两个参数
+[source,shell]
+----
+bin/hive --hiveconf hive.root.logger=INFO,console //针对HiveCLI（即将废弃）
+bin/hiveserver2 --hiveconf hive.root.logger=INFO,console
+----
+注意，通过 'SET' 命令是无法改变日志属性的，因为该参数是在程序启动时就初始化好了的。
+
+HiveServer2 操作日志从 Hive 0.14 开始引入，具体参考link:[hiveserver2-logging.adoc]
+
+审计日志记录在 Hive metatsore 里，记录下每次的 metatsore API 调用。
+
+为了获得 Hive 的性能指标，可以使用 PerfLogger 获得对应的日志，你需要设置为 'DEBUG' 模式，可以在 log4j 属性文件里配置下面的参数：
+[source,ini]
+----
+log4j.logger.org.apache.hadoop.hive.ql.log.PerfLogger=DEBUG
+----
+
+
+[[ddl-operations]]
+=== DDL 操作 ===
+
+详细的 Hive DDL 操作文档可以参看link:[hive-ddl.adoc]，在这里有简单描述。
+
+[[create-hive-tables]]
+==== 创建 Hive 表 ====
+[source,sql]
+----
+hive> CREATE TABLE pokes (foo INT, bar STRING);
+----
+上述命令创建名为 'pokes' 的表，该表有两个字段，其类型分别为整型和字符串型。
+
+[source,sql]
+----
+hive> CREATE TABLE invites (foo INT, bar STRING) PARTITIONED BY (ds STRING);
+----
+上述命令创建一个包含两个字段的表 'invites'，同时还包含一个名为 'ds' 分区字段，分区字段是一个虚拟字段。它并不是数据本身的一部分，但它会依据规则把特定的数据载入到特定的分区表里。
+
+默认情况下，表数据格式为文本文件，字段之间的分隔符为 '^A'(ctr-a)。
+
+[[browsing-through-tables]]
+==== 浏览表 ====
+
+[source,sql]
+----
+  hive> SHOW TABLES;
+----
+上述命令列出当前数据库下的所有表。
+[source,sql]
+----
+hive> SHOW TABLES '.*s';
+----
+上述命令列出所有以 's' 结尾的表。后面实际上是一个 Java 风格的正规表达式，有关正规表达式的详细内容，可以参考link:http://java.sun.com/javase/6/docs/api/java/util/regex/Pattern.html[Java正规表达式]
+
+[source,sql]
+----
+hive> DESCRIBE invites;
+----
+显示表 'invites' 的字段信息。
+
+[[altering-and-dropping-tables]]
+==== 修改和删除表 ====
+表的名字的可以修改，表的字段可以增加和替代（但不能直接删除某一个字段），以下是一些表修改的例子：
+[source,sql]
+----
+hive> ALTER TABLE events RENAME TO 3koobecaf;
+hive> ALTER TABLE pokes ADD COLUMNS (new_col INT);
+hive> ALTER TABLE invites ADD COLUMNS (new_col2 INT COMMENT 'a comment');
+hive> ALTER TABLE invites REPLACE COLUMNS (foo INT, bar STRING, baz INT COMMENT 'baz replaces new_col2');
+----
+注意上面例子中最后的 'REPLACE COLUMNS' 是替换了当前表的所有字段，但这仅仅是修改表的模式，其表的数据并没有改变，这点和传统关系型数据库有着本质的区别。
+
+删除表的命令如下：
+[source,sql]
+----
+hive> DROP TABLE pokes;
+----
+
+[[metadata-store]]
+==== 元数据存储 ====
+
+Hive 的元数据(Metastore) 可以保存在默认的嵌入数据库 Derby 里，也可以保存在所有支持 JPOX 的传统关系型数据库里，在生产环境下，我们推荐后者，以避免可能的性能问题。
+
+使用哪种数据库以及保存在哪里有两个变量控制，分别是 `javax.jdo.option.ConnectURL` 和 `javax.jdo.option.ConnectDriverName`。参考 JDO（或JPOX）文档获得这方面更详细的内容。
+
+[[dml-operations]]
+=== DML 操作 ===
+Hive 的 DML 操作的详细内容，可以参考 link:[hive-dml.adoc]，这里仅简单描述。
+
+从文本文件载入数据到 Hive 表的命令类似如下：
+[source,sql]
+----
+hive> LOAD DATA LOCAL INPATH './examples/files/kv1.txt' OVERWRITE INTO TABLE pokes;
+----
+加载的文件包含两列，列之间以 `ctrl-a` 分隔。 'LOCAl' 意味着该数据文件在本地文件系统，而不是在 HDFS 上。
+关键字 'OVERWRITE' 表示已经存在在当前表的数据会被删除，如果没有这个关键字，则数据文件会追加到已存在的数据集中。
+
+注意以下几点：
+
+* #数据记在命令并不会校验数据的有效性#
+
+* 如果文件在 HDFS 上，载入操作会把文件移动到 Hive 控制的文件系统命名空间里。Hive 的根目录由配置文件 `hive-default.xml` 里的 `hive.metastore.warehouse.dir` 选项决定。
+
+[source,sql]
+----
+hive> LOAD DATA LOCAL INPATH './examples/files/kv2.txt' OVERWRITE INTO TABLE invites PARTITION (ds='2008-08-15');
+hive> LOAD DATA LOCAL INPATH './examples/files/kv3.txt' OVERWRITE INTO TABLE invites PARTITION (ds='2008-08-08');
+----
+上面两个 LOAD 语句把数据记在到表的不同分区里。表 'invites' 必须首先创建为按天分区的分区表。
+
+[source,sql]
+----
+hive> LOAD DATA INPATH '/user/myname/kv2.txt' OVERWRITE INTO TABLE invites PARTITION (ds='2008-08-15');
+----
+上述命令是从 HDFS 文件（或目录）加载数据到表中。
+
+[[sql-operations]]
+=== SQL 操作 ===
+
+有关 Hive 查询的详细内容，请参看link:[hive-select.adoc]，这里简单描述。
+下面展示的查询例子，都可以在 _build/dist/examples/quries_ 找得到。更多的一些查询例子可以在 Hive 的源代码 _ql/src/test/queries/postive_ 中找到。
+
+[[selects-and-filters]]
+==== Select 和 Filters ====
+
+[source,sql]
+----
+hive> SELECT a.foo FROM invites a WHERE a.ds='2008-08-15';
+----
+上述语句查询表 'invites' 中分区为 'ds=2008-08-15' 的所有 'foo' 字段数据，结果仅仅打印在终端，而不是保存。
+
+注意，以下的所有例子， 'INSERT'（插入到 hive 表或本地目录或 HDFS 目录）都是可选的。
+[source,sql]
+----
+hive> INSERT OVERWRITE DIRECTORY '/tmp/hdfs_out' SELECT a.* FROM invites a WHERE a.ds='2008-08-15';
+----
+选择表分区为 'ds=2008-08-15' 的表 'invites' 的所有内容写入到 HDFS 目录 _/tmp/hdfs_out_ 目录中，结果数据以文件的形式保存在上述目录中。
+
+NOTE: 如果使用 '.*' 的方式获取字段，那么分区字段也会包含在返回结果中；对于分区表，尽可能在 where 子句中出现选定特定分区的语句，防止数据量过大的情况
+
+[source,sql]
+----
+hive> INSERT OVERWRITE LOCAL DIRECTORY '/tmp/local_out' SELECT a.* FROM pokes a;
+----
+上述语句表示从 pokes 表中选择所有的行写入到本地目录
+
+[source,sql]
+----
+hive> INSERT OVERWRITE TABLE events SELECT a.* FROM profiles a;
+hive> INSERT OVERWRITE TABLE events SELECT a.* FROM profiles a WHERE a.key < 100;
+hive> INSERT OVERWRITE LOCAL DIRECTORY '/tmp/reg_3' SELECT a.* FROM events a;
+hive> INSERT OVERWRITE DIRECTORY '/tmp/reg_4' select a.invites, a.pokes FROM profiles a;
+hive> INSERT OVERWRITE DIRECTORY '/tmp/reg_5' SELECT COUNT(*) FROM invites a WHERE a.ds='2008-08-15';
+hive> INSERT OVERWRITE DIRECTORY '/tmp/reg_5' SELECT a.foo, a.bar FROM invites a;
+hive> INSERT OVERWRITE LOCAL DIRECTORY '/tmp/sum' SELECT SUM(a.pc) FROM pc1 a;
+----
+
+上面的语句展示了使用统计函数来获得特定的统计结果，然后将结果保存到文件中。
+
+[[group-by]]
+==== Group By ====
+
+[source,sql]
+----
+hive> FROM invites a INSERT OVERWRITE TABLE events SELECT a.bar, count(*) WHERE a.foo > 0 GROUP BY a.bar;
+hive> INSERT OVERWRITE TABLE events SELECT a.bar, count(*) FROM invites a WHERE a.foo > 0 GROUP BY a.bar;
+----
+
+[[join]]
+==== Join ====
+[source,sql]
+----
+hive> FROM pokes t1 JOIN invites t2 ON (t1.bar = t2.bar) INSERT OVERWRITE TABLE events SELECT t1.bar, t1.foo, t2.foo;
+----
+[[multitable-insert]]
+==== 多表插入 ====
+[source,sql]
+----
+FROM src
+INSERT OVERWRITE TABLE dest1 SELECT src.* WHERE src.key < 100
+INSERT OVERWRITE TABLE dest2 SELECT src.key, src.value WHERE src.key >= 100 and src.key < 200
+INSERT OVERWRITE TABLE dest3 PARTITION(ds='2008-04-08', hr='12') SELECT src.key WHERE src.key >= 200 and src.key < 300
+INSERT OVERWRITE LOCAL DIRECTORY '/tmp/dest4.out' SELECT src.value WHERE src.key >= 300;
+----
+[[streaming]]
+==== Streaming ====
+[source,sql]
+----
+hive> FROM invites a INSERT OVERWRITE TABLE events SELECT TRANSFORM(a.foo, a.bar) AS (oof, rab) USING '/bin/cat' WHERE a.ds > '2008-08-09';
+----
+
+[[simple-example-use-cases]]
+=== 简单用户使用案例 ===
+[[movielens-user-ratings]]
+==== MovieLens 用户评分使用案例 ====
+首先，我们创建一个 tab 分隔的文本文件格式表
+[source,sql]
+----
+CREATE TABLE u_data (
+  userid INT,
+  movieid INT,
+  rating INT,
+  unixtime STRING)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+STORED AS TEXTFILE;
+----
+
+接下来，从link:http://grouplens.org/datasets/movielens/[GroupLens datasets] 下载 **MovieLens 100k** 数据：
+
+`wget http://files.grouplens.org/datasets/movielens/ml-100k.zip`
+
+解压文件
+
+`unzip ml-100k.zip`
+
+然后，加载 'u.data' 到刚才创建表的里：
+[source,sql]
+----
+LOAD DATA LOCAL INPATH '<path>/u.data' OVERWRITE INTO TABLE u_data;
+----
+统计表的行数
+[source,sql]
+----
+SELECT COUNT(*) FROM u_data;
+----
+
+现在，我们可以在 'u_data' 表上做一些复杂的数据分析了：
+
+创建 'weekday_mapper.py' 文件，内容如下：
+[source,python]
+----
+import sys
+import datetime
+
+for line in sys.stdin:
+  line = line.strip()
+  userid, movieid, rating, unixtime = line.split('\t')
+  weekday = datetime.datetime.fromtimestamp(float(unixtime)).isoweekday()
+  print '\t'.join([userid, movieid, rating, str(weekday)])
+----
+
+使用上述脚本
+[source,sql]
+----
+CREATE TABLE u_data_new (
+  userid INT,
+  movieid INT,
+  rating INT,
+  weekday INT)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t';
+
+add FILE weekday_mapper.py;
+
+INSERT OVERWRITE TABLE u_data_new
+SELECT
+  TRANSFORM (userid, movieid, rating, unixtime)
+  USING 'python weekday_mapper.py'
+  AS (userid, movieid, rating, weekday)
+FROM u_data;
+
+SELECT weekday, COUNT(*)
+FROM u_data_new
+GROUP BY weekday;
+----
+
+[[apache-weblog-data]]
+==== 保存 Apache 日志 ====
+Apache 的日志格式是可以定制的，不过大部分情况下都是使用的默认格式。对于默认格式，我们可以使用下面的表来存储日志，并且对其进行解析。
+[source,sql]
+----
+CREATE TABLE apachelog (
+  host STRING,
+  identity STRING,
+  user STRING,
+  time STRING,
+  request STRING,
+  status STRING,
+  size STRING,
+  referer STRING,
+  agent STRING)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.RegexSerDe'
+WITH SERDEPROPERTIES (
+  "input.regex" = "([^]*) ([^]*) ([^]*) (-|\\[^\\]*\\]) ([^ \"]*|\"[^\"]*\") (-|[0-9]*) (-|[0-9]*)(?: ([^ \"]*|\".*\") ([^ \"]*|\".*\"))?"
+)
+STORED AS TEXTFILE;
+----
