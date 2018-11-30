@@ -1,0 +1,2132 @@
+<!DOCTYPE html>
+<html lang="zh_cn">
+<head>
+<meta charset="UTF-8">
+<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Asciidoctor 1.5.5">
+<meta name="keywords" content="TDP, Hadoop, Azkaban">
+<meta name="author" content="湖南天云魔方数据科技有限公司">
+<title>大数据平台管理系统使用手册</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
+<style>
+/* Asciidoctor default stylesheet | MIT License | http://asciidoctor.org */
+/* Remove comment around @import statement below when using as a custom stylesheet */
+/*@import "https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700";*/
+article,aside,details,figcaption,figure,footer,header,hgroup,main,nav,section,summary{display:block}
+audio,canvas,video{display:inline-block}
+audio:not([controls]){display:none;height:0}
+[hidden],template{display:none}
+script{display:none!important}
+html{font-family:sans-serif;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}
+a{background:transparent}
+a:focus{outline:thin dotted}
+a:active,a:hover{outline:0}
+h1{font-size:2em;margin:.67em 0}
+abbr[title]{border-bottom:1px dotted}
+b,strong{font-weight:bold}
+dfn{font-style:italic}
+hr{-moz-box-sizing:content-box;box-sizing:content-box;height:0}
+mark{background:#ff0;color:#000}
+code,kbd,pre,samp{font-family:monospace;font-size:1em}
+pre{white-space:pre-wrap}
+q{quotes:"\201C" "\201D" "\2018" "\2019"}
+small{font-size:80%}
+sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}
+sup{top:-.5em}
+sub{bottom:-.25em}
+img{border:0}
+svg:not(:root){overflow:hidden}
+figure{margin:0}
+fieldset{border:1px solid silver;margin:0 2px;padding:.35em .625em .75em}
+legend{border:0;padding:0}
+button,input,select,textarea{font-family:inherit;font-size:100%;margin:0}
+button,input{line-height:normal}
+button,select{text-transform:none}
+button,html input[type="button"],input[type="reset"],input[type="submit"]{-webkit-appearance:button;cursor:pointer}
+button[disabled],html input[disabled]{cursor:default}
+input[type="checkbox"],input[type="radio"]{box-sizing:border-box;padding:0}
+input[type="search"]{-webkit-appearance:textfield;-moz-box-sizing:content-box;-webkit-box-sizing:content-box;box-sizing:content-box}
+input[type="search"]::-webkit-search-cancel-button,input[type="search"]::-webkit-search-decoration{-webkit-appearance:none}
+button::-moz-focus-inner,input::-moz-focus-inner{border:0;padding:0}
+textarea{overflow:auto;vertical-align:top}
+table{border-collapse:collapse;border-spacing:0}
+*,*:before,*:after{-moz-box-sizing:border-box;-webkit-box-sizing:border-box;box-sizing:border-box}
+html,body{font-size:100%}
+body{background:#fff;color:rgba(0,0,0,.8);padding:0;margin:0;font-family:"Noto Serif","DejaVu Serif",serif;font-weight:400;font-style:normal;line-height:1;position:relative;cursor:auto;tab-size:4;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased}
+a:hover{cursor:pointer}
+img,object,embed{max-width:100%;height:auto}
+object,embed{height:100%}
+img{-ms-interpolation-mode:bicubic}
+.left{float:left!important}
+.right{float:right!important}
+.text-left{text-align:left!important}
+.text-right{text-align:right!important}
+.text-center{text-align:center!important}
+.text-justify{text-align:justify!important}
+.hide{display:none}
+img,object,svg{display:inline-block;vertical-align:middle}
+textarea{height:auto;min-height:50px}
+select{width:100%}
+.center{margin-left:auto;margin-right:auto}
+.spread{width:100%}
+p.lead,.paragraph.lead>p,#preamble>.sectionbody>.paragraph:first-of-type p{font-size:1.21875em;line-height:1.6}
+.subheader,.admonitionblock td.content>.title,.audioblock>.title,.exampleblock>.title,.imageblock>.title,.listingblock>.title,.literalblock>.title,.stemblock>.title,.openblock>.title,.paragraph>.title,.quoteblock>.title,table.tableblock>.title,.verseblock>.title,.videoblock>.title,.dlist>.title,.olist>.title,.ulist>.title,.qlist>.title,.hdlist>.title{line-height:1.45;color:#7a2518;font-weight:400;margin-top:0;margin-bottom:.25em}
+div,dl,dt,dd,ul,ol,li,h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6,pre,form,p,blockquote,th,td{margin:0;padding:0;direction:ltr}
+a{color:#2156a5;text-decoration:underline;line-height:inherit}
+a:hover,a:focus{color:#1d4b8f}
+a img{border:none}
+p{font-family:inherit;font-weight:400;font-size:1em;line-height:1.6;margin-bottom:1.25em;text-rendering:optimizeLegibility}
+p aside{font-size:.875em;line-height:1.35;font-style:italic}
+h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6{font-family:"Open Sans","DejaVu Sans",sans-serif;font-weight:300;font-style:normal;color:#ba3925;text-rendering:optimizeLegibility;margin-top:1em;margin-bottom:.5em;line-height:1.0125em}
+h1 small,h2 small,h3 small,#toctitle small,.sidebarblock>.content>.title small,h4 small,h5 small,h6 small{font-size:60%;color:#e99b8f;line-height:0}
+h1{font-size:2.125em}
+h2{font-size:1.6875em}
+h3,#toctitle,.sidebarblock>.content>.title{font-size:1.375em}
+h4,h5{font-size:1.125em}
+h6{font-size:1em}
+hr{border:solid #ddddd8;border-width:1px 0 0;clear:both;margin:1.25em 0 1.1875em;height:0}
+em,i{font-style:italic;line-height:inherit}
+strong,b{font-weight:bold;line-height:inherit}
+small{font-size:60%;line-height:inherit}
+code{font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;font-weight:400;color:rgba(0,0,0,.9)}
+ul,ol,dl{font-size:1em;line-height:1.6;margin-bottom:1.25em;list-style-position:outside;font-family:inherit}
+ul,ol,ul.no-bullet,ol.no-bullet{margin-left:1.5em}
+ul li ul,ul li ol{margin-left:1.25em;margin-bottom:0;font-size:1em}
+ul.square li ul,ul.circle li ul,ul.disc li ul{list-style:inherit}
+ul.square{list-style-type:square}
+ul.circle{list-style-type:circle}
+ul.disc{list-style-type:disc}
+ul.no-bullet{list-style:none}
+ol li ul,ol li ol{margin-left:1.25em;margin-bottom:0}
+dl dt{margin-bottom:.3125em;font-weight:bold}
+dl dd{margin-bottom:1.25em}
+abbr,acronym{text-transform:uppercase;font-size:90%;color:rgba(0,0,0,.8);border-bottom:1px dotted #ddd;cursor:help}
+abbr{text-transform:none}
+blockquote{margin:0 0 1.25em;padding:.5625em 1.25em 0 1.1875em;border-left:1px solid #ddd}
+blockquote cite{display:block;font-size:.9375em;color:rgba(0,0,0,.6)}
+blockquote cite:before{content:"\2014 \0020"}
+blockquote cite a,blockquote cite a:visited{color:rgba(0,0,0,.6)}
+blockquote,blockquote p{line-height:1.6;color:rgba(0,0,0,.85)}
+@media only screen and (min-width:768px){h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6{line-height:1.2}
+h1{font-size:2.75em}
+h2{font-size:2.3125em}
+h3,#toctitle,.sidebarblock>.content>.title{font-size:1.6875em}
+h4{font-size:1.4375em}}
+table{background:#fff;margin-bottom:1.25em;border:solid 1px #dedede}
+table thead,table tfoot{background:#f7f8f7;font-weight:bold}
+table thead tr th,table thead tr td,table tfoot tr th,table tfoot tr td{padding:.5em .625em .625em;font-size:inherit;color:rgba(0,0,0,.8);text-align:left}
+table tr th,table tr td{padding:.5625em .625em;font-size:inherit;color:rgba(0,0,0,.8)}
+table tr.even,table tr.alt,table tr:nth-of-type(even){background:#f8f8f7}
+table thead tr th,table tfoot tr th,table tbody tr td,table tr td,table tfoot tr td{display:table-cell;line-height:1.6}
+h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6{line-height:1.2;word-spacing:-.05em}
+h1 strong,h2 strong,h3 strong,#toctitle strong,.sidebarblock>.content>.title strong,h4 strong,h5 strong,h6 strong{font-weight:400}
+.clearfix:before,.clearfix:after,.float-group:before,.float-group:after{content:" ";display:table}
+.clearfix:after,.float-group:after{clear:both}
+*:not(pre)>code{font-size:.9375em;font-style:normal!important;letter-spacing:0;padding:.1em .5ex;word-spacing:-.15em;background-color:#f7f7f8;-webkit-border-radius:4px;border-radius:4px;line-height:1.45;text-rendering:optimizeSpeed;word-wrap:break-word}
+*:not(pre)>code.nobreak{word-wrap:normal}
+*:not(pre)>code.nowrap{white-space:nowrap}
+pre,pre>code{line-height:1.45;color:rgba(0,0,0,.9);font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;font-weight:400;text-rendering:optimizeSpeed}
+em em{font-style:normal}
+strong strong{font-weight:400}
+.keyseq{color:rgba(51,51,51,.8)}
+kbd{font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;display:inline-block;color:rgba(0,0,0,.8);font-size:.65em;line-height:1.45;background-color:#f7f7f7;border:1px solid #ccc;-webkit-border-radius:3px;border-radius:3px;-webkit-box-shadow:0 1px 0 rgba(0,0,0,.2),0 0 0 .1em white inset;box-shadow:0 1px 0 rgba(0,0,0,.2),0 0 0 .1em #fff inset;margin:0 .15em;padding:.2em .5em;vertical-align:middle;position:relative;top:-.1em;white-space:nowrap}
+.keyseq kbd:first-child{margin-left:0}
+.keyseq kbd:last-child{margin-right:0}
+.menuseq,.menu{color:rgba(0,0,0,.8)}
+b.button:before,b.button:after{position:relative;top:-1px;font-weight:400}
+b.button:before{content:"[";padding:0 3px 0 2px}
+b.button:after{content:"]";padding:0 2px 0 3px}
+p a>code:hover{color:rgba(0,0,0,.9)}
+#header,#content,#footnotes,#footer{width:100%;margin-left:auto;margin-right:auto;margin-top:0;margin-bottom:0;max-width:62.5em;*zoom:1;position:relative;padding-left:.9375em;padding-right:.9375em}
+#header:before,#header:after,#content:before,#content:after,#footnotes:before,#footnotes:after,#footer:before,#footer:after{content:" ";display:table}
+#header:after,#content:after,#footnotes:after,#footer:after{clear:both}
+#content{margin-top:1.25em}
+#content:before{content:none}
+#header>h1:first-child{color:rgba(0,0,0,.85);margin-top:2.25rem;margin-bottom:0}
+#header>h1:first-child+#toc{margin-top:8px;border-top:1px solid #ddddd8}
+#header>h1:only-child,body.toc2 #header>h1:nth-last-child(2){border-bottom:1px solid #ddddd8;padding-bottom:8px}
+#header .details{border-bottom:1px solid #ddddd8;line-height:1.45;padding-top:.25em;padding-bottom:.25em;padding-left:.25em;color:rgba(0,0,0,.6);display:-ms-flexbox;display:-webkit-flex;display:flex;-ms-flex-flow:row wrap;-webkit-flex-flow:row wrap;flex-flow:row wrap}
+#header .details span:first-child{margin-left:-.125em}
+#header .details span.email a{color:rgba(0,0,0,.85)}
+#header .details br{display:none}
+#header .details br+span:before{content:"\00a0\2013\00a0"}
+#header .details br+span.author:before{content:"\00a0\22c5\00a0";color:rgba(0,0,0,.85)}
+#header .details br+span#revremark:before{content:"\00a0|\00a0"}
+#header #revnumber{text-transform:capitalize}
+#header #revnumber:after{content:"\00a0"}
+#content>h1:first-child:not([class]){color:rgba(0,0,0,.85);border-bottom:1px solid #ddddd8;padding-bottom:8px;margin-top:0;padding-top:1rem;margin-bottom:1.25rem}
+#toc{border-bottom:1px solid #efefed;padding-bottom:.5em}
+#toc>ul{margin-left:.125em}
+#toc ul.sectlevel0>li>a{font-style:italic}
+#toc ul.sectlevel0 ul.sectlevel1{margin:.5em 0}
+#toc ul{font-family:"Open Sans","DejaVu Sans",sans-serif;list-style-type:none}
+#toc li{line-height:1.3334;margin-top:.3334em}
+#toc a{text-decoration:none}
+#toc a:active{text-decoration:underline}
+#toctitle{color:#7a2518;font-size:1.2em}
+@media only screen and (min-width:768px){#toctitle{font-size:1.375em}
+body.toc2{padding-left:15em;padding-right:0}
+#toc.toc2{margin-top:0!important;background-color:#f8f8f7;position:fixed;width:15em;left:0;top:0;border-right:1px solid #efefed;border-top-width:0!important;border-bottom-width:0!important;z-index:1000;padding:1.25em 1em;height:100%;overflow:auto}
+#toc.toc2 #toctitle{margin-top:0;margin-bottom:.8rem;font-size:1.2em}
+#toc.toc2>ul{font-size:.9em;margin-bottom:0}
+#toc.toc2 ul ul{margin-left:0;padding-left:1em}
+#toc.toc2 ul.sectlevel0 ul.sectlevel1{padding-left:0;margin-top:.5em;margin-bottom:.5em}
+body.toc2.toc-right{padding-left:0;padding-right:15em}
+body.toc2.toc-right #toc.toc2{border-right-width:0;border-left:1px solid #efefed;left:auto;right:0}}
+@media only screen and (min-width:1280px){body.toc2{padding-left:20em;padding-right:0}
+#toc.toc2{width:20em}
+#toc.toc2 #toctitle{font-size:1.375em}
+#toc.toc2>ul{font-size:.95em}
+#toc.toc2 ul ul{padding-left:1.25em}
+body.toc2.toc-right{padding-left:0;padding-right:20em}}
+#content #toc{border-style:solid;border-width:1px;border-color:#e0e0dc;margin-bottom:1.25em;padding:1.25em;background:#f8f8f7;-webkit-border-radius:4px;border-radius:4px}
+#content #toc>:first-child{margin-top:0}
+#content #toc>:last-child{margin-bottom:0}
+#footer{max-width:100%;background-color:rgba(0,0,0,.8);padding:1.25em}
+#footer-text{color:rgba(255,255,255,.8);line-height:1.44}
+.sect1{padding-bottom:.625em}
+@media only screen and (min-width:768px){.sect1{padding-bottom:1.25em}}
+.sect1+.sect1{border-top:1px solid #efefed}
+#content h1>a.anchor,h2>a.anchor,h3>a.anchor,#toctitle>a.anchor,.sidebarblock>.content>.title>a.anchor,h4>a.anchor,h5>a.anchor,h6>a.anchor{position:absolute;z-index:1001;width:1.5ex;margin-left:-1.5ex;display:block;text-decoration:none!important;visibility:hidden;text-align:center;font-weight:400}
+#content h1>a.anchor:before,h2>a.anchor:before,h3>a.anchor:before,#toctitle>a.anchor:before,.sidebarblock>.content>.title>a.anchor:before,h4>a.anchor:before,h5>a.anchor:before,h6>a.anchor:before{content:"\00A7";font-size:.85em;display:block;padding-top:.1em}
+#content h1:hover>a.anchor,#content h1>a.anchor:hover,h2:hover>a.anchor,h2>a.anchor:hover,h3:hover>a.anchor,#toctitle:hover>a.anchor,.sidebarblock>.content>.title:hover>a.anchor,h3>a.anchor:hover,#toctitle>a.anchor:hover,.sidebarblock>.content>.title>a.anchor:hover,h4:hover>a.anchor,h4>a.anchor:hover,h5:hover>a.anchor,h5>a.anchor:hover,h6:hover>a.anchor,h6>a.anchor:hover{visibility:visible}
+#content h1>a.link,h2>a.link,h3>a.link,#toctitle>a.link,.sidebarblock>.content>.title>a.link,h4>a.link,h5>a.link,h6>a.link{color:#ba3925;text-decoration:none}
+#content h1>a.link:hover,h2>a.link:hover,h3>a.link:hover,#toctitle>a.link:hover,.sidebarblock>.content>.title>a.link:hover,h4>a.link:hover,h5>a.link:hover,h6>a.link:hover{color:#a53221}
+.audioblock,.imageblock,.literalblock,.listingblock,.stemblock,.videoblock{margin-bottom:1.25em}
+.admonitionblock td.content>.title,.audioblock>.title,.exampleblock>.title,.imageblock>.title,.listingblock>.title,.literalblock>.title,.stemblock>.title,.openblock>.title,.paragraph>.title,.quoteblock>.title,table.tableblock>.title,.verseblock>.title,.videoblock>.title,.dlist>.title,.olist>.title,.ulist>.title,.qlist>.title,.hdlist>.title{text-rendering:optimizeLegibility;text-align:left;font-family:"Noto Serif","DejaVu Serif",serif;font-size:1rem;font-style:italic}
+table.tableblock>caption.title{white-space:nowrap;overflow:visible;max-width:0}
+.paragraph.lead>p,#preamble>.sectionbody>.paragraph:first-of-type p{color:rgba(0,0,0,.85)}
+table.tableblock #preamble>.sectionbody>.paragraph:first-of-type p{font-size:inherit}
+.admonitionblock>table{border-collapse:separate;border:0;background:none;width:100%}
+.admonitionblock>table td.icon{text-align:center;width:80px}
+.admonitionblock>table td.icon img{max-width:none}
+.admonitionblock>table td.icon .title{font-weight:bold;font-family:"Open Sans","DejaVu Sans",sans-serif;text-transform:uppercase}
+.admonitionblock>table td.content{padding-left:1.125em;padding-right:1.25em;border-left:1px solid #ddddd8;color:rgba(0,0,0,.6)}
+.admonitionblock>table td.content>:last-child>:last-child{margin-bottom:0}
+.exampleblock>.content{border-style:solid;border-width:1px;border-color:#e6e6e6;margin-bottom:1.25em;padding:1.25em;background:#fff;-webkit-border-radius:4px;border-radius:4px}
+.exampleblock>.content>:first-child{margin-top:0}
+.exampleblock>.content>:last-child{margin-bottom:0}
+.sidebarblock{border-style:solid;border-width:1px;border-color:#e0e0dc;margin-bottom:1.25em;padding:1.25em;background:#f8f8f7;-webkit-border-radius:4px;border-radius:4px}
+.sidebarblock>:first-child{margin-top:0}
+.sidebarblock>:last-child{margin-bottom:0}
+.sidebarblock>.content>.title{color:#7a2518;margin-top:0;text-align:center}
+.exampleblock>.content>:last-child>:last-child,.exampleblock>.content .olist>ol>li:last-child>:last-child,.exampleblock>.content .ulist>ul>li:last-child>:last-child,.exampleblock>.content .qlist>ol>li:last-child>:last-child,.sidebarblock>.content>:last-child>:last-child,.sidebarblock>.content .olist>ol>li:last-child>:last-child,.sidebarblock>.content .ulist>ul>li:last-child>:last-child,.sidebarblock>.content .qlist>ol>li:last-child>:last-child{margin-bottom:0}
+.literalblock pre,.listingblock pre:not(.highlight),.listingblock pre[class="highlight"],.listingblock pre[class^="highlight "],.listingblock pre.CodeRay,.listingblock pre.prettyprint{background:#f7f7f8}
+.sidebarblock .literalblock pre,.sidebarblock .listingblock pre:not(.highlight),.sidebarblock .listingblock pre[class="highlight"],.sidebarblock .listingblock pre[class^="highlight "],.sidebarblock .listingblock pre.CodeRay,.sidebarblock .listingblock pre.prettyprint{background:#f2f1f1}
+.literalblock pre,.literalblock pre[class],.listingblock pre,.listingblock pre[class]{-webkit-border-radius:4px;border-radius:4px;word-wrap:break-word;padding:1em;font-size:.8125em}
+.literalblock pre.nowrap,.literalblock pre[class].nowrap,.listingblock pre.nowrap,.listingblock pre[class].nowrap{overflow-x:auto;white-space:pre;word-wrap:normal}
+@media only screen and (min-width:768px){.literalblock pre,.literalblock pre[class],.listingblock pre,.listingblock pre[class]{font-size:.90625em}}
+@media only screen and (min-width:1280px){.literalblock pre,.literalblock pre[class],.listingblock pre,.listingblock pre[class]{font-size:1em}}
+.literalblock.output pre{color:#f7f7f8;background-color:rgba(0,0,0,.9)}
+.listingblock pre.highlightjs{padding:0}
+.listingblock pre.highlightjs>code{padding:1em;-webkit-border-radius:4px;border-radius:4px}
+.listingblock pre.prettyprint{border-width:0}
+.listingblock>.content{position:relative}
+.listingblock code[data-lang]:before{display:none;content:attr(data-lang);position:absolute;font-size:.75em;top:.425rem;right:.5rem;line-height:1;text-transform:uppercase;color:#999}
+.listingblock:hover code[data-lang]:before{display:block}
+.listingblock.terminal pre .command:before{content:attr(data-prompt);padding-right:.5em;color:#999}
+.listingblock.terminal pre .command:not([data-prompt]):before{content:"$"}
+table.pyhltable{border-collapse:separate;border:0;margin-bottom:0;background:none}
+table.pyhltable td{vertical-align:top;padding-top:0;padding-bottom:0;line-height:1.45}
+table.pyhltable td.code{padding-left:.75em;padding-right:0}
+pre.pygments .lineno,table.pyhltable td:not(.code){color:#999;padding-left:0;padding-right:.5em;border-right:1px solid #ddddd8}
+pre.pygments .lineno{display:inline-block;margin-right:.25em}
+table.pyhltable .linenodiv{background:none!important;padding-right:0!important}
+.quoteblock{margin:0 1em 1.25em 1.5em;display:table}
+.quoteblock>.title{margin-left:-1.5em;margin-bottom:.75em}
+.quoteblock blockquote,.quoteblock blockquote p{color:rgba(0,0,0,.85);font-size:1.15rem;line-height:1.75;word-spacing:.1em;letter-spacing:0;font-style:italic;text-align:justify}
+.quoteblock blockquote{margin:0;padding:0;border:0}
+.quoteblock blockquote:before{content:"\201c";float:left;font-size:2.75em;font-weight:bold;line-height:.6em;margin-left:-.6em;color:#7a2518;text-shadow:0 1px 2px rgba(0,0,0,.1)}
+.quoteblock blockquote>.paragraph:last-child p{margin-bottom:0}
+.quoteblock .attribution{margin-top:.5em;margin-right:.5ex;text-align:right}
+.quoteblock .quoteblock{margin-left:0;margin-right:0;padding:.5em 0;border-left:3px solid rgba(0,0,0,.6)}
+.quoteblock .quoteblock blockquote{padding:0 0 0 .75em}
+.quoteblock .quoteblock blockquote:before{display:none}
+.verseblock{margin:0 1em 1.25em 1em}
+.verseblock pre{font-family:"Open Sans","DejaVu Sans",sans;font-size:1.15rem;color:rgba(0,0,0,.85);font-weight:300;text-rendering:optimizeLegibility}
+.verseblock pre strong{font-weight:400}
+.verseblock .attribution{margin-top:1.25rem;margin-left:.5ex}
+.quoteblock .attribution,.verseblock .attribution{font-size:.9375em;line-height:1.45;font-style:italic}
+.quoteblock .attribution br,.verseblock .attribution br{display:none}
+.quoteblock .attribution cite,.verseblock .attribution cite{display:block;letter-spacing:-.025em;color:rgba(0,0,0,.6)}
+.quoteblock.abstract{margin:0 0 1.25em 0;display:block}
+.quoteblock.abstract blockquote,.quoteblock.abstract blockquote p{text-align:left;word-spacing:0}
+.quoteblock.abstract blockquote:before,.quoteblock.abstract blockquote p:first-of-type:before{display:none}
+table.tableblock{max-width:100%;border-collapse:separate}
+table.tableblock td>.paragraph:last-child p>p:last-child,table.tableblock th>p:last-child,table.tableblock td>p:last-child{margin-bottom:0}
+table.tableblock,th.tableblock,td.tableblock{border:0 solid #dedede}
+table.grid-all th.tableblock,table.grid-all td.tableblock{border-width:0 1px 1px 0}
+table.grid-all tfoot>tr>th.tableblock,table.grid-all tfoot>tr>td.tableblock{border-width:1px 1px 0 0}
+table.grid-cols th.tableblock,table.grid-cols td.tableblock{border-width:0 1px 0 0}
+table.grid-all *>tr>.tableblock:last-child,table.grid-cols *>tr>.tableblock:last-child{border-right-width:0}
+table.grid-rows th.tableblock,table.grid-rows td.tableblock{border-width:0 0 1px 0}
+table.grid-all tbody>tr:last-child>th.tableblock,table.grid-all tbody>tr:last-child>td.tableblock,table.grid-all thead:last-child>tr>th.tableblock,table.grid-rows tbody>tr:last-child>th.tableblock,table.grid-rows tbody>tr:last-child>td.tableblock,table.grid-rows thead:last-child>tr>th.tableblock{border-bottom-width:0}
+table.grid-rows tfoot>tr>th.tableblock,table.grid-rows tfoot>tr>td.tableblock{border-width:1px 0 0 0}
+table.frame-all{border-width:1px}
+table.frame-sides{border-width:0 1px}
+table.frame-topbot{border-width:1px 0}
+th.halign-left,td.halign-left{text-align:left}
+th.halign-right,td.halign-right{text-align:right}
+th.halign-center,td.halign-center{text-align:center}
+th.valign-top,td.valign-top{vertical-align:top}
+th.valign-bottom,td.valign-bottom{vertical-align:bottom}
+th.valign-middle,td.valign-middle{vertical-align:middle}
+table thead th,table tfoot th{font-weight:bold}
+tbody tr th{display:table-cell;line-height:1.6;background:#f7f8f7}
+tbody tr th,tbody tr th p,tfoot tr th,tfoot tr th p{color:rgba(0,0,0,.8);font-weight:bold}
+p.tableblock>code:only-child{background:none;padding:0}
+p.tableblock{font-size:1em}
+td>div.verse{white-space:pre}
+ol{margin-left:1.75em}
+ul li ol{margin-left:1.5em}
+dl dd{margin-left:1.125em}
+dl dd:last-child,dl dd:last-child>:last-child{margin-bottom:0}
+ol>li p,ul>li p,ul dd,ol dd,.olist .olist,.ulist .ulist,.ulist .olist,.olist .ulist{margin-bottom:.625em}
+ul.unstyled,ol.unnumbered,ul.checklist,ul.none{list-style-type:none}
+ul.unstyled,ol.unnumbered,ul.checklist{margin-left:.625em}
+ul.checklist li>p:first-child>.fa-square-o:first-child,ul.checklist li>p:first-child>.fa-check-square-o:first-child{width:1em;font-size:.85em}
+ul.checklist li>p:first-child>input[type="checkbox"]:first-child{width:1em;position:relative;top:1px}
+ul.inline{margin:0 auto .625em auto;margin-left:-1.375em;margin-right:0;padding:0;list-style:none;overflow:hidden}
+ul.inline>li{list-style:none;float:left;margin-left:1.375em;display:block}
+ul.inline>li>*{display:block}
+.unstyled dl dt{font-weight:400;font-style:normal}
+ol.arabic{list-style-type:decimal}
+ol.decimal{list-style-type:decimal-leading-zero}
+ol.loweralpha{list-style-type:lower-alpha}
+ol.upperalpha{list-style-type:upper-alpha}
+ol.lowerroman{list-style-type:lower-roman}
+ol.upperroman{list-style-type:upper-roman}
+ol.lowergreek{list-style-type:lower-greek}
+.hdlist>table,.colist>table{border:0;background:none}
+.hdlist>table>tbody>tr,.colist>table>tbody>tr{background:none}
+td.hdlist1,td.hdlist2{vertical-align:top;padding:0 .625em}
+td.hdlist1{font-weight:bold;padding-bottom:1.25em}
+.literalblock+.colist,.listingblock+.colist{margin-top:-.5em}
+.colist>table tr>td:first-of-type{padding:0 .75em;line-height:1}
+.colist>table tr>td:last-of-type{padding:.25em 0}
+.thumb,.th{line-height:0;display:inline-block;border:solid 4px #fff;-webkit-box-shadow:0 0 0 1px #ddd;box-shadow:0 0 0 1px #ddd}
+.imageblock.left,.imageblock[style*="float: left"]{margin:.25em .625em 1.25em 0}
+.imageblock.right,.imageblock[style*="float: right"]{margin:.25em 0 1.25em .625em}
+.imageblock>.title{margin-bottom:0}
+.imageblock.thumb,.imageblock.th{border-width:6px}
+.imageblock.thumb>.title,.imageblock.th>.title{padding:0 .125em}
+.image.left,.image.right{margin-top:.25em;margin-bottom:.25em;display:inline-block;line-height:0}
+.image.left{margin-right:.625em}
+.image.right{margin-left:.625em}
+a.image{text-decoration:none;display:inline-block}
+a.image object{pointer-events:none}
+sup.footnote,sup.footnoteref{font-size:.875em;position:static;vertical-align:super}
+sup.footnote a,sup.footnoteref a{text-decoration:none}
+sup.footnote a:active,sup.footnoteref a:active{text-decoration:underline}
+#footnotes{padding-top:.75em;padding-bottom:.75em;margin-bottom:.625em}
+#footnotes hr{width:20%;min-width:6.25em;margin:-.25em 0 .75em 0;border-width:1px 0 0 0}
+#footnotes .footnote{padding:0 .375em 0 .225em;line-height:1.3334;font-size:.875em;margin-left:1.2em;text-indent:-1.05em;margin-bottom:.2em}
+#footnotes .footnote a:first-of-type{font-weight:bold;text-decoration:none}
+#footnotes .footnote:last-of-type{margin-bottom:0}
+#content #footnotes{margin-top:-.625em;margin-bottom:0;padding:.75em 0}
+.gist .file-data>table{border:0;background:#fff;width:100%;margin-bottom:0}
+.gist .file-data>table td.line-data{width:99%}
+div.unbreakable{page-break-inside:avoid}
+.big{font-size:larger}
+.small{font-size:smaller}
+.underline{text-decoration:underline}
+.overline{text-decoration:overline}
+.line-through{text-decoration:line-through}
+.aqua{color:#00bfbf}
+.aqua-background{background-color:#00fafa}
+.black{color:#000}
+.black-background{background-color:#000}
+.blue{color:#0000bf}
+.blue-background{background-color:#0000fa}
+.fuchsia{color:#bf00bf}
+.fuchsia-background{background-color:#fa00fa}
+.gray{color:#606060}
+.gray-background{background-color:#7d7d7d}
+.green{color:#006000}
+.green-background{background-color:#007d00}
+.lime{color:#00bf00}
+.lime-background{background-color:#00fa00}
+.maroon{color:#600000}
+.maroon-background{background-color:#7d0000}
+.navy{color:#000060}
+.navy-background{background-color:#00007d}
+.olive{color:#606000}
+.olive-background{background-color:#7d7d00}
+.purple{color:#600060}
+.purple-background{background-color:#7d007d}
+.red{color:#bf0000}
+.red-background{background-color:#fa0000}
+.silver{color:#909090}
+.silver-background{background-color:#bcbcbc}
+.teal{color:#006060}
+.teal-background{background-color:#007d7d}
+.white{color:#bfbfbf}
+.white-background{background-color:#fafafa}
+.yellow{color:#bfbf00}
+.yellow-background{background-color:#fafa00}
+span.icon>.fa{cursor:default}
+.admonitionblock td.icon [class^="fa icon-"]{font-size:2.5em;text-shadow:1px 1px 2px rgba(0,0,0,.5);cursor:default}
+.admonitionblock td.icon .icon-note:before{content:"\f05a";color:#19407c}
+.admonitionblock td.icon .icon-tip:before{content:"\f0eb";text-shadow:1px 1px 2px rgba(155,155,0,.8);color:#111}
+.admonitionblock td.icon .icon-warning:before{content:"\f071";color:#bf6900}
+.admonitionblock td.icon .icon-caution:before{content:"\f06d";color:#bf3400}
+.admonitionblock td.icon .icon-important:before{content:"\f06a";color:#bf0000}
+.conum[data-value]{display:inline-block;color:#fff!important;background-color:rgba(0,0,0,.8);-webkit-border-radius:100px;border-radius:100px;text-align:center;font-size:.75em;width:1.67em;height:1.67em;line-height:1.67em;font-family:"Open Sans","DejaVu Sans",sans-serif;font-style:normal;font-weight:bold}
+.conum[data-value] *{color:#fff!important}
+.conum[data-value]+b{display:none}
+.conum[data-value]:after{content:attr(data-value)}
+pre .conum[data-value]{position:relative;top:-.125em}
+b.conum *{color:inherit!important}
+.conum:not([data-value]):empty{display:none}
+dt,th.tableblock,td.content,div.footnote{text-rendering:optimizeLegibility}
+h1,h2,p,td.content,span.alt{letter-spacing:-.01em}
+p strong,td.content strong,div.footnote strong{letter-spacing:-.005em}
+p,blockquote,dt,td.content,span.alt{font-size:1.0625rem}
+p{margin-bottom:1.25rem}
+.sidebarblock p,.sidebarblock dt,.sidebarblock td.content,p.tableblock{font-size:1em}
+.exampleblock>.content{background-color:#fffef7;border-color:#e0e0dc;-webkit-box-shadow:0 1px 4px #e0e0dc;box-shadow:0 1px 4px #e0e0dc}
+.print-only{display:none!important}
+@media print{@page{margin:1.25cm .75cm}
+*{-webkit-box-shadow:none!important;box-shadow:none!important;text-shadow:none!important}
+a{color:inherit!important;text-decoration:underline!important}
+a.bare,a[href^="#"],a[href^="mailto:"]{text-decoration:none!important}
+a[href^="http:"]:not(.bare):after,a[href^="https:"]:not(.bare):after{content:"(" attr(href) ")";display:inline-block;font-size:.875em;padding-left:.25em}
+abbr[title]:after{content:" (" attr(title) ")"}
+pre,blockquote,tr,img,object,svg{page-break-inside:avoid}
+thead{display:table-header-group}
+svg{max-width:100%}
+p,blockquote,dt,td.content{font-size:1em;orphans:3;widows:3}
+h2,h3,#toctitle,.sidebarblock>.content>.title{page-break-after:avoid}
+#toc,.sidebarblock,.exampleblock>.content{background:none!important}
+#toc{border-bottom:1px solid #ddddd8!important;padding-bottom:0!important}
+.sect1{padding-bottom:0!important}
+.sect1+.sect1{border:0!important}
+#header>h1:first-child{margin-top:1.25rem}
+body.book #header{text-align:center}
+body.book #header>h1:first-child{border:0!important;margin:2.5em 0 1em 0}
+body.book #header .details{border:0!important;display:block;padding:0!important}
+body.book #header .details span:first-child{margin-left:0!important}
+body.book #header .details br{display:block}
+body.book #header .details br+span:before{content:none!important}
+body.book #toc{border:0!important;text-align:left!important;padding:0!important;margin:0!important}
+body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-break-before:always}
+.listingblock code[data-lang]:before{display:block}
+#footer{background:none!important;padding:0 .9375em}
+#footer-text{color:rgba(0,0,0,.6)!important;font-size:.9em}
+.hide-on-print{display:none!important}
+.print-only{display:block!important}
+.hide-for-print{display:none!important}
+.show-for-print{display:inherit!important}}
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
+<style>
+.listingblock .pygments .hll { background-color: #ffffcc }
+.listingblock .pygments, .listingblock .pygments code { background: #f8f8f8; }
+.listingblock .pygments .tok-c { color: #408080; font-style: italic } /* Comment */
+.listingblock .pygments .tok-err { border: 1px solid #FF0000 } /* Error */
+.listingblock .pygments .tok-k { color: #008000; font-weight: bold } /* Keyword */
+.listingblock .pygments .tok-o { color: #666666 } /* Operator */
+.listingblock .pygments .tok-cm { color: #408080; font-style: italic } /* Comment.Multiline */
+.listingblock .pygments .tok-cp { color: #BC7A00 } /* Comment.Preproc */
+.listingblock .pygments .tok-c1 { color: #408080; font-style: italic } /* Comment.Single */
+.listingblock .pygments .tok-cs { color: #408080; font-style: italic } /* Comment.Special */
+.listingblock .pygments .tok-gd { color: #A00000 } /* Generic.Deleted */
+.listingblock .pygments .tok-ge { font-style: italic } /* Generic.Emph */
+.listingblock .pygments .tok-gr { color: #FF0000 } /* Generic.Error */
+.listingblock .pygments .tok-gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.listingblock .pygments .tok-gi { color: #00A000 } /* Generic.Inserted */
+.listingblock .pygments .tok-go { color: #888888 } /* Generic.Output */
+.listingblock .pygments .tok-gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+.listingblock .pygments .tok-gs { font-weight: bold } /* Generic.Strong */
+.listingblock .pygments .tok-gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.listingblock .pygments .tok-gt { color: #0044DD } /* Generic.Traceback */
+.listingblock .pygments .tok-kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+.listingblock .pygments .tok-kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+.listingblock .pygments .tok-kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+.listingblock .pygments .tok-kp { color: #008000 } /* Keyword.Pseudo */
+.listingblock .pygments .tok-kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+.listingblock .pygments .tok-kt { color: #B00040 } /* Keyword.Type */
+.listingblock .pygments .tok-m { color: #666666 } /* Literal.Number */
+.listingblock .pygments .tok-s { color: #BA2121 } /* Literal.String */
+.listingblock .pygments .tok-na { color: #7D9029 } /* Name.Attribute */
+.listingblock .pygments .tok-nb { color: #008000 } /* Name.Builtin */
+.listingblock .pygments .tok-nc { color: #0000FF; font-weight: bold } /* Name.Class */
+.listingblock .pygments .tok-no { color: #880000 } /* Name.Constant */
+.listingblock .pygments .tok-nd { color: #AA22FF } /* Name.Decorator */
+.listingblock .pygments .tok-ni { color: #999999; font-weight: bold } /* Name.Entity */
+.listingblock .pygments .tok-ne { color: #D2413A; font-weight: bold } /* Name.Exception */
+.listingblock .pygments .tok-nf { color: #0000FF } /* Name.Function */
+.listingblock .pygments .tok-nl { color: #A0A000 } /* Name.Label */
+.listingblock .pygments .tok-nn { color: #0000FF; font-weight: bold } /* Name.Namespace */
+.listingblock .pygments .tok-nt { color: #008000; font-weight: bold } /* Name.Tag */
+.listingblock .pygments .tok-nv { color: #19177C } /* Name.Variable */
+.listingblock .pygments .tok-ow { color: #AA22FF; font-weight: bold } /* Operator.Word */
+.listingblock .pygments .tok-w { color: #bbbbbb } /* Text.Whitespace */
+.listingblock .pygments .tok-mb { color: #666666 } /* Literal.Number.Bin */
+.listingblock .pygments .tok-mf { color: #666666 } /* Literal.Number.Float */
+.listingblock .pygments .tok-mh { color: #666666 } /* Literal.Number.Hex */
+.listingblock .pygments .tok-mi { color: #666666 } /* Literal.Number.Integer */
+.listingblock .pygments .tok-mo { color: #666666 } /* Literal.Number.Oct */
+.listingblock .pygments .tok-sb { color: #BA2121 } /* Literal.String.Backtick */
+.listingblock .pygments .tok-sc { color: #BA2121 } /* Literal.String.Char */
+.listingblock .pygments .tok-sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+.listingblock .pygments .tok-s2 { color: #BA2121 } /* Literal.String.Double */
+.listingblock .pygments .tok-se { color: #BB6622; font-weight: bold } /* Literal.String.Escape */
+.listingblock .pygments .tok-sh { color: #BA2121 } /* Literal.String.Heredoc */
+.listingblock .pygments .tok-si { color: #BB6688; font-weight: bold } /* Literal.String.Interpol */
+.listingblock .pygments .tok-sx { color: #008000 } /* Literal.String.Other */
+.listingblock .pygments .tok-sr { color: #BB6688 } /* Literal.String.Regex */
+.listingblock .pygments .tok-s1 { color: #BA2121 } /* Literal.String.Single */
+.listingblock .pygments .tok-ss { color: #19177C } /* Literal.String.Symbol */
+.listingblock .pygments .tok-bp { color: #008000 } /* Name.Builtin.Pseudo */
+.listingblock .pygments .tok-vc { color: #19177C } /* Name.Variable.Class */
+.listingblock .pygments .tok-vg { color: #19177C } /* Name.Variable.Global */
+.listingblock .pygments .tok-vi { color: #19177C } /* Name.Variable.Instance */
+.listingblock .pygments .tok-il { color: #666666 } /* Literal.Number.Integer.Long */
+</style>
+</head>
+<body class="book toc2 toc-left">
+<div id="header">
+<h1>大数据平台管理系统使用手册</h1>
+<div class="details">
+<span id="author" class="author">湖南天云魔方数据科技有限公司</span><br>
+<span id="revdate">2016</span>
+</div>
+<div id="toc" class="toc2">
+<div id="toctitle">目录</div>
+<ul class="sectlevel1">
+<li><a href="#_概述">1. 概述</a>
+<ul class="sectlevel2">
+<li><a href="#_系统架构">1.1. 系统架构</a></li>
+<li><a href="#_访问平台管理系统">1.2. 访问平台管理系统</a></li>
+</ul>
+</li>
+<li><a href="#_查看系统仪表板">2. 查看系统仪表板</a>
+<ul class="sectlevel2">
+<li><a href="#_查看集群仪表板">2.1. 查看集群仪表板</a></li>
+<li><a href="#_修改集群仪表板">2.2. 修改集群仪表板</a></li>
+<li><a href="#_查看集群热力图">2.3. 查看集群热力图</a></li>
+</ul>
+</li>
+<li><a href="#_管理主机">3. 管理主机</a>
+<ul class="sectlevel2">
+<li><a href="#_主机相关工作">3.1. 主机相关工作</a></li>
+<li><a href="#_主机列表过滤">3.2. 主机列表过滤</a></li>
+<li><a href="#_执行主机级别的动作">3.3. 执行主机级别的动作</a></li>
+<li><a href="#_查看主机上的组件">3.4. 查看主机上的组件</a></li>
+<li><a href="#_如何删除一个组件">3.5. 如何删除一个组件</a></li>
+<li><a href="#_从集群中删除一台主机">3.6. 从集群中删除一台主机</a></li>
+<li><a href="#_增加主机到集群">3.7. 增加主机到集群</a></li>
+<li><a href="#_机架感知">3.8. 机架感知</a></li>
+</ul>
+</li>
+<li><a href="#_服务管理">4. 服务管理</a>
+<ul class="sectlevel2">
+<li><a href="#_启动和停止所有服务">4.1. 启动和停止所有服务</a></li>
+<li><a href="#_修改服务配置">4.2. 修改服务配置</a></li>
+<li><a href="#_查看服务摘要及告警">4.3. 查看服务摘要及告警</a></li>
+<li><a href="#_执行服务操作">4.4. 执行服务操作</a></li>
+<li><a href="#_监控后台操作">4.5. 监控后台操作</a></li>
+<li><a href="#_操作审计">4.6. 操作审计</a></li>
+</ul>
+</li>
+<li><a href="#_配置管理">5. 配置管理</a>
+<ul class="sectlevel2">
+<li><a href="#_配置服务">5.1. 配置服务</a></li>
+<li><a href="#_定制日志设置">5.2. 定制日志设置</a></li>
+<li><a href="#_下载客户端配置">5.3. 下载客户端配置</a></li>
+</ul>
+</li>
+<li><a href="#_服务配置版本管理">6. 服务配置版本管理</a>
+<ul class="sectlevel2">
+<li><a href="#_基本概念">6.1. 基本概念</a></li>
+</ul>
+</li>
+<li><a href="#_集群管理">7. 集群管理</a>
+<ul class="sectlevel2">
+<li><a href="#_堆栈和版本">7.1. 堆栈和版本</a></li>
+<li><a href="#_服务账号">7.2. 服务账号</a></li>
+<li><a href="#_kerberos">7.3. Kerberos</a></li>
+</ul>
+</li>
+<li><a href="#_监控与告警">8. 监控与告警</a>
+<ul class="sectlevel2">
+<li><a href="#_管理告警">8.1. 管理告警</a></li>
+<li><a href="#_通知配置">8.2. 通知配置</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_概述">1. 概述</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Hadoop 属于大规模，分布式数据存储和计算体系，监控和管理如此多的机器成为一个非常琐碎和耗时的任务，
+因此需要有一个管理系统来管理和监控如此庞大的机器。大数据平台管理系统就是这样的一个目的，它通过 Web 方式
+来管理和监控集群内人的所有机器。</p>
+</div>
+<div class="sect2">
+<h3 id="_系统架构">1.1. 系统架构</h3>
+<div class="paragraph">
+<p>平台管理系统通过安装在集群中每个节点上的 agent 来收集节点的信息，以及执行 server 端发出的各类命令。
+其体系架构如下图所示：</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-ee4a1.png" alt="ambari users guide ee4a1">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_访问平台管理系统">1.2. 访问平台管理系统</h3>
+<div class="paragraph">
+<p>平台管理系统以 Web 方式和客户进行交互，为了访问系统，打开浏览器，输入下面的地址：</p>
+</div>
+<div class="paragraph">
+<p><code><a href="http://&lt;your" class="bare">http://&lt;your</a> hostname&gt;:8080</code></p>
+</div>
+<div class="paragraph">
+<p>这里 &lt;your hostname&gt; 是安装了系统管理软件的机器。在出现的登陆页面后，输入账号密码登陆。</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_查看系统仪表板">2. 查看系统仪表板</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>该章节描述如何使用仪表板来监控集群。在系统主窗口上方导航栏里点击 “仪表板”，即可进入到系统仪表板界面。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-8b8a4.png" alt="ambari users guide 8b8a4">
+</div>
+</div>
+<div class="sect2">
+<h3 id="_查看集群仪表板">2.1. 查看集群仪表板</h3>
+<div class="paragraph">
+<p>管理系统在主页显示整个集群的系统状态，每一个图表描述一个服务的或者一个组件的状态，包括 HDFS，YARN，HBase，
+Storm 等。该页面只是显示简单的柱状图和拼图，对于有复杂显示的要求，会在该图表中直接给出数据源链接，点击链接进入后
+可以看到更复杂的图表展示页面。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-aee41.png" alt="ambari users guide aee41">
+</div>
+</div>
+<div class="sect3">
+<h4 id="_扫描服务状态">2.1.1. 扫描服务状态</h4>
+<div class="paragraph">
+<p>注意上一节中的仪表板左侧的组件列表，在这些列表的左侧有一个可能用不同颜色表示的原点，这些不同颜色表示了状态的不同情况，下面给出描述</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">颜色</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">状态</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">静止绿色</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">所有的master服务都在运行</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">闪动绿色</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">表示服务正在启动</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">静止红色</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">表示至少有一个 master 服务已经停止运行</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">闪动红色</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">表示服务正在停止</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="_小部件描述">2.1.2. 小部件描述</h4>
+<div class="paragraph">
+<p>仪表板包括了当前大部分服务状态指标的小部件，下面描述每一个部件的简单说明</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">指标</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">描述</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>HDFS </strong></p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HDFS 磁盘使用情况</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">DFS 使用的空间百分比，它是统计了 DFS 和非 DFS 的合计使用</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>指标</strong></p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">DataNodes 在线情况</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">有多少 Datanode 目前是在线的</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">NameNode 内存</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">NameNode 服务的 JVM 堆栈所使用的内存占比</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">NameNode RPC</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RPC 队列的平均延迟</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">NameNode CPU WIO</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">CPU 等待 I/O 的百分比</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">NameNode 在线时间</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">NameNode 在线的时长统计</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>YARN</strong></p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ResourceManager 内存</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ResourceManager JVM 堆栈使用占比</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ResourceManager 在线时间</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ResourceManager 在线时长统计</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">NodeManager 在线情况</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">当前 NodeManager 在线数量以及总数量</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">YARN 内存</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">YARN 有效内存占比 (已使用 / 总计)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>HBase</strong></p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HBase Master 内存</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HBase Master JVM 堆栈使用占比</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HBase 平均负载</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HBase 服务的平均负载</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HBase Master 在线情况</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HBase Master 服务在线时长统计</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Region in Transaction</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HBase region 事务个数</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>Storm</strong></p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Supervisors 在线</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Supervisors 在线节点个数</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="_小部件详情">2.1.3. 小部件详情</h4>
+<div class="paragraph">
+<p>将鼠标移动某一个特定小部件上，可以看到该部件更详细的信息，类似如下：</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-6bc40.png" alt="ambari users guide 6bc40">
+</div>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>点击左上角白色的 X 可以从当前仪表板删除该部件</p>
+</li>
+<li>
+<p>点击 <span class="icon"><i class="fa fa-Edit"></i></span> 图标，可以编辑当前小部件的显示信息，后面具体描述</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_链接到服务界面">2.1.4. 链接到服务界面</h4>
+<div class="paragraph">
+<p>HDFS Links 和 HBase Links 部件表示当前可以通过点击该部件的连接列表获得更详细的状态显示。
+比如线程堆栈，日志等。比如，你可以在 HDFS Links 部件中通过点击链接的方式来查看 NameNode，Secondary Namenode，
+DataNode 组件的详细状态。类似如下：</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-14aa6.png" alt="ambari users guide 14aa6">
+</div>
+</div>
+<div class="paragraph">
+<p>通过点击 "更多" 下来列表，可以获得更多的状态连接，以下描述当前状态连接的指标描述</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">服务</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">指标</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">描述</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HDFS</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">NameNode UI</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">链接到 NameNode 的管理界面</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">NameNode Logs</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">链接到 NameNode 的日志查看界面</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">NameNode JMX</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">链接到 NameNode 的 JMX servlet 界面</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Thread Stacks</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">链接到 NameNode 线程堆栈跟踪页面</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HBase</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HBase Master UI</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">链接到 HBase Master 管理界面</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HBase Logs</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">链接到 HBase 日志查看界面</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">zookeeper Info</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">链接到 Zookeeper 信息页面</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">HBase Master JMX</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">链接到 HBase Master JMX servlet 页面</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Debug Dump</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">连接到 Debug 页面</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Thread Stacks</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">链接到 HBase Master 线程堆栈跟踪页面</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_修改集群仪表板">2.2. 修改集群仪表板</h3>
+<div class="paragraph">
+<p>有以下几种方法来定制仪表板</p>
+</div>
+<div class="sect3">
+<h4 id="_增加小部件到仪表板">2.2.1. 增加小部件到仪表板</h4>
+<div class="paragraph">
+<p>通过以下方式可以把之前挪走的小部件重新加入到仪表板中</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>选择指标下拉框，如下所示</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-97a4e.png" alt="ambari users guide 97a4e">
+</div>
+</div>
+</li>
+<li>
+<p>选择添加</p>
+</li>
+<li>
+<p>选择需要的指标</p>
+</li>
+<li>
+<p>点击应用</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_重置仪表板">2.2.2. 重置仪表板</h4>
+<div class="paragraph">
+<p>可以通过下面的方式来恢复仪表板到默认布局状态</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>选择指标下拉框，如下所示</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-f675b.png" alt="ambari users guide f675b">
+</div>
+</div>
+</li>
+<li>
+<p>选择编辑</p>
+</li>
+<li>
+<p>选择重置所有的小部件到默认状态</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_定制小部件显示">2.2.3. 定制小部件显示</h4>
+<div class="paragraph">
+<p>通过以下方式可以自定义小部件的显示指标</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>移动鼠标到需要定制的小部件上</p>
+</li>
+<li>
+<p>选择出现在右上角的 <span class="icon"><i class="fa fa-Edit"></i></span> 图标
+定制小部件弹出窗口显示出你可以编辑的属性，如下图所示：</p>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-3504e.png" alt="ambari users guide 3504e">
+</div>
+</div>
+</li>
+<li>
+<p>根据定制指标方法来进行定制
+比如，本文例子中，你可以掉成 HDFS 容量饼图占比颜色变化的阈值</p>
+</li>
+<li>
+<p>点击应用按钮用来保存并关闭编辑窗口</p>
+</li>
+<li>
+<p>如果不想修改，则点击取消按钮来关闭窗口</p>
+</li>
+</ol>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+不是所有的小部件都支持小部件
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_查看集群热力图">2.3. 查看集群热力图</h3>
+<div class="paragraph">
+<p>热力图提供了用颜色来展示整个集群里使用率的方法</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-2bc03.png" alt="ambari users guide 2bc03">
+</div>
+</div>
+<div class="paragraph">
+<p>一个颜色块代表一个节点。把鼠标移动到颜色块上可以看到更详细的信息。不同颜色代表该服务所使用资源的占比。
+如果不能侦测到任何表示状态的数据，则用灰色表示无效数据。
+可以通过修改默认的最大值来改变热图的颜色分布。</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_管理主机">3. 管理主机</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>平台管理系统使用主机管理服务来安装每个节点上的集群组件，比如 DataNodes，NamenNodes，NodeManager 等。
+比如，你可以通过主机管理方式一次重启该节点上的所有与组件，或者该节点上某类型的组件或服务。</p>
+</div>
+<div class="sect2">
+<h3 id="_主机相关工作">3.1. 主机相关工作</h3>
+<div class="paragraph">
+<p>在主界面点击 “主机” 标签，进去主机管理主界面，该界面可以看到当前集群的所有主机以及主机的基本状态，类似如下：</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-f9925.png" alt="ambari users guide f9925">
+</div>
+</div>
+<div class="paragraph">
+<p>每个主机前面有一个颜色表示的图标，不同颜色表示主机的不同状态，如下：</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>红色 - 表示在主机上至少有一个 master 组件停止运行</p>
+</li>
+<li>
+<p>橙色 - 表示在主机上至少有一个 slave 组件停止运行</p>
+</li>
+<li>
+<p>黄色 - 平台管理服务不能获得该主机的心跳信息至少超过3分钟</p>
+</li>
+<li>
+<p>绿色 - 所有组件和服务状态都正常</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>红色状态标识优先于橙色状态标识，橙色则优先于黄色状态标识。换句话说，如果一个主机的一个 master 组件停止运行以及还有一些其他问题，
+则用红色表示。</p>
+</div>
+<div class="paragraph">
+<p>上图中的第一台主机用橙色标志，表示至少有一个 slave 组件停止运行了，点击主机名进入后，可以看到是 NodeManager 组件停止运行了。</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_主机列表过滤">3.2. 主机列表过滤</h3>
+<div class="paragraph">
+<p>在主机页面，可以通过组件属性或者在输入框中输入关键字进行过滤，有效的搜索类型有：</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>主机属性搜索</strong> 通过主机名，IP 地址，主机状态和其他属性进行搜索</p>
+</li>
+<li>
+<p><strong>通过服务搜索</strong> 通过安装的组件来找到对应的主机</p>
+</li>
+<li>
+<p><strong>通过组件搜索</strong> 通过安装的组件状态（比如启动，停止，维护状态等）来找到特定的主机</p>
+</li>
+<li>
+<p><strong>通过关键字搜索</strong> 在输入框中输入你想搜索的关键字来找到主机</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_执行主机级别的动作">3.3. 执行主机级别的动作</h3>
+<div class="paragraph">
+<p>使用动作下来菜单可以针对一个或者多个主机进行操作。</p>
+</div>
+<div class="paragraph">
+<p>动作有下列三种菜单组成：</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>主机： 列表选择、过滤或者所有组件选项</p>
+</li>
+<li>
+<p>对象：列出匹配选择的主机相对应的组件对象</p>
+</li>
+<li>
+<p>操作：列素哦所有你选择的对象的可能操作</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>比如，如果想在一个主机上重启 DataNode，可以这样操作：</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>在主机页面，选择至少一个运行 DataNode 的主机</p>
+</li>
+<li>
+<p>在动作下来框，选择 menu:选中的主机[ DataNodes&#8594;重启] ,如下图所示：</p>
+</li>
+</ol>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-20677.png" alt="ambari users guide 20677">
+</div>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>选择 btn:[确定] 按钮确定启动所选操作</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_查看主机上的组件">3.4. 查看主机上的组件</h3>
+<div class="paragraph">
+<p>在主机页面，点击主机名连接，进入到该主机的组件管理界面，比如我们选择 <code>tdp3.tcloudata.com</code> 主机，进入到如下图所示的页面</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-f69cc.png" alt="ambari users guide f69cc">
+</div>
+</div>
+<div class="paragraph">
+<p>上图右上角的 "Host Actions" 下来框可以用来启动、停止、重启、进入维护模式和离开模式、删除主机等操作。</p>
+</div>
+<div class="paragraph">
+<p>另外，每一个组件右侧的下来框也可以用来对该组件单独进行操作，包括启动、停止、重启、删除、打开维护模式、解除委托等操作。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-53d85.png" alt="ambari users guide 53d85">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_如何删除一个组件">3.5. 如何删除一个组件</h3>
+<div class="paragraph">
+<p>要删除一个组件，在主机页面，点击该组件所在主机的主机名连接</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>首先停止该组件</p>
+</li>
+<li>
+<p>在下来菜单中解除组件委托</p>
+</li>
+<li>
+<p>对于已经解除委托的组件，在下来菜单中，选择删除组件</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_从集群中删除一台主机">3.6. 从集群中删除一台主机</h3>
+<div class="paragraph">
+<p>要从集群中删除一台主机，需要先完成以下前提操作：</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>停止运行在主机上的所有组件</p>
+</li>
+<li>
+<p>解除 DataNodes 组件的委托</p>
+</li>
+<li>
+<p>如果主机上运行有 Master 组件，比如 NameNode，HBase Master，则需要迁移这些组件到别的主机</p>
+</li>
+<li>
+<p>如有必要，针对该主机，关闭维护模式</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>然后执行下面的步骤：</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>在主机页面，点击主机名</p>
+</li>
+<li>
+<p>在主机详情页面，选择 Host Actions 下来菜单中</p>
+</li>
+<li>
+<p>选择删除</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>如果你没有完成之前的步骤，执行该步骤可能出现类似以下警告：</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-a8e0e.png" alt="ambari users guide a8e0e">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_增加主机到集群">3.7. 增加主机到集群</h3>
+<div class="paragraph">
+<p>要增加主机到集群，进入到主机页面，然后选择 menu:Actions[+Add New Hosts]  菜单，增加主机向导将会出现，它提供了类似平台管理
+首次安装向导界面。依据提示，提供必要的信息，即可完成主机增加操作。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-2cca1.png" alt="ambari users guide 2cca1">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_机架感知">3.8. 机架感知</h3>
+<div class="paragraph">
+<p>平台管理系统可以管理主机所在的机架信息，通过设置机架 ID，系统能够通过 ID 来显示主机热力图，同时也可以通过机架 ID 来过滤主机</p>
+</div>
+<div class="paragraph">
+<p>如果集群部署了 HDFS，管理系统能够通过拓扑脚本传递机架 ID 信息给 HDFS。管理系统生成 <em>/etc/hadoop/conf/topology.py</em> 脚本，然后
+自动在 <code>core-site.xml</code> 文件中设置 <code>net.topology.script.file.name</code> 属性。
+该脚本读取系统自动创建的 <em>/etc/hadoop/conf/topology_mappings.data</em> 映射文件，当修改机架 ID 是，该映射文件也会自动更新，从而
+推送给 HDFS 配置文件。HDFS 使用该脚本来获得 DataNodes 的机架信息。</p>
+</div>
+<div class="paragraph">
+<div class="title">设置机架ID</div>
+<p>有两种方式设置机架 ID。一是在主机页面通过 Actions 菜单批量设置机架 ID；另外是更多进入到单个主机详情页面后，通过 Host Actions 菜单来
+设置机架 ID</p>
+</div>
+<div class="paragraph">
+<p>如果要批量设置机架 ID，进入到主机页面，然后选择 menu:Actions[Hosts&#8594;Set Rack]</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-16fa7.png" alt="ambari users guide 16fa7">
+</div>
+</div>
+<div class="paragraph">
+<p>如果要单独设置机架 ID，进入到主机详情页面，然后选择 menu:Host Actions[Set Rack] 菜单</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-ccb76.png" alt="ambari users guide ccb76">
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_服务管理">4. 服务管理</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>服务页面可以用来监控和管理选中的服务，该页面的最左侧列表便是当前集群所安装的服务。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-30da9.png" alt="ambari users guide 30da9">
+</div>
+</div>
+<div class="sect2">
+<h3 id="_启动和停止所有服务">4.1. 启动和停止所有服务</h3>
+<div class="paragraph">
+<p>要启动和停止所有服务，选择最左侧服务列表下方的 menu:Actions[Start All]  或者 menu:Actions[Stop All] 下来菜单即可</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-a9ebd.png" alt="ambari users guide a9ebd">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_修改服务配置">4.2. 修改服务配置</h3>
+<div class="paragraph">
+<p>选择一个服务，然后选择配置标签，可以查看和修改当前配置。比如选择 MapReduce2 ，然后选择配置，可以看到给服务的几个核心配置，点击下方的
+高级标签，既可以看到所有的配置选项。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-f1bd8.png" alt="ambari users guide f1bd8">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_查看服务摘要及告警">4.3. 查看服务摘要及告警</h3>
+<div class="paragraph">
+<p>当选择一个服务后，右侧出现的摘要信息标签会显示该服务的基本信息</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-9294d.png" alt="ambari users guide 9294d">
+</div>
+</div>
+<div class="paragraph">
+<p>每个组件的连接只连接到安装有该组件的主机详情页面。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-2b0cc.png" alt="ambari users guide 2b0cc">
+</div>
+</div>
+<div class="sect3">
+<h4 id="_告警和健康检查">4.3.1. 告警和健康检查</h4>
+<div class="paragraph">
+<p>在每一个服务页面，摘要显示区域，点击右上角的<span class="image"><img src="images/ambari_users_guide-d26cc.png" alt="ambari users guide d26cc"></span>信息，及可以看到目前的具体告警</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-f735a.png" alt="ambari users guide f735a">
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_修改服务仪表板">4.3.2. 修改服务仪表板</h4>
+<div class="paragraph">
+<p>依据服务的不同，摘要标签页会显示当前服务的一些重要指标</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-58310.png" alt="ambari users guide 58310">
+</div>
+</div>
+<div class="paragraph">
+<p>该区域的指标可以自定义，你可以增加，删除或者修改每一个小部件的显示。同时也可以通过拖动的方式修改布局。</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_执行服务操作">4.4. 执行服务操作</h3>
+<div class="paragraph">
+<p>通过服务操作下来菜单，可以对选定的服务进行管理。不同的服务，可能有效的操作不一定完全相同，比如对于 HDFS 服务而言，有效的操作如下：</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-b2fa6.png" alt="ambari users guide b2fa6">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_监控后台操作">4.5. 监控后台操作</h3>
+<div class="paragraph">
+<p>当有批量操作时，我们可以把这些批量操作转为后台操作，当之后想要查看时，点击导航栏左侧蓝色闪烁图标<span class="image"><img src="images/ambari_users_guide-62605.png" alt="ambari users guide 62605"></span>
+即可获得当前后台运行的操作</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-1c89d.png" alt="ambari users guide 1c89d">
+</div>
+</div>
+<div class="paragraph">
+<p>点击正在运行的操作名称，可以看到当前操作在每一台机器上完成的情况</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-d34a0.png" alt="ambari users guide d34a0">
+</div>
+</div>
+<div class="paragraph">
+<p>再点击每个主机名称，可以看到具体在该主机上每个服务的执行情况</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-7c3dc.png" alt="ambari users guide 7c3dc">
+</div>
+</div>
+<div class="paragraph">
+<p>再点击具体的操作，则可以看到这个操作的详细日志，类似下图所示：</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-7db65.png" alt="ambari users guide 7db65">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_操作审计">4.6. 操作审计</h3>
+<div class="paragraph">
+<p>当你通过管理系统进行操作，比如登陆/注销，启动/停止/重启，增加/删除服务等，管理系统都会创建一条审计日志。通过审计日志，我们可以
+知道谁在什么时间执行了什么样的操作。审计日志位于管理系统主机的 <em>/var/log/ambari-server/ambari-audit.log</em></p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+修改服务配置也会创建一条审计日志，不过日志文件为 <em>/var/log/ambari-server/ambari-config-changes.log</em> 类似如下:
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>+</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code>2016-05-25 18:31:26,242 INFO - Cluster 'MyCluster' changed by: 'admin';
+service_name='HDFS' config_group='default' config_group_id='-1' version='2'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>+</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_配置管理">5. 配置管理</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>管理系统把所有组件的配置当成代码方式进行版本管理</p>
+</div>
+<div class="sect2">
+<h3 id="_配置服务">5.1. 配置服务</h3>
+<div class="paragraph">
+<p>选择一个服务，然后选择配置标签来查看和更新配置。比如选择 MapReduce2，然后选择配置，查看配置参数。</p>
+</div>
+<div class="sect3">
+<h4 id="_更新服务属性">5.1.1. 更新服务属性</h4>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>打开配置属性</p>
+</li>
+<li>
+<p>修改要改变的属性值</p>
+</li>
+<li>
+<p>选择保存</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_重启组件">5.1.2. 重启组件</h4>
+<div class="paragraph">
+<p>编辑并保存修改后，橙色的重启按钮将会显示，用来提醒你某些组件需要重来才能使得修改的值生效。点击重启按钮，然后在出现的下拉框里
+选择重启所有受影响的组件。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-748a3.png" alt="ambari users guide 748a3">
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_定制日志设置">5.2. 定制日志设置</h3>
+<div class="paragraph">
+<p>管理系统默认显示 menu:服务[配置&#8594;Advanced log4j] 的配置，依据需要，可以直接在 Web 页面修改该配置文件，比如控制日志的输出级别，
+日志的存储路径以及日志的轮转周期等。</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-5eaac.png" alt="ambari users guide 5eaac">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_下载客户端配置">5.3. 下载客户端配置</h3>
+<div class="paragraph">
+<p>对于那些包含所有客户端组件的服务（比如 Hadoop 客户端或 Hive 客户端），你可以从管理系统中下载该客户端相关的配置信息。</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>在管理系统界面，点击对应的服务标签</p>
+</li>
+<li>
+<p>选择服务操作下来菜单</p>
+</li>
+<li>
+<p>选择下载客户端配置，在弹出的对话框中，选择要保存的地址，然后点击确定按钮。</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_服务配置版本管理">6. 服务配置版本管理</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>管理系统提供了配置版本的概念，这使得任何一次的配置修改都会形成一个历史以及行程一个版本，我们可以查看所有的历史版本信息，也可以
+回到到特定的版本，还能进行版本之间的比较。以下详细描述。</p>
+</div>
+<div class="sect2">
+<h3 id="_基本概念">6.1. 基本概念</h3>
+<div class="paragraph">
+<p>理解服务配置如何存储的非常重要。配置属性依据配置类型进行分组。一个服务有若干个配置类型组成。</p>
+</div>
+<div class="paragraph">
+<p>比如，HDFS 服务包含一些配置类型：hdfs-site,core-site,hdfs-log4j,hadoop-env,hadoop-policy。如果你浏览到 menu:服务[ HDFS&#8594;配置] ，
+你可以看到当前的配置版本信息（如果已经有过修改的话）</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-c1f7a.png" alt="ambari users guide c1f7a">
+</div>
+</div>
+<div class="paragraph">
+<p>配置版本建立在服务级别上，因此，当你修改某一个服务的配置时，管理系统会创建一个服务配置版本。下图显示了针对一个服务的两个配置版本 V1和 V2</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-784db.png" alt="ambari users guide 784db">
+</div>
+</div>
+<div class="sect3">
+<h4 id="_术语">6.1.1. 术语</h4>
+<div class="paragraph">
+<p>下表列出了该章节中提到的一些术语，需要提前理解</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">术语</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">描述</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">配置属性(Configuration Property)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">有管理系统管理的配置属性，比如 NameNode heapsize ,replication factor</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">配置类型(Configuration Type)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">属性的分组，比如 hdfs-site 就是一个配置类型</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">服务配置(Service Configurations)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">配置类型集合，比如 hdfs-site,core-site 配置属于 HDFS 服务配置的一部分</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">修改备注(Change Notes)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">当修改配置并保存时的备注，类似 git 提交时的 comment</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">服务配置版本(SCV)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">某一个特定服务的部分配置版本</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">主机配置组(Host Config Group HCG)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">针对主机集合的配置集合。每个服务有一个默认的主机配置组。你可以基于默认配置组来创建自定义的配置组。</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="_查看历史">6.1.2. 查看历史</h4>
+<div class="paragraph">
+<p>先进入导航栏的仪表板页面，然后点击左侧某一个服务，然后在点击右侧的配置历史，即可以查看当前服务的配置版本信息</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-2b70a.png" alt="ambari users guide 2b70a">
+</div>
+</div>
+<div class="paragraph">
+<p>而最近的几次修改配置历史，在通过进入服务的配置页面，然后在头部导航栏可以看到，类似下图：</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-721b2.png" alt="ambari users guide 721b2">
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_版本比较">6.1.3. 版本比较</h4>
+<div class="paragraph">
+<p>当进入到menu:服务[配置] 页面，当鼠标移动到具体某一个版本上时，系统会给出三个选项，查看，比较和回归</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-06985.png" alt="ambari users guide 06985">
+</div>
+</div>
+<div class="paragraph">
+<p>要比较两个配置版本，可行下面的操作：</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>导航到特定的服务版本，比如  "V19"，移动鼠标到该版本，在弹出层，点击比较按钮</p>
+</li>
+<li>
+<p>使用滚动条，找到需要比较版本，比如这里想和 V13 版本进行比较，则找到 V13版本，移动鼠标到该版本，点击在弹出层选择比较</p>
+</li>
+<li>
+<p>系统在版本栏下方显示两个版本的差异，类似如下</p>
+</li>
+</ol>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-b272a.png" alt="ambari users guide b272a">
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_版本回退">6.1.4. 版本回退</h4>
+<div class="paragraph">
+<p>如果想把配置回退到某一个特定的版本，比如回退到 V21版本，则导航到 V21版本，并点击，然后在版本栏下方条目中点击 <span class="image"><img src="images/ambari_users_guide-a19b5.png" alt="ambari users guide a19b5"></span> 按钮。
+在弹出的对话框中，填写回退的原因，然后点击确定即可。</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_集群管理">7. 集群管理</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>点击导航栏的管理标签，进入到集群管理页面，以下详细描述。</p>
+</div>
+<div class="sect2">
+<h3 id="_堆栈和版本">7.1. 堆栈和版本</h3>
+<div class="paragraph">
+<p>堆栈标签页包含了当前集群的服务组件，已经安装的显示为<span class="image"><img src="images/ambari_users_guide-8d849.png" alt="ambari users guide 8d849"></span>，未安装的则显示为<span class="image"><img src="images/ambari_users_guide-d32de.png" alt="ambari users guide d32de"></span>。</p>
+</div>
+<div class="paragraph">
+<p>版本标签则包含当前安装的个服务软件的版本信息</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-afc0a.png" alt="ambari users guide afc0a">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_服务账号">7.2. 服务账号</h3>
+<div class="paragraph">
+<p>服务账号用表格形式列出当前服务所运行的账号</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-f303e.png" alt="ambari users guide f303e">
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_kerberos">7.3. Kerberos</h3>
+<div class="paragraph">
+<p>如果集群还没有启动 Kerberos，点击启用 Kerberos 按钮，运行 Kerberos 安装向导。如果你安装 Kerberos 不在本章描述范围之内。
+一旦启动了 Kerberos，则 Kerberos 标签页会给出类似下图的信息：</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/ambari_users_guide-b465a.png" alt="ambari users guide b465a">
+</div>
+</div>
+<div class="sect3">
+<h4 id="_如何重新生成_keytab">7.3.1. 如何重新生成 keytab</h4>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>点击 menu:管理[Kerberos]</p>
+</li>
+<li>
+<p>点击 btn:[Regenerate Kerberos]  按钮</p>
+</li>
+<li>
+<p>确定你的选择，继续</p>
+</li>
+<li>
+<p>(可选) 你可以选择只针对那些丢失了 keytab 文件的主机进行 keytab 文件重新生成。</p>
+</li>
+<li>
+<p>一旦确定，系统会连接到 KDC，如何重新生成 keytab 文件并放置在正确的位置，该步骤会提示要求输入 Kerberos 管理员账号和密码</p>
+</li>
+<li>
+<p>一旦完成，你必须重启所有使用到这些 keytab 文件的服务</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_如何禁用_kerberos">7.3.2. 如何禁用 Kerberos</h4>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>点击 menu:管理[Kerberos]</p>
+</li>
+<li>
+<p>点击 btn:[Disable Kerberos] 按钮</p>
+</li>
+<li>
+<p>确定你的选择，然后继续，所有集群服务将停止，Kerberos 安全认证会被重置</p>
+</li>
+<li>
+<p>如果要重启 Kerberos，点击 btn:[Enable Kerberos] 按钮，启动配置向导</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_监控与告警">8. 监控与告警</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>管理系统监控集群健康状态并能对某些状态发出告警，以帮助你定位和解决问题。</p>
+</div>
+<div class="sect2">
+<h3 id="_管理告警">8.1. 管理告警</h3>
+<div class="paragraph">
+<p>管理系统预定义了一套针对集群组件和主机的告警。每一个告警有 Alert Definition 来定义，它指定告警类型，检测间隔以及阈值。当创建或者修改集群时，
+管理系统获取 Alert Definition 并创建告警实例。比如，针对 HDFS 服务，系统会预定义一个检测 DataNode 进程的告警定义。</p>
+</div>
+<div class="paragraph">
+<p>通过管理系统，你可以浏览当前集群的所有告警定义。也可以通过当前状态类过滤告警定义。点击告警定义名称，可以看到该告警的详细情况，修改告警属性（比如检测间隔，阈值等），关联
+到该告警定义的实例则同时会被修改。</p>
+</div>
+<div class="paragraph">
+<p>每一个告警实例显示一个告警状态来表示严重程度。最常见的严重级别有：</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>OK</p>
+</li>
+<li>
+<p>WARNING</p>
+</li>
+<li>
+<p>CRITICAL</p>
+</li>
+<li>
+<p>UNKNOWN</p>
+</li>
+<li>
+<p>NONE</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>后两者是特殊的严重级别。</p>
+</div>
+<div class="sect3">
+<h4 id="_告警类型">8.1.1. 告警类型</h4>
+<div class="paragraph">
+<p>告警的阈值以及阈值单位取决于告警类型，下表列出了告警的类型，可能的状态以及可配置的阈值</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">告警类型</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">描述</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">阈值单位</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">WEB</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">连接到 WEB，告警状态基于 HTTP 返回码</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">秒</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">PORT</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">连接到端口，告警状态基于应答时间</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">秒</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">METRIC</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">检查服务指标值，单位多样，取决于检查什么样的指标</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">多样</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AGGREGATE</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">另外一个告警的平均状态</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">%</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SCRIPT</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">执行脚本来处理告警检测</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">多样</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SERVER</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">执行服务端可运行的类键处理告警检测</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">多样</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">RECOVERY</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Agent 处理进程检测以及异常中断后重启</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">多样</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="_告警检测次数">8.1.2. 告警检测次数</h4>
+<div class="paragraph">
+<p>管理系统允许设置检测多少次后才发布告警。如果在检测期间，告警状态发生变化，系统则隔一个时间数后在进行状态检测（这个数成为检查次数）。
+首先告警状态会保存在 <em>/var/log/ambari-server/ambari-alerts.log</em> 文件里，并设置为 “SOFT” 改变。当检测次数达到后，其状态依然
+和之前相同，则设置为 "HARD" 标志，然后发布告警通知。</p>
+</div>
+<div class="paragraph">
+<p>你可以针对所有的告警设置检测测试，也可以针对每一个告警进行设置。</p>
+</div>
+<div class="paragraph">
+<p>修改全局告警次数方法如下：</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>在系统管理页面，点击 Alert 页面</p>
+</li>
+<li>
+<p>在 Actions 菜单中，点击 Manage Alert Settings</p>
+</li>
+<li>
+<p>更新 Check Count 值</p>
+</li>
+<li>
+<p>点击保存</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>修改单个告警的告警次数方法如下：</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>在系统管理页面，点击 Alert 页面</p>
+</li>
+<li>
+<p>选择你要修改的告警</p>
+</li>
+<li>
+<p>在右边，点击 <span class="icon"><i class="fa fa-Edit"></i></span>  图标，接下来出现 Check Count 属性</p>
+</li>
+<li>
+<p>更新 Check Count 值</p>
+</li>
+<li>
+<p>点击保存</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_通知配置">8.2. 通知配置</h3>
+<div class="paragraph">
+<p>告警可以通过邮件或者 SNMP 方式把通知发送出去。</p>
+</div>
+<div class="sect3">
+<h4 id="_创建或修改通知">8.2.1. 创建或修改通知</h4>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>在系统管理页面，点击 Alert 页面</p>
+</li>
+<li>
+<p>在 Action 菜单中，点击 Manage Notifications</p>
+</li>
+<li>
+<p>已经存在的通知会在下面列出</p>
+</li>
+<li>
+<p>点击 + 按钮， ”Create new Alert Notification" ，出现告警通知对话框</p>
+</li>
+<li>
+<p>输入通知名称，选择通知属于哪个组，设置严重级别以及描述，然后选择通知的方式(EMAIL 或SNMP)</p>
+</li>
+<li>
+<p>完成后，点击保存</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>对于邮件通知，需要提供发送邮箱的相关信息，列表如下：</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">参数</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">描述</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Email To</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">逗号分隔的邮件接收人</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SMTP Server</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SMTP 服务器地址</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SMTP Port</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SMTP 服务端口</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Email From</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">单个邮件地址，用来表示发件人</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Use Authentication</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">如果 SMTP 需要认证，则勾选</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>对于 SNMP 的通知方式，则需要提供 SNMP 版本，Community 等相关信息，列表如下：</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">参数</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">描述</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">OID</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1.3.6.1.4.1.18060.16.1.1</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Hosts</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">逗号分隔的主机名，用户发送 trap</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Port</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">snmptrapd 服务的侦听端口</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="_定制通知模板">8.2.2. 定制通知模板</h4>
+<div class="paragraph">
+<p>通知模板为 XML 格式，默认自带了一个 alter-templates.xml 文件。该文件包含了每一个已知类型的通知的所有内容。</p>
+</div>
+<div class="paragraph">
+<p>如果想要使用自己的模板，按照下面的方式进行操作：</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>在系统管理主机上，进入 <em>/etc/ambari-server/conf</em> 目录</p>
+</li>
+<li>
+<p>编辑 <code>ambari.properties</code> 文件</p>
+</li>
+<li>
+<p>增加新模板文件的位置记录，比如 <code>alerts.template.file=/var/tmp/alert-templates-custom.xml</code></p>
+</li>
+<li>
+<p>保存，退出，并重启系统管理服务</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<div class="title">告警模板结构</div>
+<p>模板文件结构如下，每一个 <code>&lt;alert-template&gt;</code> 元素用来申明通知的类型</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="xml"><span class="tok-nt">&lt;alert-templates&gt;</span>
+  <span class="tok-nt">&lt;alert-template</span> <span class="tok-na">type=</span><span class="tok-s">&quot;EMAIL&quot;</span><span class="tok-nt">&gt;</span>
+    <span class="tok-nt">&lt;subject&gt;</span>
+    Subject Content
+    <span class="tok-nt">&lt;/subject&gt;</span>
+    <span class="tok-nt">&lt;body&gt;</span>
+    Body Content
+   <span class="tok-nt">&lt;/body&gt;</span>
+  <span class="tok-nt">&lt;/alert-template&gt;</span>
+  <span class="tok-nt">&lt;alert-template</span> <span class="tok-na">type=</span><span class="tok-s">&quot;SNMP&quot;</span><span class="tok-nt">&gt;</span>
+    <span class="tok-nt">&lt;subject&gt;</span>
+    Subject Content
+    <span class="tok-nt">&lt;/subject&gt;</span>
+    <span class="tok-nt">&lt;body&gt;</span>
+    Body Content
+   <span class="tok-nt">&lt;/body&gt;</span>
+  <span class="tok-nt">&lt;/alert-template&gt;</span>
+<span class="tok-nt">&lt;/alert-templates&gt;</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<div class="title">模板变量</div>
+<p>模板使用 Apache Velocity 来渲染所有的标记内容，以下变量可用于模板中：</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">变量</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">描述</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$alert.getAlertDefinition()</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">当前实例来自哪个告警定义</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$alert.getAlertText()</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">告警正文</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$alert.getAlertName()</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">告警名称</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$alert.getAlertState()</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">告警状态 (OK</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">WARNING</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">CRITICAL</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">UNKNOWN)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$alert.getServiceName()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">告警作用的服务名</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$alert.hasComponentName()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">如果告警是针对指定的服务组件，则返回真</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$alert.getComponentName()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">如果告警是针对组件定义，则返回组件名称</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$alert.hasHostName()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">如果告警是针对指定主机触发，则返回为真</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$alert.getHostName()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">如果告警是针对主机触发，则返回主机名</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$ambari.getServerUrl()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">系统管理的 WEB 地址.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$ambari.getServerVersion()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">系统管理版本</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$ambari.getServerHostName()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">系统管理服务所在的主机名</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$dispatch.getTargetName()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">通知目标名称</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$dispatch.getTargetDescription()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">通知目标描述</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$summary.getAlerts(service,alertState)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">列出指定服务的所有告警</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$summary.getServicesByAlertState(alertState)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">列出指定告警状态的所有服务</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$summary.getServices()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">当前通知报告中所包含的所有服务</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$summary.getCriticalCount()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">CRITICAL 级别告警次数</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$summary.getOkCount()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">OK 级别告警次数</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$summary.getTotalCount()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">总告警次数</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$summary.getUnknownCount()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">UNKNOWN 级别告警次数</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$summary.getWarningCount()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">WARNING 级别告警次数</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">$summary.getAlerts()</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<div class="title">修改告警邮件主题</div>
+<p>下面用一个例子说明如何修改告警邮件的主题</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>系在 alert-templates.xml 文件</p>
+</li>
+<li>
+<p>保存在文件到管理系统所在主机的 <em>/var/lib/ambari-server/resources/alert-templates-custom.xml</em> 位置</p>
+</li>
+<li>
+<p>编辑上述文件，修改 `&lt;alert-template type="EMAIL"&gt;`部门</p>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="xml"><span class="tok-nt">&lt;subject&gt;</span>
+ <span class="tok-cp">&lt;![CDATA[Petstore Ambari has $summary.getTotalCount() alerts!]]&gt;</span>
+<span class="tok-nt">&lt;/subject&gt;</span></code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>保存文件</p>
+</li>
+<li>
+<p>进入 <em>/etc/ambari-server/conf</em> 目录</p>
+</li>
+<li>
+<p>修改 <code>ambari.properties</code> 文件，增加 <code>`alerts.template.file=/var/lib/ambari-server/resources/alert-templates-custom.xml</code></p>
+</li>
+<li>
+<p>保存文件，重启管理系统</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="footer">
+<div id="footer-text">
+最后更新时间 2017-04-07 15:14:04 CST
+</div>
+</div>
+</body>
+</html>
