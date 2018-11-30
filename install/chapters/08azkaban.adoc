@@ -1,0 +1,88 @@
+[[azkaban]]
+== Azkaban 安装 ==
+=== 概述 ===
+Azkaban 是 {prodshortname} 所包含的调度系统，它有三部分组成：
+
+. 关系型数据库(MySQL)
+. Azkaban Web 服务
+. Azkaban 执行服务
+
+image::{imagedir}/08azkaban-40a2c.png[Azkaban架构]
+
+=== 安装 ===
+Azkaban 安装需要的软件如下：
+
+. azkaban-executor-server.tar.gz(执行服务器)
+. azkaban-web-server.tar.gz(管理服务器)
+. azkaban-sql-script.tar.gz（mysql脚本）
+. azkaban-jobtype.tar.gz（任务插件）
+
+==== 数据库安装  ====
+
+数据库创建::
+[source,sql]
+----
+mysql>CREATE DATABASE azkaban;
+mysql>CREATE USER 'username'@'%' IDENTIFIED BY 'password';
+mysql>GRANT SELECT,INSERT,UPDATE,DELETE ON azkaban.* to 'username'@'%' WITH GRANT OPTION;
+----
+初始化数据库::
+解压 `azkaban-sql-script.tar.gz` ,执行以下程序
++
+[source,shell]
+----
+mysql -uusername -ppassword azkaban < ./create-all-sql-3.12.0.sql
+mysql -uusername -ppassword azkaban < ./update.active_executing_flows.3.0.sql
+mysql -uusername -ppassword azkaban < ./update.execution_flows.3.0.sql
+----
+
+==== 配置执行服务器 ====
+执行服务器用于具体执行azkaban任务，采用集群部署。
+
+1. 进入执行服务器，把 `azkaban-exec-server.tar.gz` 拷贝到用户根目录下，并解压
+2. 进入解压后的目录，编辑配置文件 `conf/azkaban.properties`
++
+[source,ini]
+----
+default.timezone.id=Asia/Shanghai
+  #修改mysql配置
+ database.type=mysql 
+mysql.port=3306 
+mysql.host=mysql_host 
+mysql.database=azkaban
+ mysql.user=username 
+mysql.password=password
+ mysql.numconnections=100
+----
+3. 把 `azkaban-jobtype.tar.gz` 解压到 _plugins_ 目录下，并重命名为 jobtype
+4. 编辑 _commonprivate.properties_  文件，指定各个组件的home路径
++
+[source,ini]
+----
+hadoop.home=/usr/hdp/current/hadoop-client
+pig.home=/opt/azakban-execute-server/plugins/jobtypes/pig 
+hive.home=/usr/hdp/current/hive-client
+spark.home=/usr/hdp/current/spark-client
+ azkaban.home=/opt/azkaban/
+----
+5. 在每台机器上启动执行服务器
++
+[source,shell]
+----
+./bin/start-exec.sh
+----
+
+==== 配置 WEB 服务器 ====
+
+1. 用 root 账号登陆web服务器，把 `azkaban-web-server.tar.gz` 拷贝到指定目录下，并解压。
+2. 拷贝执行服务器的配置文件 `azkaban.properties` 到 _conf_ 目录，覆盖默认的配置文件
+3. 启动 WEB 服务器
++
+[source,shell]
+----
+./bin/start-web.sh
+----
+
+=== 访问 ===
+上述配置和服务启动后，既可以访问通过浏览器访问 WEB 服务器 (http://<web_server>:8081/)
+默认的管理员账号为 admin，密码也为 admin
