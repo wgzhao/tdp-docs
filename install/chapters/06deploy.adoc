@@ -23,7 +23,7 @@ image::{imagedir}/clustername.png[alt="cluster name"]
 
 === 选择堆栈 ===
 
-堆栈是{prodshortname}的组件集合，可能存在多个堆栈版本，通过单选按钮选择您希望安装的堆栈版本（这里选择最新的  `{prodshortname} {prodver}` )。
+堆栈是{prodshortname}的组件集合，可能存在多个堆栈版本，通过单选按钮选择您希望安装的堆栈版本（这里选择最新的 `STACK 2.4` )。
 
 ”高级资源库选项“ 里设定获取软件包的仓库地址，这里已经设定完毕，无需修改。点击”下一步“”
 
