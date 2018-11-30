@@ -1,0 +1,1321 @@
+== Administration
+
+=== 队列配置
+
+排队规则定义在一个Json文件中，用于控制能够提交给Presto的查询的个数，以及每个队列中能够同时运行的查询的个数。用config.properties中的 `query.queue-config-file` 来指定Json配置文件的名字。
+
+排队规则如果定义了多个队列，查询会按顺序依次进入不同的队列中。排队规则将按照顺序进行处理，并且使用第一个匹配上的规则。
+在以下的配置例子中，有5个队列模板，在 `user.${USER}` 队列中， `${USER}` 表示着提交查询的用户名。同样的 `${SOURCE}` 表示提交查询的来源。
+
+同样有五条规则定义了哪一类查询会进入哪一个队列中：
+
+* 第一条规则将使 `bob` 成为管理员，`bob` 提交的查询进入admin队列。
+* 第二条规则表示，所有使用了 `experimental_big_querysession` 参数并且来源包含 `pipeline` 的查询将首先进入用户的个人队列中，然后进入 `pipeline` 队列，最后进入big队列中。
+当一个查询进入一个新的队列后，直到查询结束 才会离开之前的队列。
+* 第三条规则同上一条类似，但是没有 `experimental_big_query` 的要求，同时用 `global` 队列替换了 `big` 队列。
+* 最后两条规则跟以上两条规则类似，但是没有了 `pipeline` 来源的要求。
+
+所有这些规则实现了这样的策略，`bob` 是一个管理员，而其他用户需要遵循以下的限制：
+
+* 每个用户最多能同时运行5个查询。
+* `big` 查询同时只能运行一个
+* 最多能同时运行10个 `pipeline` 来源的查询。
+* 最多能同时运行100个非 `big` 查询
+
+----
+{
+  "queues": {
+    "user.${USER}": {
+      "maxConcurrent": 5,
+      "maxQueued": 20
+    },
+    "pipeline": {
+      "maxConcurrent": 10,
+      "maxQueued": 100
+    },
+    "admin": {
+      "maxConcurrent": 100,
+      "maxQueued": 100
+    },
+    "global": {
+      "maxConcurrent": 100,
+      "maxQueued": 1000
+    },
+    "big": {
+      "maxConcurrent": 1,
+      "maxQueued": 10
+    }
+  },
+  "rules": [
+    {
+      "user": "bob",
+      "queues": ["admin"]
+    },
+    {
+      "session.experimental_big_query": "true",
+      "source": ".*pipeline.*",
+      "queues": [
+        "user.${USER}",
+        "pipeline",
+        "big"
+      ]
+    },
+    {
+      "source": ".*pipeline.*",
+      "queues": [
+        "user.${USER}",
+        "pipeline",
+        "global"
+      ]
+    },
+    {
+      "session.experimental_big_query": "true",
+      "queues": [
+        "user.${USER}",
+        "big"
+      ]
+    },
+    {
+      "queues": [
+        "user.${USER}",
+        "global"
+      ]
+    }
+  ]
+}
+----
+
+==  连接器
+
+本章介绍Presto连接器， 用于访问不同数据源的数据。
+
+=== Cassandra连接器
+
+Cassandra连接器
+
+可以使用 Cassandra connector 查询存储在Cassandra中的数据。
+
+*配置*
+
+创建一个文件 etc/catalog/cassandra.properties ，该文件的内容如下
+
+----
+connector.name=cassandra
+cassandra.contact-points=host1,host2
+----
+
+以上配置项将会在cassandra catalog 上挂载一个cassandra connector。根据实际环境修改host1,host2 。
+cassandra.contact-points 的内容必须是以逗号分隔的Cassandra 节点，这些节点用来发现集群的逻辑结构。如果cassandra不使用默认的9142端口，你还要设置 `cassandra.native-protocol-port` 的值。
+
+多个Cassandra群集
+
+您可以根据需要拥有尽可能多的目录，所以如果您有其他的Cassandra群集，只需将其他属性文件添加到etc/catalog中， 并以不同的名称（确保以.properties结尾）。
+例如，如果您将属性文件命名为sales.properties，Presto将使用配置的连接器创建一个名为sales的目录。
+
+配置属性
+
+以下配置属性可用：
+
+[cols="2*",header=option]
+|===
+|Property Name	|Description
+|cassandra.contact-points	|Comma-separated list of hosts in a Cassandra cluster. The Cassandra driver will use these contact points to discover cluster topology. At least one Cassandra host is required.
+|cassandra.native-protocol-port	|The Cassandra server port running the native client protocol (defaults to 9042).
+|cassandra.thrift-port	|The Cassandra server port running the Thrift client protocol (defaults to 9160).
+|cassandra.limit-for-partition-key-select	|Limit of rows to read for finding all partition keys. If a Cassandra table has more rows than this value, splits based on token ranges are used instead. Note that for larger values you may need to adjust read timeout for Cassandra.
+|cassandra.max-schema-refresh-threads	|Maximum number of schema cache refresh threads. This property corresponds to the maximum number of parallel requests.
+|cassandra.schema-cache-ttl	|Maximum time that information about a schema will be cached (defaults to 1h).
+|cassandra.schema-refresh-interval	|The schema information cache will be refreshed in the background when accessed if the cached data is at least this old (defaults to 2m).
+|cassandra.consistency-level	|Consistency levels in Cassandra refer to the level of consistency to be used for both read and write operations. More information about consistency levels can be found in the Cassandra consistency documentation. This property defaults to a consistency level of ONE. Possible values include ALL, EACH_QUORUM, QUORUM, LOCAL_QUORUM, ONE, TWO, THREE, LOCAL_ONE, ANY, SERIAL, LOCAL_SERIAL.
+|cassandra.allow-drop-table	|Set to true to allow dropping Cassandra tables from Presto via 删表 (defaults to false).
+|cassandra.username	|Username used for authentication to the Cassandra cluster. This is a global setting used for all connections, regardless of the user who is connected to Presto.
+|cassandra.password	|Password used for authentication to the Cassandra cluster. This is a global setting used for all connections, regardless of the user who is connected to Presto.
+|===
+
+以下高级配置属性可用：
+
+[cols="2*",header=option]
+|===
+|Property Name	|Description
+|cassandra.fetch-size	|Number of rows fetched at a time in a Cassandra query.
+|cassandra.fetch-size-for-partition-key-select	|Number of rows fetched at a time in a Cassandra query that selects partition keys.
+|cassandra.partition-size-for-batch-select	|Number of partitions batched together into a single select for a single partion key column table.
+|cassandra.split-size	|Number of keys per split when querying Cassandra.
+|cassandra.partitioner	|Partitioner to use for hashing and data distribution. This property defaults to Murmur3Partitioner. The other supported values are RandomPartitioner and ByteOrderedPartitioner.
+|cassandra.thrift-connection-factory-class	|Allows for the specification of a custom implementation of org.apache.cassandra.thrift.ITransportFactory to be used to connect to Cassandra using the Thrift protocol.
+|cassandra.transport-factory-options	|Allows for the specification of arbitrary options to be passed to the Thrift connection factory.
+|cassandra.client.read-timeout	|Maximum time the Cassandra driver will wait for an answer to a query from one Cassandra node. Note that the underlying Cassandra driver may retry a query against more than one node in the event of a read timeout. Increasing this may help with queries that use an index.
+|cassandra.client.connect-timeout	|Maximum time the Cassandra driver will wait to establish a connection to a Cassandra node. Increasing this may help with heavily loaded Cassandra clusters.
+|cassandra.client.so-linger	|Number of seconds to linger on close if unsent data is queued. If set to zero, the socket will be closed immediately. When this option is non-zero, a socket will linger that many seconds for an acknowledgement that all data was written to a peer. This option can be used to avoid consuming sockets on a Cassandra server by immediately closing connections when they are no longer needed.
+|cassandra.retry-policy	|Policy used to retry failed requests to Cassandra. This property defaults to DEFAULT. Using BACKOFF may help when queries fail with “not enough replicas”. The other possible values are DOWNGRADING_CONSISTENCY and FALLTHROUGH.
+|===
+
+*查询Cassandra表*
+
+在用户表是从Cassandra的一个例子卡桑德拉表 入门指南。它可以 使用Cassandra的cqlsh（CQL交互式终端）与mykeyspace键空间一起创建：
+
+----
+cqlsh> CREATE KEYSPACE mykeyspace
+   ... WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
+cqlsh> USE mykeyspace;
+cqlsh:mykeyspace> CREATE TABLE users (
+              ...   user_id int PRIMARY KEY,
+              ...   fname text,
+              ...   lname text
+              ... );
+----
+
+这个表可以在Presto中描述：
+
+----
+DESCRIBE cassandra.mykeyspace.users;
+----
+
+----
+ Column  |  Type   | Null | Partition Key | Comment
+---------+---------+------+---------------+---------
+ user_id | bigint  | true | true          |
+ fname   | varchar | true | false         |
+ lname   | varchar | true | false         |
+(3 rows)
+----
+
+然后可以在Presto中查询此表：
+
+----
+SELECT * FROM cassandra.mykeyspace.users;
+----
+
+=== Hive连接器
+
+Hive连接器允许查询存储在Hive数据仓库中的数据。蜂巢是三个组件的组合：
+
+* 通常存储在Hadoop分布式文件系统（HDFS）或Amazon S3中的不同格式的数据文件。
+* 关于数据文件如何映射到模式和表的元数据。该元数据存储在MySQL等数据库中，并通过Hive转移服务进行访问。
+* 一种称为HiveQL的查询语言。此查询语言在分布式计算框架（如MapReduce或Tez）上执行。
+
+Presto只使用前两个组件：数据和元数据。它不使用HiveQL或Hive的执行环境的任何部分。
+
+*配置*
+
+针对不同的hadoop版本，Presto都有对应的hive连接器：
+
+* hive-hadoop1：Apache Hadoop 1.x
+* hive-hadoop2：Apache Hadoop 2.x
+* hive-cdh4：Cloudera CDH 4
+* hive-cdh5：Cloudera CDH 5
+
+创建一个包含有以下内容的文件：`etc / catalog / hive.properties`，从而在 `hive` 目录中挂载 `hive-cdh4` 的连接器根据你实际的hadoop版本和环境替换掉 `hive-cdh4` 和 `example.net:9083`：
+
+----
+connector.name=hive-cdh4
+hive.metastore.uri=thrift://example.net:9083
+----
+
+*多个Hive群集*
+
+如果需要你可以设置很多目录，所以若你现在又多了一个蜂巢集群，你只需要在等/目录目录下添加一个另一个配置文件就行了（切记：配置文件一定要以。的.properties结尾）例如，如果您将属性文件命名为sales.properties，Presto将使用已配置的连接器创建名为sales的目录。如果连接到多个Hive metastore，您可以创建配置Hive连接器多个实例的任意数量的属性文件。
+
+*HDFS配置*
+
+如果hive metastore的引用文件存放在一个存在联邦的HDFS上，或者你是通过其他非标准的客户端来访问HDFS集群的，请添加以下配置信息来指向你的HDFS配置文件:
+
+----
+hive.config.resources=/etc/hadoop/conf/core-site.xml,/etc/hadoop/conf/hdfs-site.xml
+----
+
+大多数情况下，Presto会在安装过程中自动完成HDFS客户端的配置。 如果确实需要特殊配置，只需要添加一些额外的配置文件，并且需要指定这些新加的配置文件。
+建议将配置文件中的配置属性最小化。尽量少添加一些配置属性，因为过多的添加配置属性会引起其他问题。
+
+*配置属性*
+
+[cols="3*",header=option]
+|===
+|Property Name	|Description	|Example
+|hive.metastore.uri	|The URI of the Hive Metastore to connect to using the Thrift protocol. This property is required.	|thrift://192.0.2.3:9083
+|hive.config.resources	|An optional comma-separated list of HDFS configuration files. These files must exist on the machines running Presto. Only specify this if absolutely necessary to access HDFS.	|/etc/hdfs-site.xml
+|hive.storage-format	The default file format used when creating new tables	|RCBINARY
+|hive.force-local-scheduling	|Force splits to be scheduled on the same node as the Hadoop DataNode process serving the split data. This is useful for installations where Presto is collocated with every DataNode.	|true
+|===
+
+*查询Hive表*
+
+下表是Hive教程中的示例Hive表。可以使用以下Hive CREATE TABLE命令在Hive（不在Presto中）创建它：
+
+----
+hive> CREATE TABLE page_view (
+    >   viewTime INT,
+    >   userid BIGINT,
+    >   page_url STRING,
+    >   referrer_url STRING,
+    >   ip STRING COMMENT 'IP Address of the User')
+    > COMMENT 'This is the page view table'
+    > PARTITIONED BY (dt STRING, country STRING)
+    > STORED AS SEQUENCEFILE;
+OK
+Time taken: 3.644 seconds
+----
+
+假设这个表是在Hive 的web模式中创建的，这个表可以在Presto描述：
+
+----
+DESCRIBE hive.web.page_view;
+----
+
+----
+    Column    |  Type   | Null | Partition Key |        Comment
+--------------+---------+------+---------------+------------------------
+ viewtime     | bigint  | true | false         |
+ userid       | bigint  | true | false         |
+ page_url     | varchar | true | false         |
+ referrer_url | varchar | true | false         |
+ ip           | varchar | true | false         | IP Address of the User
+ dt           | varchar | true | true          |
+ country      | varchar | true | true          |
+(7 rows)
+----
+
+然后可以在Presto中查询此表：
+
+----
+SELECT * FROM hive.web.page_view;
+----
+
+=== JMX连接器
+
+JMX连接器可以从Presto群集中的所有节点查询JMX信息。这对于监视或调试非常有用。Java管理扩展（JMX）提供有关Java虚拟机及其内部运行的所有软件的信息。Presto本身是通过JMX进行大量测试的。
+
+*配置*
+
+要配置JMX连接器，请创建目录属性文件 etc / catalog / jmx.properties，其中包含以下内容：
+
+----
+connector.name = JMX
+----
+
+*查询JMX*
+
+JMX连接器提供了一个包含Presto集群中每个节点的Managed Bean（MBean）的单一架构jmx。您可以通过运行SHOW TABLES来查看所有可用的MBean ：
+
+----
+SHOW TABLES FROM jmx.jmx;
+----
+
+MBean名称映射到非标准表名称，并在引用查询时引用双引号。例如，以下查询显示每个节点的JVM版本：
+
+----
+SELECT node, vmname, vmversion
+FROM jmx.jmx."java.lang:type=runtime";
+----
+
+----
+node                 |              vmname               | vmversion
+--------------------------------------+-----------------------------------+-----------
+ddc4df17-0b8e-4843-bb14-1b8af1a7451a | Java HotSpot(TM) 64-Bit Server VM | 24.60-b09
+(1 row)
+----
+
+以下查询显示每个节点的打开和最大文件描述符计数：
+
+----
+SELECT openfiledescriptorcount, maxfiledescriptorcount
+FROM jmx.jmx."java.lang:type=operatingsystem";
+----
+
+----
+openfiledescriptorcount | maxfiledescriptorcount
+-------------------------+------------------------
+                    329 |                  10240
+(1 row)
+----
+
+=== Kafka连接器
+该连接器允许在Presto中使用Apache Kafka主题作为表。每个消息都在Presto中作为一行显示。
+
+主题可以是实时的：当数据到达时，行会随着数据段的删除而消失。如果在单个查询中多次访问相同的表（例如执行自身连接），这可能会导致奇怪的行为。
+
+NOTE: 支持Apache Kafka 0.8+，尽管它强烈建议使用0.8.1或更高版本。
+
+*配置*
+
+要配置Kafka连接器，请使用以下内容创建目录属性文件 etc / catalog / kafka.properties，并根据需要替换属性：
+
+----
+connector.name=kafka
+kafka.table-names=table1,table2
+kafka.nodes=host1:port,host2:port
+----
+
+*多个kafka群集*
+
+您可以根据需要拥有尽可能多的目录，因此如果您还有其他Kafka群集，只需将其他属性文件添加到etc / catalog中， 并以不同的名称（确保以.properties结尾）。例如，如果您将属性文件命名为sales.properties，Presto将使用配置的连接器创建一个名为sales的目录。
+
+*配置属性*
+
+以下配置属性可用：
+
+[cols="2*",header=option]
+|===
+|Property Name	|Description
+|kafka.table-names	|List of all tables provided by the catalog
+|kafka.default-schema	Default |schema name for tables
+|kafka.nodes	|List of nodes in the Kafka cluster
+|kafka.connect-timeout	|Timeout for connecting to the Kafka cluster
+|kafka.buffer-size	|Kafka read buffer size
+|kafka.table-description-dir	|Directory containing topic description files
+|kafka.hide-internal-columns	|Controls whether internal columns are part of the table schema or not
+|===
+
+*kafka.table-names*
+
+此目录提供的所有表的逗号分隔列表。表名称可以是不合格的（简单名称），并将被放入默认模式（见下文）或限定模式名称（<schema-name>。<table-name>）。
+
+对于这里定义的每个表，可能存在表描述文件（见下文）。如果没有表描述文件存在，则表名用作Kafka上的主题名称，并且没有数据列映射到表中。该表仍将包含所有内部列（见下文）。
+
+此属性是必需的; 没有默认值，必须至少定义一个表。
+
+*kafka.default-schema*
+
+定义将包含没有限定模式名称定义的所有表的模式。
+
+此属性是可选的; 默认是default。
+
+*kafka.nodes*
+
+Kafka数据节点的主机名：端口对的逗号分隔列表。
+
+此属性是必需的; 没有默认值，必须至少定义一个节点。
+
+NOTE:
+即使在此处仅指定了一个子集，Presto仍然可以连接到集群的所有节点，因为段文件可能仅位于特定节点上。
+
+*kafka.connect-timeout*
+
+连接到数据节点的超时。忙碌的卡夫卡群集可能需要相当长的时间才能接受连接; 当由于超时而看到失败的查询时，增加此值是一个很好的策略。
+
+此属性是可选的; 默认值为10秒（10秒）。
+
+*kafka.buffer-size*
+
+用于从卡夫卡读取数据的内部数据缓冲区的大小。数据缓冲区必须能够保存至少一个消息，理想情况下可以容纳许多消息。每个工作者和数据节点分配一个数据缓冲区。
+
+此属性是可选的; 默认为64kb。
+
+*kafka.table-description-dir*
+
+引用Presto部署中的一个文件夹，其中包含一个或多个包含表描述文件的JSON文件（必须以.json结尾）。
+
+此属性是可选的; 默认是etc / kafka。
+
+*kafka.hide-internal-columns*
+
+除了表描述文件中定义的数据列之外，连接器还为每个表维护了一些附加列。如果这些列被隐藏，它们仍然可以在查询中使用，但不会显示在DESCRIBE <table-name>或SELECT *中。
+
+此属性是可选的; 默认为true。
+
+*Internal Columns*
+
+对于每个定义的表，连接器维护以下列：
+
+[cols="3*"]
+|===
+|Column name	|Type	|Description
+|_partition_id	|BIGINT	|ID of the Kafka partition which contains this row.
+|_partition_offset	|BIGINT	|Offset within the Kafka partition for this row.
+|_segment_start	|BIGINT	|Lowest offset in the segment (inclusive) which contains this row. This offset is partition specific.
+|_segment_end	|BIGINT	|Highest offset in the segment (exclusive) which contains this row. The offset is partition specific. This is the same value as _segment_start of the next segment (if it exists).
+|_segment_count	|BIGINT	|Running count of for the current row within the segment. For an uncompacted topic, _segment_start + _segment_count is equal to _partition_offset.
+|_message_corrupt	|BOOLEAN	|True if the decoder could not decode the message for this row. When true, data columns mapped from the message should be treated as invalid.
+|_message	VARCHAR	|Message bytes as an UTF-8 encoded string. This is only useful for a text topic.
+|_message_length	|BIGINT	|Number of bytes in the message.
+|_key_corrupt	|BOOLEAN	|True if the key decode could not decode the key for this row. When true, data columns mapped from the key should be treated as invalid.
+|_key	|VARCHAR	|Key bytes as an UTF-8 encoded string. This is only useful for textual keys.
+|_key_length	|BIGINT	|Number of bytes in the key.
+|===
+
+对于没有表定义文件的表，_key_corrupt和 _message_corrupt列将始终为false。
+
+*Table Definition Files*
+
+Kafka仅将主题维护为字节消息，并将其留给生产者和消费者来定义消息应如何解释。对于Presto，此数据必须映射到列以允许对数据进行查询。
+
+NOTE:
+对于包含JSON数据的文本主题，完全可以不使用任何表定义文件，而是使用Presto JSON函数来解析包含映射到UTF-8字符串的字节的_message列。然而，这是非常麻烦的，使得编写SQL查询变得困难。
+
+表定义文件由表的JSON定义组成。该文件的名称可以是任意的，但必须以.json结尾。
+
+----
+{
+    "tableName": ...,
+    "schemaName": ...,
+    "topicName": ...,
+    "key": {
+        "dataFormat": ...,
+        "fields": [
+            ...
+        ]
+    },
+    "message": {
+        "dataFormat": ...,
+        "fields": [
+            ...
+       ]
+    }
+}
+----
+
+[cols="4*",header=option]
+|===
+|Field	|Required	|Type	|Description
+|tableName	|required	|string	|Presto table name defined by this file.
+|schemaName	|optional	|string	|Schema which will contain the table. If omitted, the default schema name is used.
+|topicName	|required	|string	|Kafka topic that is mapped.
+|key	|optional	|JSON object	|Field definitions for data columns mapped to the message key.
+|message	|optional	|JSON object	|Field definitions for data columns mapped to the message itself.
+|===
+
+*Key and Message in Kafka*
+
+从Kafka 0.8开始，主题中的每个消息都可以有一个可选的键。表定义文件包含键和消息的部分，用于将数据映射到表列。
+
+表定义中的每个键和消息字段都是必须包含两个字段的JSON对象：
+
+[cols="4*",header=option]
+|===
+|Field	|Required	|Type	|Description
+|dataFormat	|required	|string	|Selects the decoder for this group of fields.
+|fields	|required	|JSON array	|A list of field definitions. Each field definition creates a new column in the Presto table.
+|===
+
+每个字段定义都是一个JSON对象：
+
+----
+{
+    "name": ...,
+    "type": ...,
+    "dataFormat": ...,
+    "mapping": ...,
+    "formatHint": ...,
+    "hidden": ...,
+    "comment": ...
+}
+----
+
+[cols="4*",header=option]
+|===
+|Field	|Required	|Type	|Description
+|name	|required	|string	|Name of the column in the Presto table.
+|type	|required	|string	|Presto type of the column.
+|dataFormat	|optional	|string	|Selects the column decoder for this field. Default to the default decoder for this row data format and column type.
+|mapping	|optional	|string	|Mapping information for the column. This is decoder specific, see below.
+|formatHint	|optional	|string	|Sets a column specifc format hint to the column decoder.
+|hidden	|optional	|boolean	|Hides the column from DESCRIBE <table name> and SELECT *. Defaults to false.
+|comment	|optional	|string	|Add a column comment which is shown with DESCRIBE <table name>.
+|===
+
+密钥或消息的字段描述没有限制。
+
+*Row Decoding*
+
+对于密钥和消息，解码器用于将数据映射到列。如果表中没有表定义文件，则使用虚拟解码器。
+
+Kafka连接器包含以下解码器：
+
+* raw - 不转换行数据，用作原始字节
+* csv - 将值解释为CSV
+* json - 将值转换为JSON对象
+
+解码器的主要目的是选择适当的字段解码器来解释消息或密钥数据。
+
+Presto仅支持Presto类型映射的四种物理数据类型：布尔型，长型和双列类型，并将其视为字符串。
+
+*raw Decoder*
+
+原始解码器支持从消息或密钥读取原始（基于字节）的值，并将其转换为Presto列。
+
+对于字段，支持以下属性：
+
+* type - 支持所有Presto数据类型
+* dataFormat - 仅支持 _default，可以省略。
+* mapping - 选择转换的数据类型的宽度
+* formatHint - 可选， <start> [：<end>] ; 要转换字节的开始和结束位置
+
+所述映射列选择转换的字节数。如果不存在，则假定BYTE。所有值都已标记。
+
+支持的值有：
+
+* BYTE - 一个字节
+* SHORT - 两个字节
+* INT - 四个字节
+* LONG - 八字节
+* FLOAT - 四字节（IEEE 754格式）
+* DOUBLE - 八个字节（IEEE 754格式）
+
+type的列定义在其上的值被映射到的的Presto数据类型。
+
+* 基于布尔的类型需要映射到BYTE，SHORT，INT或LONG。任何其他类型将抛出转换错误。值为0返回false，其他都为true。
+* 长基类型需要映射到BYTE，SHORT，INT或LONG。任何其他类型将抛出转换错误。
+* 双基类型需要映射到FLOAT或DOUBLE。任何其他类型将抛出转换错误。
+* 基于字符串的类型需要映射到BYTE。任何其他类型将抛出转换错误。
+
+所述formatHint字段指定的字节中的一个关键或消息的位置。它可以是一个或两个由冒号分隔的数字（<start> [：<end>]）。如果只给出一个起始位置，列将使用适当数量的字节（见上文）。基于字符串的类型（VARCHAR）将使用所有字节到消息的结尾。如果给定了起始和终点位置，则对于固定类型，大小必须至少为类型的大小。对于基于字符串的类型，使用start（包括）和end（exclusive）之间的所有字节。
+
+*csv Decoder*
+
+NOTE:
+CSV解码器具有beta质量，应谨慎使用。
+
+CSV解码器使用UTF-8编码将表示消息或键的字节转换为字符串，然后将结果解释为CSV（逗号分隔值）行。
+
+对于字段，支持以下属性：
+
+* type - 支持所有Presto数据类型
+* dataFormat - 仅支持 _default，可以省略
+* mapping - 用于列的字段索引。必须给予
+* formatHint - 不支持，被忽略
+* 如果字段值为字符串“true”（不区分大小写），则基于布尔类型的返回true，否则返回false。
+* 根据Java long和double解析规则，长和双基类型分析字段值。
+* 字符串类型使用现场（使用UTF-8编码的文本）
+
+*json Decoder*
+
+JSON解码器将表示消息或密钥的字节转换为JSON RFC 4627。请注意，消息或键必须转换为JSON对象，而不是数组或简单类型。
+
+对于字段，支持以下属性：
+
+* type - 支持所有Presto数据类型
+* dataFormat - _default, custom-date-time, iso8601, rfc2822, milliseconds-since-epoch, seconds-since-epoch. If missing, _default is used.
+* mapping - 用于从JSON对象中选择字段的字段名称的斜杠分隔列表。
+* formatHint - 仅适用于自定义日期时间，请参见下文。
+
+JSON解码器支持多个字段解码器，_default用于标准表列和多个基于日期和时间的类型的解码器。
+
+*_default Field decoder*
+
+这是支持所有Presto物理数据类型的标准字段解码器。字段值将被JSON转换规则强制为布尔值，长整数，双精度值或字符串值。对于非日期/时间的列，应使用该解码器。
+
+*Date and Time Decoders*
+
+要将值从JSON对象转换为Presto DATE，TIME或 TIMESTAMP列，可以使用字段定义的dataFormat属性来选择特殊解码器 。
+
+*Text Decoders*
+
+* iso8601 - 基于文本，将文本字段解析为ISO 8601时间戳。
+* rfc2822 - 基于文本，解析为一个文本字段RFC 2822时间戳。
+* custom-date-time - 基于文本，需要格式化提示，将其解析为Joda-Time格式化字符串。
+
+[cols="3*",header=option]
+|===
+|Presto Type	|JSON Text	|JSON Long
+|string type	|as-is	|parse according to format type, return millis since epoch
+|long-based |type	parse according to format type, return millis since epoch	|return as millis since epoch
+|===
+
+*Number Decoders*
+
+* milliseconds-since-epoch -基于数字，解释一个文本或编号作为从epoch毫秒数。
+* seconds-since-epoch -将文本或数字解释为自时代以来的毫秒数。
+
+[cols="3*",header=option]
+|===
+|Presto Type	|JSON Text	|JSON Long
+|string type	|parse as long, format as ISO8601	|format as ISO8601
+|long-based type	|parse as long, return millis since epoch	|return millis since epoch
+|===
+
+=== Kafka连接器教程
+
+*介绍*
+
+Presto的Kafka Connector可以使用Presto访问Apache Kafka的实时主题数据。本教程将介绍如何设置主题以及如何创建返回Presto表的主题描述文件。
+
+*安装*
+
+本教程假定您熟悉Presto和本地Presto安装（参见部署Presto）。它将专注于设置Apache Kafka并将其与Presto进行集成。
+
+步骤1：安装Apache Kafka
+
+下载并解压缩Apache Kafka。
+
+NOTE:
+本教程使用Apache Kafka 0.8.1进行了测试。它应该适用于任何0.8.x版本的Apache Kafka。
+
+启动ZooKeeper和Kafka服务器：
+
+----
+$ bin/zookeeper-server-start.sh config/zookeeper.properties
+[2013-04-22 15:01:37,495] INFO Reading configuration from: config/zookeeper.properties (org.apache.zookeeper.server.quorum.QuorumPeerConfig)
+...
+----
+
+----
+$ bin/kafka-server-start.sh config/server.properties
+[2013-04-22 15:01:47,028] INFO Verifying properties (kafka.utils.VerifiableProperties)
+[2013-04-22 15:01:47,051] INFO Property socket.send.buffer.bytes is overridden to 1048576 (kafka.utils.VerifiableProperties)
+...
+----
+
+这将启动端口2181上的Zookeeper 和9092端口的Kafka 。
+
+步骤2：加载数据
+
+从Maven中心下载tpch-kafka loader：
+
+----
+$ curl -o kafka-tpch https://repo1.maven.org/maven2/de/softwareforge/kafka_tpch_0811/1.0/kafka_tpch_0811-1.0.sh
+$ chmod 755 kafka-tpch
+----
+
+现在运行kafka-tpch程序，用tpch数据预先加载一些主题：
+
+----
+$ ./kafka-tpch load --brokers localhost:9092 --prefix tpch. --tpch-type tiny
+2014-07-28T17:17:07.594-0700     INFO    main    io.airlift.log.Logging    Logging to stderr
+2014-07-28T17:17:07.623-0700     INFO    main    de.softwareforge.kafka.LoadCommand    Processing tables: [customer, orders, lineitem, part, partsupp, supplier, nation, region]
+2014-07-28T17:17:07.981-0700     INFO    pool-1-thread-1    de.softwareforge.kafka.LoadCommand    Loading table 'customer' into topic 'tpch.customer'...
+2014-07-28T17:17:07.981-0700     INFO    pool-1-thread-2    de.softwareforge.kafka.LoadCommand    Loading table 'orders' into topic 'tpch.orders'...
+2014-07-28T17:17:07.981-0700     INFO    pool-1-thread-3    de.softwareforge.kafka.LoadCommand    Loading table 'lineitem' into topic 'tpch.lineitem'...
+2014-07-28T17:17:07.982-0700     INFO    pool-1-thread-4    de.softwareforge.kafka.LoadCommand    Loading table 'part' into topic 'tpch.part'...
+2014-07-28T17:17:07.982-0700     INFO    pool-1-thread-5    de.softwareforge.kafka.LoadCommand    Loading table 'partsupp' into topic 'tpch.partsupp'...
+2014-07-28T17:17:07.982-0700     INFO    pool-1-thread-6    de.softwareforge.kafka.LoadCommand    Loading table 'supplier' into topic 'tpch.supplier'...
+2014-07-28T17:17:07.982-0700     INFO    pool-1-thread-7    de.softwareforge.kafka.LoadCommand    Loading table 'nation' into topic 'tpch.nation'...
+2014-07-28T17:17:07.982-0700     INFO    pool-1-thread-8    de.softwareforge.kafka.LoadCommand    Loading table 'region' into topic 'tpch.region'...
+2014-07-28T17:17:10.612-0700    ERROR    pool-1-thread-8    kafka.producer.async.DefaultEventHandler    Failed to collate messages by topic, partition due to: Failed to fetch topic metadata for topic: tpch.region
+2014-07-28T17:17:10.781-0700     INFO    pool-1-thread-8    de.softwareforge.kafka.LoadCommand    Generated 5 rows for table 'region'.
+2014-07-28T17:17:10.797-0700    ERROR    pool-1-thread-3    kafka.producer.async.DefaultEventHandler    Failed to collate messages by topic, partition due to: Failed to fetch topic metadata for topic: tpch.lineitem
+2014-07-28T17:17:10.932-0700    ERROR    pool-1-thread-1    kafka.producer.async.DefaultEventHandler    Failed to collate messages by topic, partition due to: Failed to fetch topic metadata for topic: tpch.customer
+2014-07-28T17:17:11.068-0700    ERROR    pool-1-thread-2    kafka.producer.async.DefaultEventHandler    Failed to collate messages by topic, partition due to: Failed to fetch topic metadata for topic: tpch.orders
+2014-07-28T17:17:11.200-0700    ERROR    pool-1-thread-6    kafka.producer.async.DefaultEventHandler    Failed to collate messages by topic, partition due to: Failed to fetch topic metadata for topic: tpch.supplier
+2014-07-28T17:17:11.319-0700     INFO    pool-1-thread-6    de.softwareforge.kafka.LoadCommand    Generated 100 rows for table 'supplier'.
+2014-07-28T17:17:11.333-0700    ERROR    pool-1-thread-4    kafka.producer.async.DefaultEventHandler    Failed to collate messages by topic, partition due to: Failed to fetch topic metadata for topic: tpch.part
+2014-07-28T17:17:11.466-0700    ERROR    pool-1-thread-5    kafka.producer.async.DefaultEventHandler    Failed to collate messages by topic, partition due to: Failed to fetch topic metadata for topic: tpch.partsupp
+2014-07-28T17:17:11.597-0700    ERROR    pool-1-thread-7    kafka.producer.async.DefaultEventHandler    Failed to collate messages by topic, partition due to: Failed to fetch topic metadata for topic: tpch.nation
+2014-07-28T17:17:11.706-0700     INFO    pool-1-thread-7    de.softwareforge.kafka.LoadCommand    Generated 25 rows for table 'nation'.
+2014-07-28T17:17:12.180-0700     INFO    pool-1-thread-1    de.softwareforge.kafka.LoadCommand    Generated 1500 rows for table 'customer'.
+2014-07-28T17:17:12.251-0700     INFO    pool-1-thread-4    de.softwareforge.kafka.LoadCommand    Generated 2000 rows for table 'part'.
+2014-07-28T17:17:12.905-0700     INFO    pool-1-thread-2    de.softwareforge.kafka.LoadCommand    Generated 15000 rows for table 'orders'.
+2014-07-28T17:17:12.919-0700     INFO    pool-1-thread-5    de.softwareforge.kafka.LoadCommand    Generated 8000 rows for table 'partsupp'.
+2014-07-28T17:17:13.877-0700     INFO    pool-1-thread-3    de.softwareforge.kafka.LoadCommand    Generated 60175 rows for table 'lineitem'.
+----
+
+卡夫卡现在有一些预先加载数据的主题可以查询。
+
+步骤3：使Presto知道Kafka主题
+
+在您的Presto安装中，为Kafka连接器添加目录属性文件 etc / catalog / kafka.properties。此文件列出了Kafka节点和主题：
+
+----
+connector.name=kafka
+kafka.nodes=localhost:9092
+kafka.table-names=tpch.customer,tpch.orders,tpch.lineitem,tpch.part,tpch.partsupp,tpch.supplier,tpch.nation,tpch.region
+kafka.hide-internal-columns-hidden=false
+----
+
+现在开始Presto：
+
+----
+$ bin/launcher start
+----
+
+因为卡夫卡桌子上都有tpch。前缀在配置中，表格在tpch模式中。连接器已安装到 kafka目录中，因为属性文件名为kafka.properties。
+
+启动Presto CLI：
+
+----
+$ ./presto --catalog kafka --schema tpch
+----
+
+列出表以验证事情是否正常：
+
+----
+presto:tpch> SHOW TABLES;
+  Table
+----------
+ customer
+ lineitem
+ nation
+ orders
+ part
+ partsupp
+ region
+ supplier
+(8 rows)
+----
+
+步骤4：基本数据查询
+
+Kafka数据是非结构化的，它没有元数据来描述消息的格式。没有进一步的配置，Kafka连接器可以访问数据并以原始形式映射，但除了内置的数据之外，没有实际的列：
+
+----
+presto:tpch> DESCRIBE customer;
+      Column       |  Type   | Null | Partition Key |                   Comment
+-------------------+---------+------+---------------+---------------------------------------------
+ _partition_id     | bigint  | true | false         | Partition Id
+ _partition_offset | bigint  | true | false         | Offset for the message within the partition
+ _segment_start    | bigint  | true | false         | Segment start offset
+ _segment_end      | bigint  | true | false         | Segment end offset
+ _segment_count    | bigint  | true | false         | Running message count per segment
+ _key              | varchar | true | false         | Key text
+ _key_corrupt      | boolean | true | false         | Key data is corrupt
+ _key_length       | bigint  | true | false         | Total number of key bytes
+ _message          | varchar | true | false         | Message text
+ _message_corrupt  | boolean | true | false         | Message data is corrupt
+ _message_length   | bigint  | true | false         | Total number of message bytes
+(11 rows)
+
+presto:tpch> SELECT count(*) FROM customer;
+ _col0
+-------
+  1500
+
+presto:tpch> SELECT _message FROM customer LIMIT 5;
+                                                                                                                                                 _message
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ {"rowNumber":1,"customerKey":1,"name":"Customer#000000001","address":"IVhzIApeRb ot,c,E","nationKey":15,"phone":"25-989-741-2988","accountBalance":711.56,"marketSegment":"BUILDING","comment":"to the even, regular platelets. regular, ironic epitaphs nag e"}
+ {"rowNumber":3,"customerKey":3,"name":"Customer#000000003","address":"MG9kdTD2WBHm","nationKey":1,"phone":"11-719-748-3364","accountBalance":7498.12,"marketSegment":"AUTOMOBILE","comment":" deposits eat slyly ironic, even instructions. express foxes detect slyly. blithel
+ {"rowNumber":5,"customerKey":5,"name":"Customer#000000005","address":"KvpyuHCplrB84WgAiGV6sYpZq7Tj","nationKey":3,"phone":"13-750-942-6364","accountBalance":794.47,"marketSegment":"HOUSEHOLD","comment":"n accounts will have to unwind. foxes cajole accor"}
+ {"rowNumber":7,"customerKey":7,"name":"Customer#000000007","address":"TcGe5gaZNgVePxU5kRrvXBfkasDTea","nationKey":18,"phone":"28-190-982-9759","accountBalance":9561.95,"marketSegment":"AUTOMOBILE","comment":"ainst the ironic, express theodolites. express, even pinto bean
+ {"rowNumber":9,"customerKey":9,"name":"Customer#000000009","address":"xKiAFTjUsCuxfeleNqefumTrjS","nationKey":8,"phone":"18-338-906-3675","accountBalance":8324.07,"marketSegment":"FURNITURE","comment":"r theodolites according to the requests wake thinly excuses: pending
+(5 rows)
+
+presto:tpch> SELECT sum(cast(json_extract_scalar(_message, '$.accountBalance') AS double)) FROM customer LIMIT 10;
+   _col0
+------------
+ 6681865.59
+(1 row)
+presto：tpch> SELECT sum（cast（json_extract_scalar（_message，'$ .accountBalance'）AS double））FROM customer LIMIT 10;
+   _col0
+------------
+ 6681865.59
+（1排）
+----
+
+来自Kafka的数据可以使用Presto进行查询，但是还没有实际的表格形状。原始数据可通过_message和 _key列获得，但不会被解码成列。由于样本数据采用JSON格式，Presto内置的JSON函数可用于分割数据。
+
+步骤5：添加主题描述文件
+
+Kafka连接器支持主题描述文件将原始数据转换成表格式。这些文件位于Presto安装中的etc / kafka文件夹中，必须以.json结尾。建议文件名与表名匹配，但这不是必需的。
+
+将以下文件添加为etc / kafka / tpch.customer.json并重新启动Presto：
+
+----
+{
+    "tableName": "customer",
+    "schemaName": "tpch",
+    "topicName": "tpch.customer",
+    "key": {
+        "dataFormat": "raw",
+        "fields": [
+            {
+                "name": "kafka_key",
+                "dataFormat": "LONG",
+                "type": "BIGINT",
+                "hidden": "false"
+            }
+        ]
+    }
+}
+----
+
+客户表现在有一个附加列：kafka_key。
+
+----
+presto:tpch> DESCRIBE customer;
+      Column       |  Type   | Null | Partition Key |                   Comment
+-------------------+---------+------+---------------+---------------------------------------------
+ kafka_key         | bigint  | true | false         |
+ _partition_id     | bigint  | true | false         | Partition Id
+ _partition_offset | bigint  | true | false         | Offset for the message within the partition
+ _segment_start    | bigint  | true | false         | Segment start offset
+ _segment_end      | bigint  | true | false         | Segment end offset
+ _segment_count    | bigint  | true | false         | Running message count per segment
+ _key              | varchar | true | false         | Key text
+ _key_corrupt      | boolean | true | false         | Key data is corrupt
+ _key_length       | bigint  | true | false         | Total number of key bytes
+ _message          | varchar | true | false         | Message text
+ _message_corrupt  | boolean | true | false         | Message data is corrupt
+ _message_length   | bigint  | true | false         | Total number of message bytes
+(12 rows)
+
+presto:tpch> SELECT kafka_key FROM customer ORDER BY kafka_key LIMIT 10;
+ kafka_key
+-----------
+         0
+         1
+         2
+         3
+         4
+         5
+         6
+         7
+         8
+         9
+(10 rows)
+----
+
+主题定义文件将内部Kafka密钥（其为8个字节的原始长度）映射到Presto BIGINT列。
+
+步骤6：将主题消息中的所有值映射到列
+
+更新etc / kafka / tpch.customer.json文件以添加消息的字段并重新启动Presto。消息中的字段是JSON，它使用json数据格式。这是一个示例，其中使用不同的数据格式的密钥和消息。
+
+----
+{
+    "tableName": "customer",
+    "schemaName": "tpch",
+    "topicName": "tpch.customer",
+    "key": {
+        "dataFormat": "raw",
+        "fields": [
+            {
+                "name": "kafka_key",
+                "dataFormat": "LONG",
+                "type": "BIGINT",
+                "hidden": "false"
+            }
+        ]
+    },
+    "message": {
+        "dataFormat": "json",
+        "fields": [
+            {
+                "name": "row_number",
+                "mapping": "rowNumber",
+                "type": "BIGINT"
+            },
+            {
+                "name": "customer_key",
+                "mapping": "customerKey",
+                "type": "BIGINT"
+            },
+            {
+                "name": "name",
+                "mapping": "name",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "address",
+                "mapping": "address",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "nation_key",
+                "mapping": "nationKey",
+                "type": "BIGINT"
+            },
+            {
+                "name": "phone",
+                "mapping": "phone",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "account_balance",
+                "mapping": "accountBalance",
+                "type": "DOUBLE"
+            },
+            {
+                "name": "market_segment",
+                "mapping": "marketSegment",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "comment",
+                "mapping": "comment",
+                "type": "VARCHAR"
+            }
+        ]
+    }
+}
+----
+
+现在对于消息的JSON中的所有字段，定义了列，并且前面的和查询可以直接在account_balance列上运行：
+
+----
+presto:tpch> DESCRIBE customer;
+      Column       |  Type   | Null | Partition Key |                   Comment
+-------------------+---------+------+---------------+---------------------------------------------
+ kafka_key         | bigint  | true | false         |
+ row_number        | bigint  | true | false         |
+ customer_key      | bigint  | true | false         |
+ name              | varchar | true | false         |
+ address           | varchar | true | false         |
+ nation_key        | bigint  | true | false         |
+ phone             | varchar | true | false         |
+ account_balance   | double  | true | false         |
+ market_segment    | varchar | true | false         |
+ comment           | varchar | true | false         |
+ _partition_id     | bigint  | true | false         | Partition Id
+ _partition_offset | bigint  | true | false         | Offset for the message within the partition
+ _segment_start    | bigint  | true | false         | Segment start offset
+ _segment_end      | bigint  | true | false         | Segment end offset
+ _segment_count    | bigint  | true | false         | Running message count per segment
+ _key              | varchar | true | false         | Key text
+ _key_corrupt      | boolean | true | false         | Key data is corrupt
+ _key_length       | bigint  | true | false         | Total number of key bytes
+ _message          | varchar | true | false         | Message text
+ _message_corrupt  | boolean | true | false         | Message data is corrupt
+ _message_length   | bigint  | true | false         | Total number of message bytes
+(21 rows)
+
+presto:tpch> SELECT * FROM customer LIMIT 5;
+ kafka_key | row_number | customer_key |        name        |                address                | nation_key |      phone      | account_balance | market_segment |                                                      comment
+-----------+------------+--------------+--------------------+---------------------------------------+------------+-----------------+-----------------+----------------+---------------------------------------------------------------------------------------------------------
+         1 |          2 |            2 | Customer#000000002 | XSTf4,NCwDVaWNe6tEgvwfmRchLXak        |         13 | 23-768-687-3665 |          121.65 | AUTOMOBILE     | l accounts. blithely ironic theodolites integrate boldly: caref
+         3 |          4 |            4 | Customer#000000004 | XxVSJsLAGtn                           |          4 | 14-128-190-5944 |         2866.83 | MACHINERY      |  requests. final, regular ideas sleep final accou
+         5 |          6 |            6 | Customer#000000006 | sKZz0CsnMD7mp4Xd0YrBvx,LREYKUWAh yVn  |         20 | 30-114-968-4951 |         7638.57 | AUTOMOBILE     | tions. even deposits boost according to the slyly bold packages. final accounts cajole requests. furious
+         7 |          8 |            8 | Customer#000000008 | I0B10bB0AymmC, 0PrRYBCP1yGJ8xcBPmWhl5 |         17 | 27-147-574-9335 |         6819.74 | BUILDING       | among the slyly regular theodolites kindle blithely courts. carefully even theodolites haggle slyly alon
+         9 |         10 |           10 | Customer#000000010 | 6LrEaV6KR6PLVcgl2ArL Q3rqzLzcT1 v2    |          5 | 15-741-346-9870 |         2753.54 | HOUSEHOLD      | es regular deposits haggle. fur
+(5 rows)
+
+presto:tpch> SELECT sum(account_balance) FROM customer LIMIT 10;
+   _col0
+------------
+ 6681865.59
+(1 row)
+----
+
+现在，客户主题消息中的所有字段都可用作Presto表列。
+
+步骤7：使用实时数据
+
+Presto可以在Kafka到达时查询实时数据。为了模拟数据的实时数据，本教程将向Kafka提供实时推文。
+
+设置一个现场Twitter Feed
+
+* 下载扭曲工具
+----
+$ curl -o twistr https://repo1.maven.org/maven2/de/softwareforge/twistr_kafka_0811/1.2/twistr_kafka_0811-1.2.sh
+$ chmod 755 twistr
+----
+
+* 在https://dev.twitter.com/创建开发者帐户，并设置访问和消费者令牌。
+* 创建一个twistr.properties文件，并将访问和消费者密钥和秘密放入其中：
+
+----
+twistr.access-token-key=...
+twistr.access-token-secret=...
+twistr.consumer-key=...
+twistr.consumer-secret=...
+twistr.kafka.brokers=localhost:9092
+----
+
+*在Presto上创建一个tweets表*
+
+将tweets表添加到etc / catalog / kafka.properties文件中：
+
+----
+connector.name=kafka
+kafka.nodes=localhost:9092
+kafka.table-names=tpch.customer,tpch.orders,tpch.lineitem,tpch.part,tpch.partsupp,tpch.supplier,tpch.nation,tpch.region,tweets
+kafka.hide-internal-columns=false
+----
+
+为Twitter feed添加主题定义文件等等/ kafka / tweets.json：
+
+----
+{
+    "tableName": "tweets",
+    "topicName": "twitter_feed",
+    "dataFormat": "json",
+    "key": {
+        "dataFormat": "raw",
+        "fields": [
+            {
+                "name": "kafka_key",
+                "dataFormat": "LONG",
+                "type": "BIGINT",
+                "hidden": "false"
+            }
+        ]
+    },
+    "message": {
+        "dataFormat":"json",
+        "fields": [
+            {
+                "name": "text",
+                "mapping": "text",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "user_name",
+                "mapping": "user/screen_name",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "lang",
+                "mapping": "lang",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "created_at",
+                "mapping": "created_at",
+                "type": "TIMESTAMP",
+                "dataFormat": "rfc2822"
+            },
+            {
+                "name": "favorite_count",
+                "mapping": "favorite_count",
+                "type": "BIGINT"
+            },
+            {
+                "name": "retweet_count",
+                "mapping": "retweet_count",
+                "type": "BIGINT"
+            },
+            {
+                "name": "favorited",
+                "mapping": "favorited",
+                    "type": "BOOLEAN"
+            },
+            {
+                "name": "id",
+                "mapping": "id_str",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "in_reply_to_screen_name",
+                "mapping": "in_reply_to_screen_name",
+                "type": "VARCHAR"
+            },
+            {
+                "name": "place_name",
+                "mapping": "place/full_name",
+                "type": "VARCHAR"
+            }
+        ]
+    }
+}
+----
+
+由于此表没有显式的模式名称，它将被放置到默认模式中。
+
+*提供实时数据*
+
+启动扭曲工具：
+
+----
+$ java -Dness.config.location=file:$(pwd) -Dness.config=twistr -jar ./twistr
+----
+
+扭曲器连接到Twitter API，并将“示例推文”馈送到名为 twitter_feed的Kafka主题。
+
+现在可以对实时数据进行查询：
+
+----
+$ ./presto-cli --catalog kafka --schema default
+
+presto:default> SELECT count(*) FROM tweets;
+ _col0
+-------
+  4467
+(1 row)
+
+presto:default> SELECT count(*) FROM tweets;
+ _col0
+-------
+  4517
+(1 row)
+
+presto:default> SELECT count(*) FROM tweets;
+ _col0
+-------
+  4572
+(1 row)
+
+presto:default> SELECT kafka_key, user_name, lang, created_at FROM tweets LIMIT 10;
+     kafka_key      |    user_name    | lang |       created_at
+--------------------+-----------------+------+-------------------------
+ 494227746231685121 | burncaniff      | en   | 2014-07-29 14:07:31.000
+ 494227746214535169 | gu8tn           | ja   | 2014-07-29 14:07:31.000
+ 494227746219126785 | pequitamedicen  | es   | 2014-07-29 14:07:31.000
+ 494227746201931777 | josnyS          | ht   | 2014-07-29 14:07:31.000
+ 494227746219110401 | Cafe510         | en   | 2014-07-29 14:07:31.000
+ 494227746210332673 | Da_JuanAnd_Only | en   | 2014-07-29 14:07:31.000
+ 494227746193956865 | Smile_Kidrauhl6 | pt   | 2014-07-29 14:07:31.000
+ 494227750426017793 | CashforeverCD   | en   | 2014-07-29 14:07:32.000
+ 494227750396653569 | FilmArsivimiz   | tr   | 2014-07-29 14:07:32.000
+ 494227750388256769 | jmolas          | es   | 2014-07-29 14:07:32.000
+(10 rows)
+----
+
+现在有一个可以使用Presto查询的卡夫卡的现场饲料。
+
+*Epilogue: Time stamps*
+
+在最后一步中设置的tweets feed在RFC 2822格式中包含每个tweet中的created_at属性的时间戳。
+
+----
+presto:default> SELECT DISTINCT json_extract_scalar(_message, '$.created_at')) AS raw_date
+             -> FROM tweets LIMIT 5;
+            raw_date
+--------------------------------
+ Tue Jul 29 21:07:31 +0000 2014
+ Tue Jul 29 21:07:32 +0000 2014
+ Tue Jul 29 21:07:33 +0000 2014
+ Tue Jul 29 21:07:34 +0000 2014
+ Tue Jul 29 21:07:35 +0000 2014
+(5 rows)
+----
+
+tweets表的主题定义文件包含使用rfc2822转换器到时间戳的映射：
+
+----
+...
+{
+    "name": "created_at",
+    "mapping": "created_at",
+    "type": "TIMESTAMP",
+    "dataFormat": "rfc2822"
+},
+...
+----
+
+这允许将原始数据映射到Presto时间戳列：
+
+----
+presto:default> SELECT created_at, raw_date FROM (
+             ->   SELECT created_at, json_extract_scalar(_message, '$.created_at') AS raw_date
+             ->   FROM tweets)
+             -> GROUP BY 1, 2 LIMIT 5;
+       created_at        |            raw_date
+-------------------------+--------------------------------
+ 2014-07-29 14:07:20.000 | Tue Jul 29 21:07:20 +0000 2014
+ 2014-07-29 14:07:21.000 | Tue Jul 29 21:07:21 +0000 2014
+ 2014-07-29 14:07:22.000 | Tue Jul 29 21:07:22 +0000 2014
+ 2014-07-29 14:07:23.000 | Tue Jul 29 21:07:23 +0000 2014
+ 2014-07-29 14:07:24.000 | Tue Jul 29 21:07:24 +0000 2014
+(5 rows)
+----
+
+Kafka连接器包含用于ISO 8601，RFC 2822文本格式的转换器，以及从时代开始使用秒或毫秒的基于数字的时间戳。还有一个通用的，基于文本的格式化程序，它使用Joda-Time格式的字符串来解析文本列。
+
+=== MySQL连接器
+
+MySQL连接器允许在外部MySQL数据库中查询和创建表。这可以用于加入不同系统之间的数据，如MySQL和Hive，或两个不同的MySQL实例之间的数据。
+
+*配置*
+
+要配置MySQL连接器，请在etc / catalog中创建一个目录属性文件，例如mysql.properties，将MySQL连接器作为mysql目录安装。创建具有以下内容的文件，根据您的设置替换连接属性：
+
+----
+connector.name=mysql
+connection-url=jdbc:mysql://example.net:3306
+connection-user=root
+connection-password=secret
+----
+
+*多个MySQL服务器*
+
+您可以根据需要拥有尽可能多的目录，因此如果您有其他MySQL服务器，只需将其他属性文件添加到etc / catalog中， 并以不同的名称（确保以.properties结尾）。例如，如果您将属性文件命名为sales.properties，Presto将使用配置的连接器创建一个名为sales的目录。
+
+*查询MySQL*
+
+MySQL连接器为每个MySQL 数据库提供一个模式。您可以通过运行SHOW SCHEMAS来查看可用的MySQL数据库：
+
+----
+SHOW SCHEMAS FROM mysql;
+----
+
+如果您有一个名为web的MySQL数据库，您可以通过运行SHOW TABLES来查看此数据库中的表：
+
+----
+SHOW TABLES FROM mysql.web;
+----
+
+最后，您可以访问Web数据库中的点击表：
+
+----
+SELECT * FROM mysql.web.clicks;
+----
+
+如果您为目录属性文件使用了其他名称，请在上述示例中使用该目录名称而不是mysql。
+
+=== PostgreSQL连接器
+
+PostgreSQL连接器允许在外部PostgreSQL数据库中查询和创建表。这可以用于连接不同系统之间的数据，如PostgreSQL和Hive，或两个不同的PostgreSQL实例之间。
+
+*配置*
+
+要配置PostgreSQL连接器，请在etc / catalog中创建一个目录属性文件，例如postgresql.properties，以挂载PostgreSQL连接器作为postgreSQL目录。创建具有以下内容的文件，根据您的设置替换连接属性：
+
+----
+connector.name=postgresql
+connection-url=jdbc:postgresql://example.net:5432/database
+connection-user=root
+connection-password=secret
+----
+
+*多个PostgreSQL数据库或服务器*
+
+PostgreSQL连接器只能访问PostgreSQL服务器中的单个数据库。因此，如果您有多个PostgreSQL数据库，或者想要连接到多个PostgreSQL服务器，则必须配置PostgreSQL连接器的多个实例。
+
+要添加另一个目录，只需将另一个属性文件添加到 具有不同名称的etc / catalog中（确保以.properties结尾）。例如，如果您将属性文件命名为sales.properties，Presto将使用配置的连接器创建一个名为sales的目录。
+
+*查询PostgreSQL*
+
+PostgreSQL连接器为每个PostgreSQL模式提供一个模式。您可以通过运行SHOW SCHEMAS来查看可用的PostgreSQL模式：
+
+----
+SHOW SCHEMAS FROM postgresql;
+----
+
+如果您有一个名为Web的PostgreSQL模式，则可以通过运行SHOW TABLES来查看此模式中的表：
+
+----
+SHOW TABLES FROM postgresql.web;
+----
+
+最后，您可以访问Web架构中的点击表：
+
+----
+SELECT * FROM postgresql.web.clicks;
+----
+
+如果您为目录属性文件使用其他名称，请在上述示例中使用该目录名称而不是postgresql。
+
+=== 系统方案
+
+=== TPCH连接器
+
+TPCH连接器提供了一组支持TPC Benchmark™H（TPC-H）的模式。TPC-H是用于衡量高复杂决策支持数据库性能的数据库基准。
+
+此连接器还可用于测试Presto的功能和查询语法，而无需配置对外部数据源的访问。当查询TPCH模式时，连接器使用确定性算法即时生成数据。
+
+*配置*
+
+要配置TPCH连接器，请创建目录属性文件 etc / catalog / tpch.properties，其中包含以下内容：
+
+----
+connector.name=tpch
+----
+
+*TPCH Schemas*
+
+TPCH连接器提供几种模式：
+
+----
+SHOW SCHEMAS FROM tpch;
+----
+
+----
+        Schema
+--------------------
+ information_schema
+ sf1
+ sf100
+ sf1000
+ sf10000
+ sf100000
+ sf300
+ sf3000
+ sf30000
+ sys
+ tiny
+(11 rows)
+----
+
+忽略由Presto提供并存在于每个目录中的特殊的information_schema和sys模式。
+
+每个TPCH模式提供相同的表集合。所有模式中的某些表格是相同的。其他表根据基于 模式名称确定的比例因子而变化。
+例如，模式 sf1对应于比例因子1，而模式sf300 对应于比例因子300。TPCH连接器为任何比例因子提供无限数量的模式，而不仅仅是SHOW SCHEMAS列出的几个常见的模式。
+该微小的架构是比例因子的别名0.01，这是一个非常小的数据集进行测试是有用的。

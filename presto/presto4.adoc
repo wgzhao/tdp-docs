@@ -1,0 +1,1175 @@
+== SQL语言
+
+=== 数据类型
+
+目前Presto支持有限的数据类型。 这些类型可以进行标准的 类型转换 操作。
+
+*BOOLEAN*
+
+此类型获取布尔值 `true` 和 `false` 。
+
+*BIGINT*
+
+64位有符号整数， 最小值为 `-2^63` ，最大值为 `2^63 - 1` 。
+
+*DOUBLE*
+
+double是64位不精确，可变精度， 基于IEEE标准754的二进制浮点算法的实现。
+
+*VARCHAR*
+
+变长字符数据。
+
+*VARBINARY*
+
+变长二进制数据。
+
+*JSON*
+
+变长json数据。
+
+*DATE*
+
+日历日期（年，月，日）。
+
+示例： `DATE '2001-08-22'`
+
+*TIME*
+
+一天中的时间（小时，分钟，秒，毫秒），无时区。 此类型的值在会话时区进行解析并转换。
+
+示例： `TIME '01:02:03.456'`
+
+*TIME有时区*
+
+一天中的时间（小时，分钟，秒，毫秒），有时区。 此类型的值使用指定的时区进行转换。
+
+示例： TIME `'01:02:03.456 America/Los_Angeles'`
+
+*TIMESTAMP*
+
+一天中的某一瞬间，包括日期和时间，无时区。 此类型的值在会话时区进行解析并转换。
+
+示例： `TIMESTAMP '2001-08-22 03:04:05.321'`
+
+*TIMESTAMP有时区*
+
+一天中的某一瞬间，包括日期和时间，无时区。 此类型的值使用指定的时区进行转换。
+
+示例： `TIMESTAMP '2001-08-22 03:04:05.321 America/Los_Angeles'`
+
+*INTERVAL YEAR TO MONTH*
+
+年和月的跨度。
+
+示例： `INTERVAL '3' MONTH`
+
+*INTERVAL DAY TO SECOND*
+
+天、小时、分钟、秒和毫秒的跨度。
+
+示例： `INTERVAL '2' DAY`
+
+*ARRAY*
+
+给定类型的数组。
+
+示例： `ARRAY[1, 2, 3]`
+
+*MAP*
+
+给定类型的map。
+
+*ROW*
+
+由名字字段组成的结构。可以是任何SQL类型的字段， 使用字段操作符 ``. ``访问。
+
+示例： `my_column.my_field`
+
+== SQL语法声明
+
+=== 修改表
+
+*概述*
+
+----
+ALTER TABLE name RENAME TO new_name
+----
+
+*说明*
+
+改变一个现有表的定义。
+
+*示例*
+
+将 `users` 表重命名为 `people`:
+
+----
+ALTER TABLE users RENAME TO people;
+----
+
+=== 建表
+
+*概述*
+
+----
+CREATE TABLE table_name AS query
+----
+
+*说明*
+
+创建一个包含 *查询* 查询结果的新表。
+
+*示例*
+
+创建一个新表 `orders_by_date` ，内容为 `orders` 的摘要数据:
+
+----
+CREATE TABLE orders_by_date AS
+SELECT orderdate, sum(totalprice) AS price
+FROM orders
+GROUP BY orderdate
+----
+
+=== 建视图
+
+*概述*
+
+----
+CREATE [ OR REPLACE ] VIEW view_name AS query
+----
+
+*说明*
+
+创建一个 查询 查询的新视图。视图是一个逻辑表， 可以在将来的查询中使用。视图不包含任何数据。 每当视图被其他查询语句使用时， 存储在视图中的查询语句都会被执行。
+
+可以使用 `OR REPLACE` 子句，替换已经存在的视图， 而不是报错。
+
+*示例*
+
+根据 `orders` 表，创建一个简单的视图 `test`:
+
+----
+CREATE VIEW test AS
+SELECT orderkey, orderstatus, totalprice / 2 AS half
+FROM orders
+----
+
+创建一个视图 `orders_by_date` ，内容为 `orders` 的摘要数据:
+
+----
+CREATE VIEW orders_by_date AS
+SELECT orderdate, sum(totalprice) AS price
+FROM orders
+GROUP BY orderdate
+----
+
+创建一个视图替换现有视图:
+
+----
+CREATE OR REPLACE VIEW test AS
+SELECT orderkey, orderstatus, totalprice / 4 AS quarter
+FROM orders
+----
+
+=== 查看表结构
+
+*概述*
+
+----
+DESCRIBE table_name
+----
+
+*说明*
+
+DESCRIBE 是 *显示列* 的别名。
+
+*示例*
+
+----
+presto:default> describe airline_origin_destination;
+     Column      |  Type   | Null | Partition Key
+-----------------+---------+------+---------------
+ itinid          | varchar | true | false
+ mktid           | varchar | true | false
+ seqnum          | varchar | true | false
+ coupons         | varchar | true | false
+ year            | varchar | true | false
+ quarter         | varchar | true | false
+ origin          | varchar | true | false
+ originaptind    | varchar | true | false
+ origincitynum   | varchar | true | false
+(9 rows)
+----
+
+=== 删表
+
+*概述*
+
+----
+DROP TABLE table_name
+----
+
+*说明*
+
+删除一个已经存在的表
+
+*示例*
+
+删除 `orders_by_date` 表:
+
+----
+DROP TABLE orders_by_date
+----
+
+=== 删视图
+
+*概述*
+
+----
+DROP VIEW view_name
+----
+
+*说明*
+
+删除一个已经存在的视图。
+
+*示例*
+
+删除 `orders_by_date` 视图:
+
+----
+DROP VIEW orders_by_date
+----
+
+=== 解释
+
+*概述*
+
+----
+EXPLAIN [ ( option [, ...] ) ] statement
+
+option可以为以下之一：
+
+    FORMAT { TEXT | GRAPHVIZ }
+    TYPE { LOGICAL | DISTRIBUTED }
+----
+
+*说明*
+
+显示一个语句的逻辑或分布式执行方案。
+
+*示例*
+
+逻辑方案：
+
+----
+presto:tiny> EXPLAIN SELECT regionkey, count(*) FROM nation GROUP BY 1;
+                                             Query Plan
+----------------------------------------------------------------------------------------------------------
+- Output[regionkey, _col1] => [regionkey:bigint, count:bigint]
+         _col1 := count
+    - Exchange[GATHER] => regionkey:bigint, count:bigint
+         - Aggregate(FINAL)[regionkey] => [regionkey:bigint, count:bigint]
+                 count := "count"("count_8")
+            - Exchange[REPARTITION] => regionkey:bigint, count_8:bigint
+                 - Aggregate(PARTIAL)[regionkey] => [regionkey:bigint, count_8:bigint]
+                         count_8 := "count"(*)
+                    - TableScan[tpch:tpch:nation:sf0.01, original constraint=true] => [regionkey:bigint]
+                             regionkey := tpch:tpch:regionkey:2
+----
+
+分布式方案：
+
+----
+presto:tiny> EXPLAIN (TYPE DISTRIBUTED) SELECT regionkey, count(*) FROM nation GROUP BY 1;
+                                             Query Plan
+----------------------------------------------------------------------------------------------
+Fragment 2 [SINGLE]
+     Output layout: [regionkey, count]
+    - Output[regionkey, _col1] => [regionkey:bigint, count:bigint]
+             _col1 := count
+        - RemoteSource[1] => [regionkey:bigint, count:bigint]
+
+Fragment 1 [FIXED]
+     Output layout: [regionkey, count]
+    - Aggregate(FINAL)[regionkey] => [regionkey:bigint, count:bigint]
+             count := "count"("count_8")
+        - RemoteSource[0] => [regionkey:bigint, count_8:bigint]
+
+Fragment 0 [SOURCE]
+    Output layout: [regionkey, count_8]
+    Output partitioning: [regionkey]
+    - Aggregate(PARTIAL)[regionkey] => [regionkey:bigint, count_8:bigint]
+             count_8 := "count"(*)
+        - TableScan[tpch:tpch:nation:sf0.01, original constraint=true] => [regionkey:bigint]
+                 regionkey := tpch:tpch:regionkey:2
+----
+
+=== 插入
+
+*概述*
+
+----
+INSERT INTO table_name query
+----
+
+*说明*
+
+向表中插入行。
+
+NOTE: 目前尚不支持指定列名。 因此， 查询语句中的列与要插入的表中的列必须完全匹配。
+
+*示例*
+
+将 `new_orders` 表中的数据插入 `orders` 表:
+
+----
+INSERT INTO orders
+SELECT * FROM new_orders;
+----
+
+向 `cities` 表插入一行数据:
+
+----
+INSERT INTO cities VALUES (1, 'San Francisco');
+----
+
+向 `cities` 表插入多行数据:
+
+----
+INSERT INTO cities VALUES (2, 'San Jose'), (3, 'Oakland');
+----
+
+===  重置会话
+
+*概述*
+
+----
+RESET SESSION name
+RESET SESSION catalog.name
+----
+
+*说明*
+
+将会话的属性值重置为默认值。
+
+*示例*
+
+----
+RESET SESSION optimize_hash_generation;
+RESET SESSION hive.optimized_reader_enabled;
+----
+
+=== 查询
+
+*概述*
+
+----
+[ WITH with_query [, ...] ]
+SELECT [ ALL | DISTINCT ] select_expr [, ...]
+[ FROM from_item [, ...] ]
+[ WHERE condition ]
+[ GROUP BY expression [, ...] ]
+[ HAVING condition]
+[ UNION [ ALL | DISTINCT ] select ]
+[ ORDER BY expression [ ASC | DESC ] [, ...] ]
+[ LIMIT count ]
+----
+
+`from_item` 为以下之一
+
+----
+table_name [ [ AS ] alias [ ( column_alias [, ...] ) ] ]
+----
+
+----
+from_item join_type from_item [ ON join_condition | USING ( join_column [, ...] ) ]
+----
+
+*说明*
+
+从0或多个表获取数据行
+
+*GROUP BY子句*
+
+`GROUP BY` 子句对 `SELECT` 语句的输出进行分组， 分组中是匹配值的数据行。 `Group BY` 子句支持任意表达式， 包括指定列名或列序号（从1开始）。
+
+以下查询是等价的。 他们都对 `nationkey` 列进行分组， 第一个查询使用列序号， 第二个查询使用列名:
+
+----
+SELECT count(*), nationkey FROM customer GROUP BY 2;
+
+SELECT count(*), nationkey FROM customer GROUP BY nationkey;
+----
+
+在查询语句中没有指定列名的情况下， `GROUP BY` 子句也可以将输出进行分组。 例如，以下查询使用列 `mktsegment` 进行分组， 统计出 `customer` 表的行数:
+
+----
+SELECT count(*) FROM customer GROUP BY mktsegment;
+----
+
+----
+ _col0
+-------
+ 29968
+ 30142
+ 30189
+ 29949
+ 29752
+(5 rows)
+----
+
+在 `SELECT` 语句中使用 `GROUP BY` 子句时， 进行分组的列要么是聚会函数， 要么是 `GROUP BY` 子句中的列。
+
+*HAVING子句*
+
+`HAVING` 子句与聚合函数以及 `GROUP BY` 子句共同使用， 用来控制选择分组。 `HAVING` 子句去掉不满足条件的分组。 在分组和聚合计算完成后，`HAVING` 对分组进行过滤。
+
+以下示例查询 `customer` 表，并进行分组， 查出账户余额大于指定值的记录:
+
+----
+SELECT count(*), mktsegment, nationkey,
+       CAST(sum(acctbal) AS bigint) AS totalbal
+FROM customer
+GROUP BY mktsegment, nationkey
+HAVING sum(acctbal) > 5700000
+ORDER BY totalbal DESC;
+----
+
+----
+ _col0 | mktsegment | nationkey | totalbal
+-------+------------+-----------+----------
+  1272 | AUTOMOBILE |        19 |  5856939
+  1253 | FURNITURE  |        14 |  5794887
+  1248 | FURNITURE  |         9 |  5784628
+  1243 | FURNITURE  |        12 |  5757371
+  1231 | HOUSEHOLD  |         3 |  5753216
+  1251 | MACHINERY  |         2 |  5719140
+  1247 | FURNITURE  |         8 |  5701952
+(7 rows)
+----
+
+*UNION子句*
+
+`UNION` 子句用于将多个查询语句的结果合并为一个结果集:
+
+----
+query UNION [ALL | DISTINCT] query
+----
+
+参数 `ALL` 或 `DISTINCT` 控制最终结果集包含哪些行。 如果指定参数 `ALL` ，则包含全部行，即使行完全相同。
+如果指定参数 `DISTINCT` ， 则合并结果集，结果集只有唯一不重复的行。 如果不指定参数，执行时默认使用 `DISTINCT` 。
+
+以下示例可能是最简单的 UNION 子句之一。 以下查询将返回值 13 与第二个查询的返回值 42 进行结果集连接:
+
+----
+SELECT 13
+UNION
+SELECT 42;
+----
+
+----
+ _col0
+-------
+    13
+    42
+(2 rows)
+----
+
+多个union从左向右执行， 除非用括号明确指定顺序。
+
+*ORDER BY子句*
+
+`ORDER BY` 子句按照一个或多个输出表达式对结果集排序：
+
+----
+ORDER BY expression [ ASC | DESC ] [ NULLS { FIRST | LAST } ] [, ...]
+----
+
+每个表达式由列名或列序号（从1开始）组成。 `ORDER BY` 子句作为查询的最后一步， 在 `GROUP BY` 和 `HAVING` 子句之后。
+
+*LIMIT子句*
+
+`LIMIT` 子句限制结果集的行数。 以下示例为查询一个大表， limit子句限制它只输出5行（因为查询没有 `ORDER BY` ， 所以随意返回几行）:
+
+----
+SELECT orderdate FROM orders LIMIT 5;
+----
+
+----
+ o_orderdate
+-------------
+ 1996-04-14
+ 1992-01-15
+ 1995-02-01
+ 1995-11-12
+ 1992-04-26
+(5 rows)
+----
+
+*TABLESAMPLE*
+
+有多种抽样方法:
+
+*BERNOULLI*
+
+查出的每行记录都源于表样本，使用样本百分比概率。 当使用Bernoulli方法对表进行抽样时， 会扫描表的所有物理块， 并跳过某些行。 （基于样本百分比与运行时随机计算之间的比较）
+
+结果中每行记录的概率都是独立的。 这不会减少从磁盘读取抽样表所需要的时间。 如果对抽样输出做处理， 它可能对整体查询时间有影响。
+
+*SYSTEM*
+
+这种抽样方法将表划分为逻辑数据段， 并按此粒度进行抽样。 这种抽样方法要么从特定数据段查询全部行， 要么跳过它。 （基于样本百分比与运行时随机计算之间的比较）
+
+系统抽样选取哪些行，取决于使用哪种连接器。 例如，使用Hive， 它取决于HDFS上的数据是怎样存储的。 这种方法无法保证独立抽样概率。
+
+NOTE: 这两种方法都不能确定返回行数的范围。
+
+*示例:*
+
+----
+SELECT *
+FROM users TABLESAMPLE BERNOULLI (50);
+
+SELECT *
+FROM users TABLESAMPLE SYSTEM (75);
+----
+
+通过join进行抽样:
+
+----
+SELECT o.*, i.*
+FROM orders o TABLESAMPLE SYSTEM (10)
+JOIN lineitem i TABLESAMPLE BERNOULLI (40)
+  ON o.orderkey = i.orderkey;
+----
+
+*UNNEST*
+
+`UNNEST` 用于展开 数组类型 或 map类型 的子查询。 数组展开为单列，map展开为双列（键，值）。 `UNNEST` 可以使用多个参数，它们展开为多列， 行数与最大的基础参数一样（其他列填空）。
+ `UNNEST` 通常与 `JOIN` 一起使用 也可以引用join左侧的关系列。
+
+使用单列:
+
+----
+SELECT student, score
+FROM tests
+CROSS JOIN UNNEST(scores) AS t (score);
+----
+
+使用多列:
+
+----
+SELECT numbers, animals, n, a
+FROM (
+  VALUES
+    (ARRAY[2, 5], ARRAY['dog', 'cat', 'bird']),
+    (ARRAY[7, 8, 9], ARRAY['cow', 'pig'])
+) AS x (numbers, animals)
+CROSS JOIN UNNEST(numbers, animals) AS t (n, a);
+----
+
+----
+  numbers  |     animals      |  n   |  a
+-----------+------------------+------+------
+ [2, 5]    | [dog, cat, bird] |    2 | dog
+ [2, 5]    | [dog, cat, bird] |    5 | cat
+ [2, 5]    | [dog, cat, bird] | NULL | bird
+ [7, 8, 9] | [cow, pig]       |    7 | cow
+ [7, 8, 9] | [cow, pig]       |    8 | pig
+ [7, 8, 9] | [cow, pig]       |    9 | NULL
+(6 rows)
+----
+
+WITH ORDINALITY clause:
+
+----
+SELECT numbers, n, a
+FROM (
+  VALUES
+    (ARRAY[2, 5]),
+    (ARRAY[7, 8, 9])
+) AS x (numbers)
+CROSS JOIN UNNEST(numbers) WITH ORDINALITY AS t (n, a);
+----
+
+----
+  numbers  | n | a
+-----------+---+---
+ [2, 5]    | 2 | 1
+ [2, 5]    | 5 | 2
+ [7, 8, 9] | 7 | 1
+ [7, 8, 9] | 8 | 2
+ [7, 8, 9] | 9 | 3
+(5 rows)
+----
+
+===  设置会话
+
+*概述*
+
+----
+SET SESSION name = 'value'
+SET SESSION catalog.name = 'value'
+----
+
+*说明*
+
+设置会话属性值。
+
+*示例*
+
+----
+SET SESSION optimize_hash_generation = 'true';
+SET SESSION hive.optimized_reader_enabled = 'true';
+----
+
+=== 显示CATALOG
+
+*概述*
+
+----
+SHOW CATALOGS
+----
+
+*说明*
+
+列出可用的catalog。
+
+=== 显示列
+
+*概述*
+
+----
+SHOW COLUMNS FROM table
+----
+
+*说明*
+
+列出 表 中的列及其数据类型和其他属性。
+
+=== 显示函数
+
+*概述*
+
+----
+SHOW FUNCTIONS
+----
+
+*说明*
+
+列出全部可用于查询的函数
+
+=== 显示分区
+
+*概述*
+
+----
+SHOW PARTITIONS FROM table [ WHERE ... ] [ ORDER BY ... ] [ LIMIT ... ]
+----
+
+*说明*
+
+列出 `表` 中的分区，可以使用 `WHERE` 子句进行过滤， 使用 `ORDER BY` 子句排序，使用 `LIMIT` 子句限制。 这些子句与他们的在 *查询* 中的工作方式相同。
+
+*示例*
+
+列出 `orders` 表的全部分区:
+
+----
+SHOW PARTITIONS FROM orders;
+----
+
+列出 `orders` 表中的全部分区，起始时间为 `2013` 年， 并按日期倒序排序:
+
+----
+SHOW PARTITIONS FROM orders WHERE ds >= '2013-01-01' ORDER BY ds DESC;
+----
+
+列出 `orders` 表中最新的分区:
+
+----
+SHOW PARTITIONS FROM orders ORDER BY ds DESC LIMIT 10;
+----
+
+=== 显示库
+
+*概述*
+
+----
+SHOW SCHEMAS [ FROM catalog ]
+----
+
+*说明*
+
+列出 `catalog` 或当前catalog中的库。
+
+*示例*
+
+----
+presto:default> show schemas;
+       Schema
+--------------------
+ information_schema
+ jmx
+ sys
+(3 rows)
+----
+
+=== 显示会话
+
+*概述*
+
+----
+SHOW SESSION
+----
+
+*说明*
+
+列出当前会话属性。
+
+=== 显示表
+
+*概述*
+
+----
+SHOW TABLES [ FROM schema ] [ LIKE pattern ]
+----
+
+*说明*
+
+列出指定 库 或当前库中的表。 可以用 `LIKE` 子句控制列出的表名。
+
+=== 使用
+
+*概述*
+
+----
+USE catalog.schema
+USE schema
+----
+
+*说明*
+
+更新会话，以便使用指定的catalog和schema。 如果不指定catalog， schema将关联到当前的catalog。
+
+*示例*
+
+----
+USE hive.finance;
+USE information_schema;
+----
+
+== 迁移
+
+=== 从Hive迁移
+
+Presto使用ANSI SQL的语法和语义，而Hive使用的是一种名为HiveQL的类似SQL的语言，它模仿MySQL（与ANSI SQL有许多差异）。
+
+使用下标访问动态数组索引来替代udf
+
+SQL中的下标运算符支持完整的表达式，与Hive（它只支持常量）不同。因此，你可以像这样写查询语句:
+
+----
+SELECT my_array[CARDINALITY(my_array)] as last_element
+FROM ...
+----
+
+*避免越界访问数组*
+
+越界访问数组元素会导致发生异常。你可以像下面这样，使用 `if` 来避免:
+
+----
+SELECT IF(CARDINALITY(my_array) >= 3, my_array[3], NULL)
+FROM ...
+----
+
+*使用ANSI SQL语法操作数组*
+
+数组索引从1开始，而不是0:
+
+----
+SELECT my_array[1] AS first_element
+FROM ...
+----
+
+使用ANSI语法建立数组:
+
+----
+SELECT ARRAY[1, 2, 3] AS my_array
+----
+
+使用ANSI SQL语法操作标识符和字符串
+
+字符串用单引号括起来，标识符用双引号括起来，而不是反引号:
+
+----
+SELECT name AS "User Name"
+FROM "7day_active"
+WHERE name = 'foo'
+----
+
+*引用以数字打头的标示符*
+
+以数字开头的标识符在ANSI SQL中不合法，必须用双引号括起来:
+
+----
+SELECT *
+FROM "7day_active"
+----
+
+*使用标准的字符串连接运算符*
+
+使用ANSI SQL字符串连接运算符:
+
+----
+SELECT a || b || c
+FROM ...
+----
+
+使用标准的类型去转换目标::
+
+以下标准类型支持 转换 目标:
+
+----
+SELECT
+  CAST(x AS varchar)
+, CAST(x AS bigint)
+, CAST(x AS double)
+, CAST(x AS boolean)
+FROM ...
+----
+
+特别注意，使用 `VARCHAR` 而不是 `STRING` 。
+
+*在整数除法中使用转换*
+
+Presto按照标准的方法进行整数除法运算。例如， `7` 除以 `2` 的结果是 `3` 而不是 `3.5` 。 对两个整数进行浮点除法运算，需要将其中的一个转为double类型:
+
+----
+SELECT CAST(5 AS DOUBLE) / 2
+----
+
+*在复杂的表达式或查询中使用WITH*
+
+当你要重复使用一个复杂的表达式做过滤器时，可以使用内联子查询或使用 `WITH` 子句:
+
+----
+WITH a AS (
+  SELECT substr(name, 1, 3) x
+  FROM ...
+)
+SELECT *
+FROM a
+WHERE x = 'foo'
+----
+
+*使用UNNEST展开数组和map*
+
+Presto支持使用 UNNEST 展开数组和map。 使用 UNNEST 代替 LATERAL VIEW explode() 。
+
+Hive查询:
+
+----
+SELECT student, score
+FROM tests
+LATERAL VIEW explode(scores) t AS score;
+----
+
+Presto查询:
+
+----
+SELECT student, score
+FROM tests
+CROSS JOIN UNNEST(scores) AS t (score);
+----
+
+*Outer Join的差异*
+
+按照ANSI SQL规则，Presto认为 整个 `ON` 语句的作用就是判定左边的表中的一行是否要和右边的表中的行进行关联操作。
+在 `LEFT JOIN` 中，左边表中的所有行都会显示在最终的查询结果中；在 `RIGHT JOIN` 操作中是相反的。相反，Hive 首先 在 `ON` 子句中使用常量过滤， 然后 执行join。
+当使用 `ON` 子句关联外部表时，这会使结果会产生非常大的差别。
+
+当你要将Hive的 `OUTER_JOIN` 查询转为Presto查询时，注意Hive认为 `ON` 子句是 `WHERE` 子句的一部分。因此为了在Presto中得到同样的效果，你需要将 `ON` 子句放到 `WHERE` 子句中。
+
+Hive查询:
+
+----
+SELECT a.id, b.userid
+FROM a
+LEFT JOIN b
+ON a.id = b.id AND a.ds = '2013-11-11'
+----
+
+Presto查询:
+
+----
+SELECT a.id, b.userid
+FROM a
+LEFT JOIN b
+ON a.id = b.id
+WHERE a.ds = '2013-11-11'
+----
+
+== 开发者指南
+
+=== SPI概述
+
+如果你想要开发一个新的Presto的插件，那么你必须实现SPI定义的接口和方法。
+
+插件能够提供connector（Presto中所有查询的数据都是通过connector提供的）。 即使你的数据源中没有任何基础数据表，但是只要你的数据源实现了Presto中要求的API，你照样可以从你自己定义的数据源中进行查询。
+
+这一章我们将会了解Presto SPI中常用的一些服务接口,以及如果调整这些API来适应你自己的数据源
+
+*代码*
+
+Presto的SPI源码在Presto source文件夹的 `presto-spi` 目录下：
+
+元数据插件
+
+每个插件都代表一个入口点：`Plugin` 接口的实现。
+插件的类名通过标准 `ServiceLoader` 接口提供给给Presto：在classpath中必须包含一个位于 `META-INF/services` 目录下的名为 `com.facebook.presto.spi.Plugin` 的源文件。
+这个文件的内容其实只有一行，这一行就是plugin插件的类名，如下：
+
+----
+com.facebook.presto.example.ExamplePlugin
+----
+
+*插件*
+
+`Plugin` 接口是新手学习使用Presto SPI的一个很好的入手点。当Presto想要创建某个catalog对应的connector的时候，首先会调用 `getServices()` 方法获得一个 `ConnectorFactory` 对象。
+
+*ConnectorFactory*
+
+`ConnectorFactory` 的实例是Presto通过调用Plugin中的 `getServices()` 方法获得的。`ConnectorFactory` 实例就代表一个类型为ConnectorFactory的服务。`connector` 实例就是通过ConnectorFactory创建的。
+ConnectorFactory使用单例模式创建Connector的实例，可以返回以下几种类型：
+
+* ConnectorMetadata
+* ConnectorSplitManager
+* ConnectorHandleResolver
+* ConnectorRecordSetProvider
+* ConnectorMetdata
+
+ConnectorMetadata中有大量的方法，Presto就是使用ConnectorMetadata中的这些方法对一个特定的data source进行如下操作：遍历所有的schema；遍历所有的table；遍历所有的列；遍历其他的元数据信息
+
+这个接口中的方法太多了，以至于文档中没有全部罗列出来。如果你对这个接口的实现类感兴趣，你可以去看下 #Example HTTP Connector# 和Cassandra connector的实现。
+如果你的基础数据源支持schema，table和column，那么这个接口是很容易实现的。
+如果你打算使用非传统的数据库[英文原话：If you are attempting to adapt something that is not a relational database (as the Example HTTP connector does)，
+不知道翻译的对不对，^-^],（就像Example HTTP Connector那样），那么你的实现中需要考虑怎样将的你的数据源映射到Presto的schema，table和列。
+
+*ConnectorSplitManger*
+
+ConnectorSplitManger的作用就是将一个表中的数据分成独立的数据分片，这些数据分片会被分发到各个worker去处理。
+例如，Hive connector列出每个Hive分区中的文件，并且针对于每个文件创建一个或者多个分片。对于那些没有分区数据的数据源，一个比较好的处理策略就是将一个table中的数据作为一个split处理。
+这也是Example HTTP connector使用的处理策略。
+
+*ConnectorRecordSetProvider*
+
+获得了Split数据和表的Column信息之后，ConnectorRecordSetProvider就会针对Split和Columnin信息创建一个RecordCursor对象，Presto就是使用RecordCoursor来读取每一行中对应的Column中的值的。
+
+=== HTTP连接器示例
+
+Example HTTP connector 的作用很简单：读取通过HTTP协议传递过来的以逗号分隔的数据。 例如，如果你有大量的CSV格式的数据，那么你可以使用Example HTTP Connector来进行这些数据的处理。
+通过Example HTTP Connector你可以方便的通过SQL查询来处理这些数据。
+
+*代码*
+
+Example HTTP Connector的源码可以在Presto源代码根目录下的presto-example-http目录下找到。
+
+*Maven工程*
+
+Example HTTP connector通过位于plugin工程根目录下的pom.xml文件来使用Maven进行编译。 Example HTTP connector可以通过Maven进行编译。其Maven配置文件是位于plugin根目录的pom.xml
+
+*工程依赖*
+
+Plugins依赖于Presto的SPI：
+
+----
+<dependency>
+    <groupId>com.facebook.presto</groupId>
+    <artifactId>presto-spi</artifactId>
+    <scope>provided</scope>
+</dependency>
+----
+
+上面的scope之所以是provided是因为Presto已经提供运行时所使用的类，所以plugin不应该再将这些类重新编译打包。
+
+除了上面的依赖之外，还需要Presto提供的一些其他依赖，例如：javax.inject和Jackson。 Jackson主要用于序列化处理，因此plugin必须使用Presto提供的版本。
+
+根据自定义的plugin具体实现过程中使用到的类来添加其他依赖。Plugin使用独立的类加载器进行加载，这样plugin和其他的类是隔离的，因此plugin可以使用与Presto内部使用的类库不同版本的类库。
+
+*Plugin实现类*
+
+Example HTTP connector与其他的plugin相比，其实现非常的简单。在其实现中大部分的方法都在处理各种配置项，唯一一个关键的方法如下：
+
+----
+@Override
+public <T> List<T> getServices(Class<T> type)
+{
+    if (type == ConnectorFactory.class) {
+        return ImmutableList.of(type.cast(new ExampleConnectorFactory(getOptionalConfig())));
+    }
+    return ImmutableList.of();
+}
+----
+
+ImmutableList 是Guava的一个工具类。
+
+和所有的plugin一样，Example HTTP connector重写了getServices()方法，并且针对于请求ConnectorFactory类型服务的请求返回一个ExampleConnectorFactory实例。
+
+*ConnectorFactory Implementation*
+
+在Presto中，Connetor是通过ConnectorFactory创建的。并且Presto就是使用Connetor建立与各种数据源之间的连接的。
+
+在ExampleConnectorFactory实现中，要做的第一件事情就是为connector指定名称。这个名称的作用与在Presto的配置文件中指定connector名称的作用是一样的。
+
+----
+@Override
+public String getName()
+{
+    return "example-http";
+}
+----
+
+connector factory中的实际工作实在create()方法中完成的。 在ExampleConnectorFactory类中,create()方法配置相应的connector，然后使用Guice创建相应的对象。
+下面就是一个没有参数验证和异常处理的create方法的简单实现：
+
+----
+// A plugin is not required to use Guice; it is just very convenient
+Bootstrap app = new Bootstrap(
+        new JsonModule(),
+        new ExampleModule(connectorId));
+
+Injector injector = app
+        .strictConfig()
+        .doNotInitializeLogging()
+        .setRequiredConfigurationProperties(requiredConfig)
+        .setOptionalConfigurationProperties(optionalConfig)
+        .initialize();
+
+return injector.getInstance(ExampleConnector.class);
+----
+
+*Connector: ExampleConnector*
+
+Presto通过使用该类来获得connector提供的各种服务。
+
+*Metadata: ExampleMetadata*
+
+这个类的主要作用就是：获得table names，table metadata，column names，column metadata和connector提供的相关的schema信息。Presto也会使用ConnectorMetadata确保connector可以识别和处理给定的表名
+
+该ExampleMetadata执行代表许多这些调用的 ExampleClient，实现多的连接器的核心功能的类。
+
+*Split Manager: ExampleSplitManager*
+
+split manager将一个表中的数据切分成一个或者多个split，并且分发给各个worker进行处理。在ExampleHTTPConnector中，每个表中包含一个或者多个指向实际数据的URI。
+ExampleSplitManager会针对于每个URI创建一个Split。
+
+*Record Set Provider: ExampleRecordSetProvider*
+
+record set provider 会创建一个record set，然后Record Set会创建一个Record cursor，而Record Cursor又会去获得实际的数据，最终返回给Presto。
+ExampleRecordCursor通过HTTP从一个指定的URI中读取数据。每一行数据都被逗号分成相应的列，然后返回给Presto。
+
+=== 类型系统
+
+Presto中的Type接口用于实现SQL语言中的类型。Presto拥有许多内置类型，如VarcharType和BigintType。一个插件可以通过从getServices（）返回来提供新的类型。
+以下是类型界面的高级概述，有关详细信息，请参阅JavaDocs for Type。
+
+* 本机容器类型：
+
+所有类型都定义了getJavaType（）方法，通常称为“本机容器类型”。这是用于在执行期间保存值并将其存储在块中的Java类型。例如，这是用于实现生成或使用此类型的函数的Java代码中使用的类型。
+
+* 本地编码：
+
+其本机容器类型形式的值的解释由其类型定义 。对于某些类型，例如BigintType，它匹配本机容器类型（64位2的补码）的Java解释。然而，对于诸如TimestampWithTimeZoneType之类的其他类型，它们对其本机容器类型也使用long，存储在long中的值是8位二进制值，它结合了从unix纪元开始的时区和毫秒。特别地，这意味着您无法比较两个本机值，并希望获得有意义的结果，而无需了解本机编码。
+
+* 类型签名：
+
+类型的签名定义其身份，并且还编码关于类型的一些一般信息，例如其类型参数（如果它是参数的）及其字面参数。文字参数用于类似于 VARCHAR（10）。
+
+=== 函数
+
+函数框架用于实现SQL函数。Presto包含许多内置函数，并且内部插件（对presto-main有依赖性的插件）可以通过从getServices（）返回一个FunctionFactory来提供新的功能 。
+
+----
+@ScalarFunction("is_null")
+@Description("Returns TRUE if the argument is NULL")
+@SqlType(StandardTypes.Boolean)
+public static boolean isNull(@Nullable @SqlType(StandardTypes.VARCHAR) Slice string)
+{
+    return (string == null);
+}
+----
+
+上面的代码实现了一个新的函数is_null，它接受一个VARCHAR 参数，并返回一个BOOLEAN，指示该参数是否为NULL。请注意，该函数的参数类型为Slice。
+VARCHAR使用 Slice，它本质上是byte []的包装器，而不是String 的本机容器类型。
+
+* @SqlType：
+
+该@SqlType注解用于声明的返回类型和参数类型。请注意，Java代码的返回类型和参数必须与相应注释的本机容器类型相匹配。
+
+* @Nullable：
+
+该@Nullable注解表明该参数可以是NULL。如果没有这个注释框架假定所有的函数返回NULL如果有他们的论据是NULL。当与一个工作类型具有原始本机容器类型，例如BigintType，使用对象包装器的本机容器型使用时@Nullable。必须使用@Nullable注释该方法， 如果参数不为null ，则返回NULL。
+
+*聚合函数*
+
+聚合函数使用与标量函数相似的框架，但是涉及到更多的复杂性。
+
+* 蓄能器状态：
+
+所有聚合函数将输入行累加到状态对象中; 此对象必须实现AccumulatorState。对于简单的聚合，只需将AccumulatorState扩展到您需要的getter和setter的新界面，框架就会为您生成所有的实现和序列化。如果需要更复杂的状态对象，则需要实现AccumulatorStateFactory和AccumulatorStateSerializer， 并通过AccumulatorStateMetadata注释提供这些对象。
+
+----
+@AggregationFunction("avg")
+public final class AverageAggregation
+{
+    @InputFunction
+    public static void input(LongAndDoubleState state, @SqlType(StandardTypes.DOUBLE) double value)
+    {
+        state.setLong(state.getLong() + 1);
+        state.setDouble(state.getDouble() + value);
+    }
+
+    @CombineFunction
+    public static void combine(LongAndDoubleState state, LongAndDoubleState otherState)
+    {
+        state.setLong(state.getLong() + otherState.getLong());
+        state.setDouble(state.getDouble() + otherState.getDouble());
+    }
+
+    @OutputFunction(StandardTypes.DOUBLE)
+    public static void output(LongAndDoubleState state, BlockBuilder out)
+    {
+        long count = state.getLong();
+        if (count == 0) {
+            out.appendNull();
+        }
+        else {
+            double value = state.getDouble();
+            DOUBLE.writeDouble(out, value / count);
+        }
+    }
+}
+----
+
+上述代码实现了计算DOUBLE列平均值的聚合函数avg。
+
+* @InputFunction：
+
+所述@InputFunction注解声明其接收输入的行和将它们存储在所述函数AccumulatorState。与标量函数类似，您必须使用@SqlType对参数进行注释。
+在这个例子中，输入函数只是跟踪运行的行数（通过setLong（））和运行总和（通过setDouble（））。
+
+* @CombineFunction：
+
+该@CombineFunction注解声明用于在两个状态对象进行组合的功能。此函数用于合并所有部分聚合状态。它需要两个状态对象，并将结果合并到第一个对象中（在上面的示例中，只是将它们添加在一起）。
+
+* @输出功能：
+
+该@OutputFunction是计算聚合时调用的最后一个函数。它需要最终状态对象（合并所有部分状态的结果），并将结果写入BlockBuilder。
+
+* 序列化发生在哪里，什么是@GroupedAccumulatorState？
+
+该@InputFunction通常是从不同的工人跑 @CombineFunction，所以状态对象被序列化并通过聚合框架这些工人之间的运输。
+ 执行GROUP BY聚合时使用@GroupedAccumulatorState，如果未指定AccumulatorStateFactory，将自动为您生成一个实现

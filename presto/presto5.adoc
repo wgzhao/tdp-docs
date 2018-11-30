@@ -1,0 +1,1269 @@
+== 发布说明
+
+=== 发布0.100
+
+*系统连接器*
+
+该系统连接器现在就像其它接口一样工作：全球系统表仅适用于系统目录中，而不是在一个特殊的模式可用在每一个目录。
+此外，连接器现在可以通过在Connector接口上实现getSystemTables（）方法来提供该连接器目录中可用的系统表。
+
+*一般变更*
+
+* 修复date_format（）和date_parse（）中的％f说明符。
+* 向UNNEST添加WITH ORDINALITY支持。
+* 添加array_distinct（）函数。
+* 添加split（）函数。
+* 添加degrees（）和radians（）函数。
+* 添加to_base（）和from_base（）函数。
+* 将config属性task.shard.max-threads重命名为task.max-worker-threads。此属性设置用于并发处理拆分的线程数。旧的属性名称已被弃用，将在以后的版本中删除。
+* 修复引用ROW中的NULL值。
+* 使MAP可比。
+* 修复在查询拆卸期间阻止任务的泄漏。
+* 改进查询队列配置验证。
+
+=== 发布0.99
+
+*一般变更*
+
+* 减少TaskExecutor中的lock contention。
+* 使用ORC的空键修复读取地图。
+* 修正null值的预先计算的哈希优化。
+* 使得 contains（）适用于所有可比类型。
+
+=== 发布0.98
+
+*Array, Map, and Row Types*
+
+现在是用VariableWidthBlockEncoding而不是JSON表示这些类型的内存。
+
+NOTE: 这是与以前的表示形式的向后不兼容的更改，因此，如果您已经编写了连接器或函数，则在部署此版本之前需要更新代码。
+
+*Hive变化*
+
+* 修复带有损坏检查点的ORC文件。
+
+*SPI变更*
+
+将Index重命名为ConnectorIndex。
+
+NOTE: 这是一个向后不兼容的更改，因此，如果您编写了使用Index的连接器，则在部署此版本之前需要更新代码。
+
+*一般变更*
+
+* 修正输出未被引用或部分引用时UNNEST中的错误。
+* 使max（）和min（）函数适用于所有可排序的类型。
+* 优化max_by（）和其他使用Block的地方的内存分配。
+
+=== 发布0.97
+
+*一般变更*
+
+* Presto的排队政策现在可以注入。有关详细信息，请参阅队列配置。
+* 在LIKE操作符的实现中加快对ASCII字符串的检测。
+* 当启用基于元数据的查询优化时修复NullPointerException。
+* 解压缩ORC数据时修复可能的无限循环。
+* 修正在NOT WHERE谓词中NOT子句被忽略的问题。
+* 在使用SELECT *，窗口函数和隐式胁迫的查询中修复计划问题。
+* 解决调度程序死锁的查询与一个UNION在VALUES和SELECT之间。
+
+*Hive变化*
+
+* 从Parquet文件修复STRUCT类型的解码。
+* 加快对非常小条纹的ORC文件的解码。
+
+=== 发布0.96
+
+*一般变更*
+
+* 修复用于TIMESTAMP的try_cast（）和其他需要访问会话信息的类型。
+* 修复可能导致包含具有相同前缀，下划线和数字的列的表的错误结果的计划程序错误。
+* MAP类型可比性。
+* 在StatementResource.Query中修复输出缓冲区泄漏。
+* 修复由无效的心跳引起的SqlTask​​中的漏洞。
+* 修复在队列已满时提交的查询的双重记录。
+* 修正“运行查询”JMX stat。
+* 添加distributed_join会话属性以启用/禁用分布式连接。
+
+*Hive变化*
+
+* 添加对DATE分区表的支持。
+
+=== 发布0.95
+
+*一般变更*
+
+* 修复任务和阶段漏洞，导致一个阶段在其分段之前完成任务。
+
+=== 发布0.94
+
+*ORC内存使用*
+
+此版本包含对Presto ORC阅读器的其他更改，以便在读取varchar和varbinary数据时支持小型缓冲区。一些ORC文件包含数百兆字节压缩的数据列。读取这些列时，Presto将为压缩的列数据分配单个缓冲区，这将导致CMS和G1中的堆碎片以及最终的OOM。在此版本中，hive.orc.max-buffer-size设置单个ORC缓冲区的最大大小，对于较大的列，我们改为流式传输数据。这样可以降低ORC中的堆碎片和过多的缓冲区，牺牲HDFS IOPS。默认值为8MB。
+
+*一般变更*
+
+* 将Hive CDH 4连接器更新到CDH 4.7.1
+* 修正ORDER BY与LIMIT 0
+* 修复try_cast的编译
+* 将线程组合成Java线程组以简化调试
+* 添加task.min-drivers配置以帮助限制并发读者的数量
+
+=== 发布0.93
+
+*ORC内存使用*
+
+当读取varchar和varbinary数据时，此版本会更改Presto ORC读取器以支持小型缓冲区。一些ORC文件包含解压缩数百兆字节的数据列。在之前的Presto ORC阅读器中，我们将为列中的所有值分配一个大型共享缓冲区。这将导致CMS和G1中的堆碎片，并且会导致OOM，因为列的每个值都保留对共享缓冲区的引用。在此版本中，ORC读取器为列中的每个值使用单独的缓冲区。这减少了堆碎片和过多的内存保留，而牺牲了对象创建。
+
+*验证*
+
+* 添加对每个查询设置用户名和密码的支持
+
+如果从0.92升级，则需要更改您的verifier_queries表
+
+----
+ALTER  TABLE  verifier_queries  添加 test_username  VARCHAR （256 ） NOT  NULL  默认 '验证测试' ;
+ALTER  TABLE  verifier_queries  add  test_password  VARCHAR （256 ）;
+ALTER  TABLE  verifier_queries  添加 control_username  VARCHAR （256 ） NOT  NULL  默认 '验证测试' ;
+ALTER  TABLE  verifier_queries  add  control_password  VARCHAR （256 ）;
+----
+
+*一般变更*
+
+* 为LIMIT 0添加优化器
+* 修正不正确的检查以禁用ORC中的字符串统计信息
+* 忽略INSERT和CREATE TABLE AS查询中的隐藏列
+* 向CLI添加SOCKS支持
+* 改进更新查询的CLI输出
+* 禁用非确定性谓词的下推
+
+=== 发布 0.92
+
+*一般变更*
+
+* 修复查询失败时的缓冲区漏洞。
+
+=== 发布0.91
+
+WARNING: 此版本有内存泄漏，不应该使用。
+
+*一般变更*
+
+* 在加载到空闲内存之后清除 `LazyBlockLoader` 引用。
+
+=== 发布0.90
+
+WARNING: 此版本有内存泄漏，不应该使用。
+
+*一般变更*
+
+* 在查询计划程序中初始支持分区和放置意识。这可以导致更好的计划，涉及JOIN和GROUP BY的查询通过相同的关键列。
+* 改进UNION查询的规划。
+* 添加presto版本以查询创建和完成事件。
+* 添加属性task.writer-count以配置每个任务的写入数。
+* 在优化涉及二进制类型的常量表达式时修复错误。
+* 修复在清除失败的查询时，表写入程序提交部分结果的错误。
+* 修复一个错误，当不需要一个包含NaN或Infinity的双打数组时。
+* 在访问空数组中的元素时修复失败。
+* 修复“远程页面太大”错误。
+* 尝试将值转换为UNKNOWN时，改进错误消息。
+* 使用正确的标准错误范围更新approx_distinct（）文档。
+* 当表达式无法编译为字节码时，禁用回退到解释器。要启用此选项，请将coord.interpreter-enabled = true添加 到协调器和worker配置属性。启用此选项将允许某些查询运行缓慢而不是失败。
+* 提高JDBC驱动一致性。特别地，所有未实现的方法现在抛出的是SQLException而不是UnsupportedOperationException。
+
+*函数和语言特征*
+
+* 添加bool_and（）和bool_or（）聚合函数。
+* 添加标准SQL函数every（）作为bool_and（）的别名。
+* 添加year_of_week（）函数。
+* 添加regexp_extract_all（）函数。
+* 添加map_agg（）聚合函数。
+* 添加支持将JSON转换为ARRAY或MAP类型。
+* 在VALUES子句中添加对未公认表达式的支持。
+* 新增设置会话，重置会话，和显示会话。
+* 改进EXPLAIN （TYPE DISTRIBUTED）输出的格式，并包含输出布局，任务放置策略和分区功能等附加信息。
+
+*Hive变化*
+
+* 禁用针对非字符串分区键的优化的转移分区提取。这解决了Presto可能会用非规范分区值而忽略数据的问题。要启用此选项，请将hive.assume-canonical-partition-keys = true添加 到协调器和worker配置属性。
+* 不要对由于缺少权限而失败的S3进行重试操作。
+
+*SPI变更*
+
+* 将getColumnTypes添加到RecordSink。
+* 使用Slice作为表的写入器片段。
+* 添加ConnectorPageSink，它是面向列的源的更有效的接口。
+
+NOTE: 这是与以前的连接器SPI的向后不兼容的更改。如果您已经编写了一个连接器，则在部署此版本之前需要更新代码。
+
+=== 发布0.89
+
+*DATE类型*
+
+自从1970年1月1日使用32带符号整数以来日期的内存表示的是天数。
+
+NOTE: 这是与以前的日期表示形式的向后不兼容的更改，因此如果您已经编写了一个连接器，则在部署此版本之前需要更新代码。
+
+*一般变更*
+
+* 使用目录和用途 SCHEMA已被替换为使用。
+* 修复SELECT NULL错误地返回0行的问题。
+* 修复JOIN查询可能产生不正确结果的罕见条件。
+* 修复涉及复杂类型的UNION查询在计划过程中失败的问题。
+
+=== 发布0.88
+
+*一般变更*
+
+* 添加了 arbitrary() 聚合函数。
+* 允许使用所有聚合函数作为窗口函数。
+* 支持指定窗口框架并正确实现所有窗口函数的框架。
+* 允许near_distinct（）聚合函数接受标准错误参数。
+* 实现least（）和greatest（）使用可变数量的参数。
+* ARRAY现在是可比较的，可以用作 GROUP BY键或 ORDER BY表达式。
+* 为ROW实现=和<>运算符。
+* 在ORC阅读器中修复过多的垃圾创建。
+* 修复可能导致使用row_number（）和LIMIT的查询永远不会终止的问题。
+* 修复可能导致与row_number（）和特定过滤器查询产生不正确结果的问题。
+* 修复了导致Cassandra插件无法使用SecurityException加载的问题。
+
+=== 发布0.87
+
+*一般变更*
+
+* 修正了一个ROW类型可能有错误字段名称的错误。
+* 将最小JDK版本更改为1.8。
+
+=== 发布0.86
+
+*一般变更*
+
+* 添加对不等式INNER JOIN的支持，当条件的每个条件仅指连接的一侧时。
+* 添加ntile（）函数。
+* 添加map（）函数以从键和值的数组创建地图。
+* 添加min_by（）聚合函数。
+* 添加对||连接数组的支持运营商。
+* 将=和！=添加到JSON类型的支持。
+* 当DISTINCT应用于不可比较的类型时，改进错误消息。
+* 对IN表达式执行类型验证，其中右侧是子查询表达式。
+* 当ORDER BY ... LIMIT查询超过其最大内存分配时，改进错误消息。
+* 在ORDER BY子句中使用不可订购的类型时，改进错误消息。
+* 当UNION查询的子查询的列的类型不匹配时，改进错误消息。
+* 修复一个回归，其中查询可能在一个高度加载的群集上过期。
+* 修复涉及来自information_schema的表的查询的调度问题，这可能导致元数据不一致。
+* 修复min_by（）和max_by（）的问题，在GROUP BY查询中使用可变长度类型（例如，VARCHAR）可能会导致错误。
+* 修复JMX连接器中数组属性的渲染。
+* 现在正在为JOIN查询跟踪输入行/字节。
+* 解决常量表表达式的名称时修复大小写敏感性问题。
+* 修复包含ROW类型的不卫生数组和映射。
+
+=== 发布0.85
+
+* 提高具有大量分区的表的查询计划性能。
+* 在GROUP BY表达式中使用JSON值时修复问题。
+
+=== 发布0.84
+
+* 在ARRAY中修正NaN和无穷大的处理
+* 修复使用JOIN的大概查询
+* 在协调器中减少过多的内存分配和GC压力
+* 修复了一个问题，其中设置node-scheduler.location-aware-scheduling-enabled = false 会导致对分裂不可远程访问的连接器的查询失败
+* 在information_schema和sys中的表上运行COUNT（*）时修复错误
+
+=== 发布0.83
+
+*Raptor变化*
+
+* Raptor现在可以指定备份存储位置。此功能非常实用。
+* 修复未分配给任何节点碎片的处理。
+
+*一般变更*
+
+* 修复在查询队列中的资源漏洞。
+* 将空白的ARRAY / MAP写入Hive 时修正NPE 。
+* 修复json_array_get（）来处理嵌套结构。
+* 修正UNNEST空集合。
+* 解决在解析或分析期间失败的查询不会过期的回归。
+* 使JSON类型可比。
+* 添加了散列聚合的优化。默认情况下，此优化已关闭。要启用它，请对协调器配置属性添加optimizer.optimize-hash-generation = true。
+
+=== 发布0.82
+
+* Presto现在支持ROW类型，所有Hive结构都转换为ROW，而不是JSON编码的VARCHAR。
+* 添加current_timezone（）函数。
+* 提高具有数千列的查询的计划性能。
+* 解决了在协调器中造成过多内存分配和GC压力的回归。
+
+=== 发布本0.81
+
+*Hive变化*
+
+* 修正ORC谓词下推。
+* 修复RCFile中的列选择。
+
+*一般变更*
+
+* 修正对lead（），lag（）和nth_value（）函数的零和超出范围偏移量的处理 。
+
+=== 发布0.80
+
+*新Hive ORC阅读器*
+
+我们添加了一个新的ORC阅读器。新的阅读器支持向量化读取，延迟加载和谓词推送，所有这些都使读者更有效率，并且通常减少查询的挂钟时间。
+虽然新读者已经经过严格测试，但它是Apache Hive ORC读者的大量重写，可能会有一些潜在的问题。
+如果您看到问题，您可以通过设置 <hive-catalog> .optimized_reader_enabled会话属性来禁用新的阅读器，或者您可以通过设置Hive目录属性hive.optimized-reader.enabled=false.来默认禁用阅读器。
+
+蜂巢变化
+
+* 可以通过设置hive.s3.max-retry-time来配置Hive S3文件系统的最大重试时间。
+* 修复Hive分区修剪空键（即__HIVE_DEFAULT_PARTITION__）。
+
+*Cassandra变化*
+
+* 将Cassandra驱动程序更新为2.1.0。
+* 将Cassandra TIMESTAMP类型映射到Presto TIMESTAMP类型。
+
+*“Big Query”支持*
+
+我们为“big”查询添加了实验支持。这提供了由以下属性控制的单独队列：
+
+* experimental.max-concurrent-big-queries
+* experimental.max-queued-big-queries
+
+对于使用experimental_big_query会话属性提交的查询，有单独的配置选项：
+
+* experimental.big-query-initial-hash-partitions
+* experimental.big-query-max-task-memory
+
+使用此属性提交的查询将使用所有连接的哈希散列。
+
+*Metadata-Only Query Optimization*
+
+我们现在支持一种优化，重写对输入的基数（例如，max（），min（），DISTINCT聚合）不敏感的聚合查询，以针对表元数据执行。
+
+例如，如果key，key1和key2是分区键，则以下查询将受益：
+
+----
+SELECT  min （key ）， max （key ） FROM  t ;
+
+SELECT  DISTINCT  key  FROM  t ;
+
+SELECT  count （DISTINCT  key ） FROM  t ;
+
+SELECT  count （DISTINCT  key  +  5 ） FROM  t ;
+
+SELECT  count （DISTINCT  key ） FROM  （SELECT  key  FROM  t  ORDER  BY  1  LIMIT  10 ）;
+
+SELECT  key1 ， count （DISTINCT  key2 ） FROM  t  GROUP  BY  1 ;
+----
+
+默认情况下，此优化已关闭。要启用它，请将optimizer.optimize-metadata-queries = true添加到协调器配置属性。
+
+WARNING: 如果连接器允许分区不包含数据，则此优化将导致查询产生不正确的结果。例如，如果您的Hive仓库包含没有数据的分区，则Hive连接器将产生不正确的结果。
+
+*一般变更*
+
+* 添加支持隐式联接。现在允许以下语法：
+
+----
+SELECT  *  FROM  a ， b  WHERE  a 。id  =  b 。id ;
+----
+
+* 添加属性task.verbose-stats以启用任务的详细统计信息收集。默认值为false。
+* 将CLI中的二进制数据格式化为十六进制转储。
+* 添加近似数字直方图函数numeric_histogram（）。
+* 添加array_sort（）函数。
+* 添加map_keys（）和map_values（）函数。
+* 使row_number（）完全流式传输。
+* 添加属性task.max-partial-aggregation-memory以配置聚合的部分步骤的内存限制。
+* 使用未使用输出的UNNEST操作处理查询时修复异常。
+* 查询完成后，仅在UI中显示查询进度。
+* 将查询执行可视化添加到协调器UI。可以通过查询详细信息页访问。
+
+=== 发布0.79
+
+*Hive变化*
+
+* 添加配置选项hive.force-local-scheduling和会话属性 force_local_scheduling以强制本地调度拆分。
+* 添加新的实验优化RCFile阅读器。可以通过设置配置选项hive.optimized-reader.enabled或会话属性optimize_reader_enabled来启用读卡器。
+
+*一般变更*
+
+* 添加对UNNEST的支持，可用于替代Hive中的explode（）函数。
+* 修复扫描操作符中可能导致数据丢失的错误。它目前仅影响对information_schema或sys表的查询，元数据查询（如SHOW PARTITIONS）和实现ConnectorPageSource接口的连接器。
+
+=== 发布0.78
+
+*ARRAY and MAP Types in Hive Connector*
+
+Hive连接器现在返回数组和地图而不是json编码的字符串，其基础类型是数组或地图的列。请注意，这是一个向后不兼容的更改，JSON函数将不再适用于这些列，除非将cast（）转换为json类型。
+
+*会话属性*
+
+Presto会话现在可以包含属性，Presto引擎或连接器可以使用这些属性来自定义查询执行。Presto引擎和每个目录都有一个单独的命名空间。目录的属性简化为前缀，后跟目录名称.（点）。连接器可以使用ConnectorSession.getProperties（）检索目录的属性 。
+
+可以使用Presto CLI 的--session命令行参数设置会话属性。例如：
+
+----
+presto-cli --session color = red --session size = large
+----
+
+对于JDBC，可以通过以下方式展开Connection来设置属性：
+
+----
+connection.unwrap(PrestoConnection.class).setSessionProperty("name", "value");
+----
+
+NOTE: 此功能是一项正在进行的工作，将在未来的版本中更改。具体来说，我们计划要求预注册属性，因此用户可以列出可用的会话属性，因此引擎可以验证属性值。此外，Presto语法将被扩展以允许通过查询设置属性。
+
+*Hive变化*
+
+* 添加storage_format会话属性以覆盖用于创建表的格式。
+* 添加对VARBINARY，DATE和TIMESTAMP的写入支持。
+* 添加对TIMESTAMP类型的分区密钥的支持。
+* 添加对具有空值的分区键的支持（__HIVE_DEFAULT_PARTITION__）。
+* 修复hive.storage-format选项（请参阅版本0.76）。
+
+*一般变更*
+
+* 修复表达式优化器，使其以线性时间而不是指数时间运行。
+* 为地图添加cardinality（）。
+* 修复SqlTask​​创建中的竞争条件，这可能导致查询z暂停。
+* 修复node-scheduler.multiple-tasks-per-node-enabled选项。
+* 在JOIN下使用UNION规划查询时修复异常。
+
+=== 发布0.77
+
+*参数类型*
+
+Presto现在有一个实现参数类型和功能的框架。添加了对ARRAY和MAP类型的支持，包括元素访问器操作符[]和新数组函数和运算符。
+
+*Streaming Index Joins*
+
+如果索引结果不符合分配的索引内存空间，则索引连接现在将切换为使用逐键流式连接。
+
+*分布式连接*
+
+现在支持两个表分布的连接。这允许加入更大的表，并且可以使用分布式连接启用的标志来启用。它可能比现有的广播加入实现更差，因为它需要重新分配两个表。此功能仍然是实验性的，应谨慎使用。
+
+*Hive变化*
+
+* 关闭S3输入流时处理虚假的AbortedException
+* 在Hive中添加对ORC，DWRF和Parquet的支持
+* 在Hive中添加对DATE类型的支持
+* 修正Hive阅读VARCHAR列时的性能回归
+
+*kafka变化*
+
+* 修复Kafka处理默认端口
+* 使用空键添加对Kafka消息的支持
+
+*一般变更*
+
+* 修复可能导致查询挂起的调度程序中的竞争条件
+* 添加ConnectorPageSource，它是面向列的源的更有效的接口
+* 在Cassandra中添加对字符串分区键的支持
+* 添加对变量特征函数的支持
+* 添加对所有类型的count（）的支持
+* 修复HashAggregation中的错误，这可能导致操作员进入无限循环
+
+=== 发布0.76
+
+*kafka连接器*
+
+此版本添加了一个连接器，可以从Presto 查询Apache Kafka主题数据。主题可以是实时的，重复的查询将会拾取新的数据。
+
+虽然Apache Kafka 0.8.1+被推荐，但是它支持Apache Kafka 0.8+。有大量文档有关配置连接器和教程。
+
+*MySQL和PostgreSQL连接器*
+
+此版本添加了MySQL连接器和PostgreSQL连接器， 用于在外部关系数据库中查询和创建表。这些可用于在不同系统（如MySQL和Hive）之间，或两个不同的MySQL或PostgreSQL实例之间或任何组合之间加入或复制数据。
+
+*Cassandra变化*
+
+所述Cassandra连接器配置属性 cassandra.client.read超时和cassandra.client.connect超时，现在正在使用的持续时间，而不是毫秒（这使得它们与所有的Presto其它此类性质相一致的）来指定。如果您以前指定了一个值，例如25，将其更改为25ms。
+
+Cassandra客户端的重试策略现在可以通过cassandra.retry-policy属性进行配置 。特别地，自定义BACKOFF 重试策略可能是有用的。
+
+*Hive变化*
+
+新的Hive连接器配置属性hive.s3.socket-timeout 允许更改读取或写入Amazon S3的查询的套接字超时。此外，以前添加的hive.s3.max-connections属性不受尊重，始终默认为500。
+
+Hive允许表中的分区具有与表不同的模式。特别地，它允许更改列的类型而不改变现有分区的列类型。Hive连接器不支持此功能，如果列类型从非数字类型（如STRING）转换为数字类型（例如BIGINT） 和现有分区中的实际数据，则可能会使用RCFile文本格式返回存储的分区的垃圾数据不是数字。Hive连接器现在检测到这种情况，并且在读取分区元数据之后，查询失败。
+
+属性hive.storage-format已损坏，已被禁用。它设置元数据上的存储格式，但始终使用RCBINARY写入表 。这将在以后的版本中实现。
+
+*一般变更*
+
+* 发生异常时修复验证者。
+* 修正chr（）函数使用Unicode代码点而不是ASCII代码点。
+* JDBC驱动程序不再挂起JVM关闭（所有线程都是守护进程线程）。
+* 修正函数参数的不正确解析。
+* 字节码编译器现在缓存生成的连接和组副本的代码，这将提高这些类型的查询的性能和CPU效率。
+* 提高对具有大量分区的表的某些简单查询的计划性能。
+* 避免创建大的输出页面。这应该减轻“远程页面太大”错误的一些情况 。
+* 协调员/工作人员通信层现在完全是异步的。具体来说，长时间轮询请求不再绑定在线程上。这使得负载较重的集群更有效率。
+
+=== 发布0.75
+
+*Hive变化*
+
+* Hive S3文件系统具有一个新的配置选项， hive.s3.max-connections，它设置与S3的最大连接数。默认值从50增加到500。
+* Hive连接器现在支持重命名表。默认情况下，此功能未启用。要启用它，请在Hive目录属性文件中设置hive.allow-rename-table = true。
+
+*一般变更*
+
+* 更快的count(*)优化count（）与一个常量的执行
+* 将二进制类型的支持添加到JDBC驱动程序
+* 遗留字节代码编译器已被删除
+* 新的聚合框架（快10％）
+* 添加了max_by（）聚合函数
+* 该approx_avg（）函数已被删除。使用avg（）代替。
+* 解决了使用DISTINCT和ALL的UNION查询的解析
+* 修复某些查询形状的交叉连接计划错误
+*　为varbinary添加了hex和base64转换函数
+* 修复LIKE操作符以正确匹配包含多行的值。以前，它将停止在第一个换行符的匹配。
+* 使用修改表语句添加对重命名表的支持。
+* 添加使用插入语句插入数据的基本支持。目前仅支持Raptor连接器。
+
+*JSON函数更改*
+
+所述json_extract（）和json_extract_scalar（）函数现在支持方括号语法：
+
+----
+SELECT  json_extract （json ， '$ .store [book]' ）;
+SELECT  json_extract （json ， '$ .store [“book name”]' ）;
+----
+
+作为此更改的一部分，非括号内路径段中允许的一组字符已被限制为字母数字，下划线和冒号。另外，冒号不能在未引用的括号中的路径段中使用。使用带有引号的新括号语法来匹配包含特殊字符的元素。
+
+*Scheduler更改*
+
+调度程序现在根据所有查询上节点上的当前负载分配节点。以前，调度器负载平衡在每个查询级别上分割跨节点。每个节点都可以 在其上安排节点调度器。
+为了避免小型查询的饥饿，当节点已经具有最大允许分割时，每个任务最多可以调度节点上最多的 node-scheduler.max-pending-split-per-node-per-task分裂。
+
+*Row Number优化*
+
+使用row_number（）函数的查询更快，可以在两种类型的查询的较大结果集上运行。
+
+执行每个分区选择N个任意行的分区限制是流操作。下面的查询选择从五个任意行令每个orderstatus：
+
+----
+SELECT  *  FROM  （
+    SELECT  row_number （） OVER  （PARTITION  BY  orderstatus ） AS  rn ，
+        custkey ， orderdate ， orderstatus
+    FROM  orders
+） WHERE  rn  <=  5 ;
+----
+
+执行从每个分区中选择最大或最小N行的分区top-N 现在使用显着更少的内存。下面的查询基于选择的五个最古老的行订购日期 从订单为每个orderstatus：
+
+----
+SELECT  *  FROM  （
+    SELECT  row_number （） OVER  （PARTITION  BY  orderstatus  ORDER  BY  orderdate ） AS  rn ，
+        custkey ， orderdate ， orderstatus
+    FROM  orders
+） WHERE  rn  <=  5 ;
+----
+
+使用解释语句查看是否有任何这些优化已应用于您的查询。
+
+*SPI更改*
+
+核心Presto引擎不再自动为count（*） 查询添加列。相反，RecordCursorProvider将会收到一列空白的列句柄列表。
+
+该类型和模块的API已经通过了本版本中主要重构了。重构的主要重点是整合类型本身中的所有类型特定编码逻辑，这使得类型更容易实现。您应该将Type和Block视为beta API，因为我们预计在不久的将来会有进一步的变化。
+
+为了简化API，ConnectorOutputHandleResolver已经合并到 ConnectorHandleResolver中。另外，ConnectorHandleResolver， ConnectorRecordSinkProvider和ConnectorMetadata被修改为支持插入。
+
+NOTE: 这是与以前的连接器和SPI类型的向后不兼容的更改，因此如果您已经编写了连接器或类型，则在部署此版本之前需要更新代码。
+特别是，确保您的连接器可以处理一个空的列处理列表（这可以通过在连接器的表上运行SELECT count（*）进行验证）。
+
+=== 发布0.74
+
+*Bytecode Compiler*
+
+该版本包括用于字节码编译的新基础设施，为未来的改进奠定基础。新代码对性能或正确性不应有任何影响，但是如果出现问题，我们已经添加了一个标志来恢复旧的实现。
+为此，请在协调员和工作人员中将compile.new-bytecode-generator-enabled = false添加到 etc /config.properties。
+
+*Hive存储格式*
+
+现在可以通过Hive目录属性文件中的hive.storage-format选项配置将数据写入Hive时使用的存储格式。有效的选项是RCBINARY，RCTEXT，SEQUENCEFILE和TEXTFILE。如果属性未设置，则默认格式为RCBINARY。
+
+*一般变更*
+
+* 在DESCRIBE中显示列注释
+* 添加类似于cast（）的try_cast（），但如果转换失败，则返回null
+* nullif现在正确返回一个值与第一个参数的类型
+* 解决timezone_hour（）返回结果的问题，以毫秒为单位，而不是几个小时
+* 在使用非等价条款分析查询时显示正确的错误消息
+* 当协调员不能与工作人员交谈时，改善“太多失败”错误信息
+* json_size（）函数的次优化
+* 提高机器学习功能的特征归一化算法
+* 向S3 FileSystem重试逻辑添加指数回退
+* 提高半连接的CPU效率
+
+=== 发布0.73
+
+*Cassandra插件*
+
+Cassandra连接器现在支持CREATE TABLE和DROP TABLE。此外，连接器现在在生成CQL时考虑到Cassandra索引。此版本还包括几个错误修复和性能改进。
+
+*一般变更*
+
+* 新窗口函数：lead（）和lag（）
+* 新的标量函数：json_size（）
+
+=== 发布0.72
+
+* 在使用空值解码Map时，修复Hive RCFile读取器中的无限循环错误
+
+=== 发布0.71
+
+* 修复了导致0.70版本不可用的服务器压缩包的打包问题
+* 修复在使用Amazon S3时登录Hive连接器
+
+=== 发布0.70
+
+WARNING: 此版本包含导致无法使用的服务器压缩包的包装错误。不要使用这个版本。
+
+*Views*
+
+我们增加了在Presto中创建视图的功能。视图使用Presto语法定义，但由连接器存储（作为blob）。
+目前，Raptor和Hive连接器支持视图。对于Hive连接器，视图存储在Hive转移中作为Hive视图，但是它们不能被Hive查询，Presto也不能查询Hive视图。
+
+有关 详细信息和示例，请参见建视图和删视图。
+
+*DUAL Table*
+
+不再支持合成DUAL表。作为替代方案，请不要使用FROM子句编写查询，也可以使用VALUES语法。
+
+*Presto验证器*
+
+有一个新项目，Presto校验器，可用于验证一组针对两个不同集群的查询。
+
+*Connector Improvements*
+
+* 连接器现在可以将隐藏的列添加到表中。隐藏的列不会显示在DESCRIBE或information_schema中，不适用于SELECT *。例如，我们已经在tpch连接器中添加了一个隐藏的 row_number列。
+* Presto包含一个广泛的测试套件来验证正确性。该测试套件已经被提取到了在连接器开发过程中使用的预测试模块。有关示例，请参阅TestRaptorDistributedQueries。
+
+*Machine Learning Functions*
+
+我们添加了两个新的机器学习功能，可以由熟悉LIBSVM的高级用户使用。函数是 learn_libsvm_classifier和learn_libsvm_regressor。两者都采用一个参数字符串，其格式为key = value，key = value
+
+*一般变更*
+
+* 新的比较函数： greatest（）和least（）
+* 新窗口函数：first_value（），last_value（）和nth_value（）
+* 当表达式无法编译为字节码时，我们添加了一个配置选项，以禁用回退到解释器。要设置此选项，请将compile.interpreter-enabled = false添加 到etc / config.properties。这将强制某些查询失败，而不是缓慢运行。
+* DATE值现在通过将会话时区 的小时/分/秒设置为0隐式强制为 TIMESTAMP和 TIMESTAMP WITH TIME ZONE。
+* 对具有数万个分区或更多分区的表进行规划查询时，进行轻微的性能优化。
+* 修复了一个错误，当规划ORDER BY ... LIMIT查询，这可能会导致重复和无序结果在罕见的条件下。
+* 减少从任务收集的统计数据，大大减少垃圾的产生，提高协调员的稳定性。
+* 修复表达式的编译器缓存。
+* 修复在CLI中处理空的或注释的语句。
+
+*Hive变化*
+
+* Hive连接器有两个新的配置选项，用于配置初始拆分大小的hive.max-initial-split-size，以及配置初始拆分数量的hive.max-initial- split。这对加速小型查询是有用的，否则这些查询将具有较低的并行性。
+* Hive连接器现在将考虑表属性presto_offline的所有具有非空值的表离线。该属性的值将在错误消息中使用。
+* 我们已经在蜂巢连接器中添加了DROP TABLE的支持。默认情况下，此功能未启用。要启用它，请在Hive目录属性文件中设置 hive.allow-drop-table = true。
+* 在生成拆分时忽略子目录（现在匹配Hive的非递归行为）。
+* 修正使用空键处理地图。
+
+=== 发布发布0.69
+
+WARNING: 必须从协调器和工作器的etc/config.properties文件中删除以下配置属性 ：
+* presto-metastore.db.type
+* presto-metastore.db.filename　＋
+此外，datasources属性现在已被弃用，也应该被删除（参见数据源配置）。
+
+*Prevent Scheduling Work on Coordinator*
+
+我们有一个新的配置属性node-scheduler.include-coordinator，允许或不允许协调器上的调度工作。以前，可以在协调器上安排诸如最终聚合的任务。
+对于较大的集群，协调器的处理工作可能会影响查询性能，因为机器的资源不可用于调度，管理和监视查询执行的关键任务。
+
+我们建议将此属性设置为false为协调器。有关示例，请参阅配置属性。
+
+*数据源配置*
+
+该数据源配置属性已被弃用。请从您的etc / config.properties文件中删除它。数据源配置现在根据node-scheduler.include-coordinator属性自动生成（请参阅“ 阻止调度工作在协调器上”）。
+
+*Raptor连接器*
+
+Presto有一个非常实验的连接器，以前被称为本机连接器，并与主要的Presto代码（它是Presto有连接器之前）编写的。这个连接器现在命名为猛禽，并且生活在一个单独的插件中。
+
+作为重构的一部分，presto-metastore.db.type和 presto-metastore.db.filename配置属性不再存在，必须从etc / config.properties中删除。
+
+Raptor连接器使用Presto用于内存中数据的相同布局，以列格式存储Presto机器上的数据。目前，它有很大的局限性：缺少复制，丢弃表不能回收存储等。它仅适用于实验，临时表，缓存连接器的数据缓存等。元数据和数据格式可能会发生变化以不兼容的方式发布。
+
+如果您想对连接器进行实验，请在包含以下内容的协调器和工作人员上创建一个目录属性文件，如etc / catalog / raptor.properties：
+
+----
+connector.name = raptor
+metadata.db.type = h2
+metadata.db.filename = var / data / db / MetaStore
+----
+
+*Machine Learning Functions*
+
+Presto现在具有训练和使用机器学习模型（分类器和回归器）的功能。这只是一个概念证明，并没有准备好用于生产。用法示例如下：
+
+----
+SELECT  evaluate_classifier_predictions （label ， classify （features ， model ））
+FROM  （
+    SELECT  learn_classifier （label ， features ） AS  model
+    FROM  training_data
+）
+CROSS  JOIN  validation_data
+----
+
+在上面的例子中，列标签是一个bigint，列 特征是特征标识符到特征值的映射。特征标识符必须是整数（编码为字符串，因为JSON仅支持映射键的字符串），而特征值是数字（浮点）。
+
+*Variable Length Binary Type*
+
+Presto现在支持可变长度二进制数据的varbinary类型。目前，唯一支持的函数是length（）。Hive连接器现在将Hive BINARY类型映射到varbinary。
+
+*一般变更*
+
+* ：添加缺少的操作时间戳timestamp with time zone - interval year to month
+* 支持解释抽样查询
+* 为已放弃和取消的查询添加JMX统计信息
+* 将javax.inject添加到插件的父级列表中
+* 改进事件记录中的错误分类
+
+=== 发布0.68
+
+* 修正处理字符串列中的Hive表的回归。这导致了查询可以利用这种表格的优势来选择错误的存储桶，因此不会匹配表的任何行。这个回归是在0.66中引入的。
+* 在读取记录时修复字节和行的重复计数
+
+=== 发布0.67
+
+* 修复Hive连接器中的资源遗漏
+* 改进事件记录中的错误分类
+* 使用窗口函数修复某些查询的计划问题
+
+*SPI更改*
+
+该ConnectorSplitSource界面如今已经扩展可关闭。
+
+NOTE: 这是与SPI中ConnectorSplitSource的向后不兼容的更改，因此如果您已经编写了一个连接器，则在部署此版本之前需要更新代码。
+
+=== 发布0.66
+
+*Type System*
+
+在这个版本中，我们已经用完全可扩展的系统替换了现有的简单固定类型系统，并添加了几种新类型。我们还扩展了功能系统，以支持自定义算术，比较和投射操作。
+例如，新的日期/时间的类型包括用于添加操作INTERVAL到TIMESTAMP。
+
+现有功能已更新，可以对新添加的类型进行操作并返回。例如，ANSI颜色功能现在以COLOR类型运行，日期/时间函数在标准SQL日期/时间类型（如下所述）下运行。
+
+最后，除了连接器和功能之外，插件现在可以提供定制类型和操作符。此功能非常实用，因此期望接口在接下来的几个版本中进行更改。
+另外，由于在SQL中只有一个类型的命名空间，所以您应该小心为自定义类型创建唯一的名称，因为我们将在不久的将来向Presto添加其他常见的SQL类型。
+
+*日期/时间类型*
+
+Presto现在支持所有标准的SQL日期/时间类型： DATE，TIME，TIMESTAMP和INTERVAL。所有日期/时间功能和语言结构现在都可以使用这些类型而不是BIGINT进行操作，并正确执行时间计算。
+由于例如无法检测参数是DATE还是TIMESTAMP，以前已被破坏。此更改的代价是将直接对从date / time函数返回的BIGINT值执行算术运算的现有查询进行破坏。
+
+作为这项工作的一部分，我们还添加了date_trunc（）函数，方便用户在一段时间内对数据进行分组。例如，您可以按小时执行聚合：
+
+----
+SELECT  date_trunc （'hour' ， timestamp_column ）， count （* ）
+FROM  ...
+GROUP  BY  1
+----
+
+*Time Zones*
+
+此版本完全支持时区规则，这些规则是正确执行日期/时间计算所必需的。通常，会话时区用于时间计算。这是提交查询的客户端计算机的时区（如果可用）。否则，它是运行Presto协调器的服务器的时区。
+
+使用夏令时后的时区进行查询可能会产生意想不到的结果。例如，如果我们运行以下查询以在美国/ 洛杉矶时区中添加24小时：
+
+----
+SELECT  date_add （'hour' ， 24 ， TIMESTAMP'2014-03-08  09:00:00' ）;
+=>
+2014 - 版本03 - 09  10 ：00 ：00 。000
+----
+
+时间戳似乎只能提前23个小时。这是因为在3月9日时钟在美洲/洛杉矶被打开提前1个小时，所以3月9日只有23小时。要提前时间戳的日期部分，请改用日期单位：
+
+----
+SELECT  date_add （'day' ， 1 ， TIMESTAMP'2014-03-08  09:00:00' ）;
+=>
+2014 - 版本03 - 09  09 ：00 ：00 。000
+----
+
+这是因为date_add（）函数将时间戳视为字段列表，将值添加到指定的字段，然后将任何溢出转到下一个更高的字段。
+
+时区也是分析和打印时间戳所必需的。使用此功能的查询也会产生意想不到的结果。例如，在同一台机器上：
+
+----
+选择 TIMESTAMP'2014-03-09  02:30:00' ;
+----
+
+上述查询导致错误，因为3月9日由于夏令时转换在美国/ Los_Angeles没有2:30 AM。
+
+除了正常的TIMESTAMP值之外，Presto还支持 TIMESTAMP WITH TIME ZONE类型，其中每个值都有一个显式的时区。例如，以下查询创建一个TIMESTAMP WITH TIME ZONE：
+
+----
+选择 TIMESTAMP'2014-03-14  09:30:00欧洲/柏林' ;
+=>
+2014 - 版本03 - 14  09 ：30 ：00 。000  欧洲/ 柏林
+----
+
+您还可以使用AT TIME ZONE子句更改现有时间戳的 时区：
+
+----
+选择 TIMESTAMP'2014-03-14  09:30:00欧洲/柏林'
+     AT  TIME  ZONE  '美国/ Los_Angeles' ;
+=>
+2014 - 版本03 - 14  01 ：30 ：00 。000  美国/ Los_Angeles
+----
+
+两个时间戳在时间上代表相同的时刻; 它们仅在用于打印它们的时区不同。
+
+可以使用X-Presto-Time-Zone HTTP头，或通过JDBC驱动程序中的 PrestoConnection.setTimeZoneId（String）方法，在每个查询的基础上设置会话的时区 。
+
+*Localization*
+
+除了时区之外，用户的语言在解析和打印日期/时间类型时很重要。此版本为Presto引擎和需要它的函数添加了本地化支持： date_format（）和date_parse（）。例如，如果我们将语言设置为西班牙语：
+
+----
+SELECT  date_format （TIMESTAMP'2001-01-09  09:04' ， '％M' ）;
+=>
+enero
+----
+
+如果我们将语言设置为日语：
+
+----
+SELECT date_format（TIMESTAMP'2001-01-09 09:04'，'％M'）;
+=>
+1月
+----
+
+可以使用X-Presto-Language HTTP标头，或通过JDBC驱动程序中的 PrestoConnection.setLocale（Locale）方法，在每个查询的基础上设置会话 的语言。
+
+*Optimizations*
+
+* 我们已将Hive连接器升级为Hive 0.12，其中包括RCFile的性能改进。
+* GROUP BY和 JOIN操作符现在编译成字节码，速度明显更快。
+* 减少GROUP BY和SELECT DISTINCT的内存使用情况，即使组数较少，以前每个操作员也需要几兆字节的内存。
+* 规划师现在优化函数调用参数。这将提高包含复杂表达式的查询的性能。
+* 修复了HTTP客户端的性能回归。最近的HTTP客户端升级正在使用无意中的GZIP压缩，并且在缓冲区管理中存在错误，导致CPU使用率高。
+
+*SPI更改*
+
+在这个版本中，我们对SPI做了一些向后不兼容的更改：
+
+* 添加类型和相关接口
+* 元数据中的 ConnectorType已替换为 Type
+* 将TableHandle重命名为ConnectorTableHandle
+* 将ColumnHandle重命名为ConnectorColumnHandle
+* 将分区重命名为ConnectorPartition
+* 将PartitionResult重命名为ConnectorPartitionResult
+* 重命名拆分到ConnectorSplit
+* 将SplitSource重命名为ConnectorSplitSource
+* 为大多数ConnectorMetadata方法添加了一个ConnectorSession参数
+* 删除了大多数canHandle方法
+
+*General Bug Fixes*
+
+* 使用USE CATALOG或使用SCHEMA后固定CLI挂起
+* 汇总中的隐性胁迫现在正如预期一样工作
+* 表达式中的空值按预期工作
+* 修复编译器中的内存泄漏
+* 修复任务内存使用中的会计错误
+* 固定资源泄漏造成的废弃查询
+* 立即对不可恢复的数据传输错误进行查询失败
+
+*Hive Bug Fixes*
+
+* 固定在蜂房RCFile文本SERDE（时间戳的解析ColumnarSerDe通过添加配置来设置写入数据时最初使用的时区）
+
+*Cassandra Bug Fixes*
+
+* 如果Cassandra会话中断，则自动重新连接
+* 格式收集类型为JSON
+
+=== 发布0.65
+
+* 解除查询时修复NullPointerException
+* 在JDBC驱动程序JAR中修复暴露的第三方依赖关系
+
+=== 发布0.64
+
+* 修正近似聚合误差界限计算
+* 错误处理和分类改进
+* 当键太大时修复GROUP BY失败
+* 在/ ui / thread上添加线程可视化UI
+* 在CREATE TABLE中修复可以导致列数据交换的回归。这个bug是在0.57版本中引入的。
+
+=== 发布0.63
+
+* 协调器UI的改进
+* 计划优化，以避免在某些情况下出现冗余计算
+* 错误处理和分类改进
+
+=== 发布0.62
+
+* 修复活动查询的问题JMX计数器报告不正确的数字
+* 蜂巢二进制地图键未正确解码
+* APPROX_DISTINCT的性能改进
+* 在大量分区上规划查询时修复性能回归
+* 显示长SQL查询时协调器UI的轻微改进
+
+=== 发布0.61
+
+*Add support for Table Value Constructors*
+
+Presto现在支持SQL表值构造函数语法来创建内联表。该VALUES子句可以用于任何一个SELECT语句是允许的。例如，作为顶级查询：
+
+----
+值 （'a' ， 1 ）， （'b' ， 2 ）;
+----
+
+----
+_col0 | _col1
+------- ------- +
+ a | 1
+ b | 2
+（2排）
+----
+
+或者，在FROM子句中：
+
+----
+SELECT *
+FROM (
+  VALUES
+    ('a', 'ape'),
+    ('b', 'bear')
+) AS animal (letter, animal)
+JOIN (
+  VALUES
+    ('a', 'apple'),
+    ('b', 'banana')
+) AS fruit (letter, fruit)
+USING (letter);
+----
+
+----
+letter | animal | letter |  fruit
+--------+--------+--------+---------
+ a      | ape    | a      | apple
+ b      | bear   | b      | banana
+(2 rows)
+----
+
+*Cassandra*
+
+* 添加对大写模式，表和列名称的支持。
+* 添加对DECIMAL类型的支持。
+
+*Amazon S3 support*
+
+* 完全重写了使用Amazon AWS SDK的S3的Hadoop FileSystem实现，具有主要的性能和可靠性改进。
+* 添加对S3写入数据的支持。
+
+*Approximate Aggregation Queries*
+
+我们为聚合查询添加了实验支持，返回带有错误边界的近似结果。此功能旨在与使用TABLESAMPLE POISSONIZED RESCALED生成的采样表一起使用。例如，以下查询将创建1％的样本：
+
+----
+CREATE  TABLE  lineitems_sample  AS
+SELECT  *
+FROM  tpch 。sf10 。lineitems  TABLESAMPLE  POISSONIZED  （1 ） RESCALED
+----
+
+然后，运行一个近似查询：
+
+----
+SELECT COUNT(*)
+FROM lineitems_sample
+APPROXIMATE AT 95.0 CONFIDENCE
+----
+
+----
+          _col0
+----------------------------
+ 5.991790345E7 +/- 14835.75
+(1 row)
+----
+
+要启用此功能，您必须在配置中添加analyzer.experimental-syntax-enabled = true。
+
+NOTE: 近似查询的语法和功能是实验性的，将来可能会发生更改。
+
+*Miscellaneous*
+
+* 对JDBC驱动程序的一般改进，特别是关于元数据处理。
+* 在方差聚合函数（VARIANCE，STDDEV等）中修正零错误。
+* 在HAVING子句中使用DISTINCT聚合时修复错误。
+* 在编写大表时修复内存不足问题。
+* 在JOIN查询中使用ORDER BY rand（）时修复错误。
+* 修复Hive连接器中地图和列表中时间戳的处理。
+* 添加Hive转移和HDFS API调用的仪器，以跟踪故障和延迟。这些指标通过JMX公开。
+
+=== 发布0.60
+
+*JDBC improvements*
+
+现在，JDBC DatabaseMetaData接口的Presto版本包含getTables，getSchemas和getCatalogs的正确实现。
+
+JDBC驱动程序现在总是作为独立的jar打包而没有任何依赖关系。以前，这个工件是用独立的Maven分类器发布的。新版本不再发布此工件。
+
+*USE CATALOG and USE SCHEMA*
+
+在命令行接口现在支持使用目录和使用SCHEMA。
+
+*TPCH Connector*
+
+我们添加了一个新的连接器，将根据TPC-H规范生成合成数据。该连接器可以轻松生成大型数据集进行测试和错误报告。当生成错误报告时，我们鼓励用户使用此目录，因为它可以缓解复制问题的过程。
+为每个查询动态生成数据，因此此连接器不使用磁盘空间。要将tpch目录添加到系统中，请在协调器和工作器上创建目录属性文件etc / catalog / tpch.properties，并具有以下内容：
+
+----
+connector.name = TPCH
+----
+
+另外，更新配置属性文件etc / config.properties中的datasources属性 ，以使worker包含tpch。
+
+*SPI更改*
+
+该连接器接口现在都有供应由查询引擎所期望的服务的明确方法。以前，这是由一个通用getService方法处理的 。
+
+NOTE: 这是与SPI中的Connector的向后不兼容的更改，因此如果您已经编写了一个连接器，则在部署此版本之前需要更新代码。
+
+另外，我们已将NodeManager接口添加到SPI，以允许插件检测Presto群集中的所有节点。这对于可以在所有节点之间均匀划分表的连接器很重要，只要连接器知道存在多少个节点即可。
+要访问节点管理器，只需将以下内容添加到Plugin类：
+
+----
+@Inject
+public  void  setNodeManager （NodeManager  nodeManager ）
+{
+    this 。nodeManager  =  nodeManager ;
+}
+----
+
+*Optimizations*
+
+DISTINCT限制
+
+对于具有以下形式的查询：
+
+----
+SELECT  DISTINCT  ...
+FROM  T
+LIMIT  N
+----
+
+我们已经添加了一个优化，一旦找到N个不同的行，就会停止查询。
+
+*Range predicates*
+
+优化连接时，Presto会分析连接两边分区的范围，并将这些范围推送到另一侧。当表有很多分区时，这可能会导致一个非常大的过滤器，每个分区有一个表达式。优化器现在总结了谓词范围以减少过滤器的复杂性。
+
+*Compound filters*
+
+现在通过表达式优化器优化涉及AND，OR或NOT的复杂表达式。
+
+*Window functions*
+
+现在基于分区键分配具有PARTITION BY子句的窗口功能。
+
+*Bug fixes*
+
+* 调度
+
+在批量调度拆分的更改中，我们引入了两个错误，导致节点之间的不平衡工作负载增加了查询延迟。第一个问题是在调度批处理时不检查节点排队的分割计数，而第二个问题并不是计算任务执行器中等待创建的分割。
+
+* 复杂Hive类型的JSON转换
+
+Presto将复杂的Hive类型（数组，地图，结构和联合）转换为JSON。以前，地图中的数字键被转换为数字，而不是字符串，这是无效的，因为JSON只允许对象键的字符串。这阻止了JSON函数的工作。
+
+* Hive隐藏文件
+
+Presto现在将忽略Hive中的以下划线_或点开头的文件。。这符合Hadoop MapReduce / Hive的行为。
+
+* 失败报告为无数据
+
+某些类型的故障将导致查询成功，并返回不完整的结果（通常为零行）。错误传播和查询拆卸之间存在竞争条件。在某些情况下，查询将在异常发送给协调器之前被拆除。这是在查询拆卸优化工作期间引入的回归。现在有测试来捕捉这种类型的错误。
+
+* Exchange客户端泄漏
+
+当查询提前完成（例如，限制或失败），并且交换操作员被阻止等待来自其他节点的数据时，交换机未正确关闭。这导致连续失败的HTTP请求泄露资源并生成大型日志文件。
+
+* 哈希分区
+
+具有许多GROUP BY项的查询可能会由于hash函数中的溢出而失败。
+
+* 编译的NULL文字
+
+在某些情况下， 由于表达式编译器中输出类型检测代码的错误，使用select表达式（如CAS AS （NULL AS varchar））的查询将失败。
+
+=== 发布0.59
+
+* 修复HiveSplitSource中的暂停。由于0.57中引入的错误，对大型表的查询可能会分裂发现。
+
+=== 发布0.58
+
+* 添加Cassandra连接器的第一个版本。此插件仍在开发中，尚未与服务器捆绑在一起。有关 详细信息，请参阅插件源目录中的README。
+* 支持内部插件的UDF。这还不是SPI的一部分，是针对高级用户的停止功能。必须使用内部的Presto API来实现UDF，这些API通常在版本之间大幅改变。
+* 修复Hive连接器信号量发布错误。
+* 修复非块式文件的处理。
+
+=== 发布0.57
+
+*Distinct Aggregations*
+
+现在完全支持聚合函数的DISTINCT参数限定符。例如：
+
+----
+SELECT  country ， count （DISTINCT  city ）， count （DISTINCT  age ）
+FROM  users
+GROUP  BY  country
+----
+
+NOTE: 当约定近似答案大大加快并且对其可处理的不同项目的数量没有任何限制时，应优先使用约 deistinct（）。COUNT（DISTINCT ...）必须通过网络传输每个项目，并将每个不同的项目保存在内存中。
+
+*Hadoop 2.x*
+
+使用hive-hadoop2连接器从Hadoop 2.x读取Hive数据。有关详细信息，请参阅部署Presto。
+
+*Amazon S3*
+
+所有Hive连接器都支持从Amazon S3读取数据 。这需要Hive连接器的两个附加目录属性来指定您的AWS Access密钥ID和密钥访问密钥：
+
+----
+hive.s3.aws-access-key=AKIAIOSFODNN7EXAMPLE
+hive.s3.aws-secret-key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+----
+
+*Miscellaneous*
+
+* 允许在JDBC驱动 URL中指定目录和模式。
+* 在JDBC驱动程序中实现更多功能。
+* 通过将Hive序列化属性传播到RecordReader，允许某些自定义InputFormat工作。
+* 许多执行引擎的性能提升。
+* 修复优化器性能回归。
+* 修复奇怪的MethodHandle异常。
+
+=== 发布0.56
+
+*Table Creation*
+
+可以从查询的结果创建表：
+
+----
+CREATE  TABLE  orders_by_date  AS
+SELECT  orderdate ， sum （totalprice ） AS  price
+FROM  orders
+GROUP  BY  orderdate
+----
+
+在Hive中创建表，不分区（未分区），并使用RCFile与二进制SerDe（LazyBinaryColumnarSerDe），因为这是Presto的最佳格式。
+
+NOTE: 这是与SPI中ConnectorMetadata的向后不兼容的更改，因此如果您已经编写了一个连接器，则在部署此版本之前需要更新代码。我们建议您更改连接器以从新的ReadOnlyConnectorMetadata抽象基类扩展，除非您希望支持表创建。
+
+*Cross Joins*
+
+使用标准ANSI SQL语法支持交叉连接：
+
+----
+SELECT  *
+FROM  a
+CROSS  JOIN  b
+----
+
+还支持由于在分析时评估为true的连接条件导致交叉连接的内部连接。
+
+=== 发布0.55
+
+*RC Binary 2-4x Gain in CPU Efficiency*
+
+Presto使用特定Hive文件格式的自定义快速路径解码逻辑。在此版本中，我们在使用二进制SerDe（LazyBinaryColumnarSerDe）时为RCFile添加了快速路径。
+在我们的微基准测试中，与通用（慢）路径相比，我们看到CPU效率提升了2x和4x。由于蜂巢数据解码占用CPU时间的很大一部分，因此大多数查询可以通过RC二进制编码数据获得可衡量的增益。
+请注意，如果群集是网络或磁盘I / O绑定，则此优化可能不会导致延迟减少。
+
+*Hash Distributed Aggregations*
+
+GROUP BY集合现在分布在固定数量的机器上。这由在协调器和工作者的 etc / config.properties中 设置 的属性 query.initial-hash-partitions控制。
+如果该值大于在查询调度期间可用的机器数量，Presto将使用所有可用的机器。默认值为 8。
+
+聚合的最大内存大小现在是 query.initial-hash-partitions乘以task.max-memory。
+
+*Simple Distinct Aggregations*
+
+我们添加了对于聚合函数的DISTINCT参数限定符的支持。这当前仅限于没有GROUP BY子句的查询，而所有聚合函数具有相同的输入表达式。例如：
+
+----
+SELECT  count （DISTINCT  country ）
+FROM  users
+----
+
+支持完整的DISTINCT功能在我们的路线图中。
+
+*Range Predicate Pushdown*
+
+除了简单的等式谓词之外，我们还修改了连接器API以支持范围谓词。这为将连接器添加到支持范围扫描的系统（例如，HBase，Cassandra，JDBC等）打下了基础。
+
+除了接收范围谓词之外，连接器还可以回传每个分区的范围，以便在查询优化器中使用。这可能是JOIN查询的主要性能增益，其中一方的连接只有几个分区。例如：
+
+----
+SELECT  *  FROM  data_1_year  JOIN  data_1_week  USING  （ds ）
+----
+
+如果data_1_year和data_1_week都在ds上分区，则连接器将报告一个表具有365天的分区，另一个表具有仅为7天的分区。那么优化器会将data_1_year表的扫描限制为可能匹配的7天。
+这些约束与查询中的其他谓词组合，以进一步限制扫描的数据。
+
+NOTE: 这是与以前的连接器SPI的向后不兼容的更改，因此如果您已经编写了一个连接器，则在部署此版本之前需要更新代码。
+
+*json_array_get函数*
+
+所述json_array_get（）函数可以很方便地从一个标量JSON数组提取的单个元素。
+
+*Non-reserved Keywords*
+
+关键字DATE，TIME，TIMESTAMP和INTERVAL不再是语法中的保留关键字。这意味着您可以访问名为date的列，而不引用标识符。
+
+*CLI source Option*
+
+Presto CLI现在可以设置查询源。源值显示在UI中，并记录在事件中。在shell脚本中使用CLI时，设置--source选项可以区分shell脚本和普通用户。
+
+*SHOW SCHEMAS FROM*
+
+虽然文档包含语法SHOW SCHEMAS [FROM catalog]，但是没有实现。此版本现在正确地实现了这个语句。
+
+*Hive Bucketed Table Fixes*
+对于通过Hive桶表的查询，Presto将尝试将扫描限制到可能包含与WHERE子句匹配的行的存储桶。不幸的是，我们用来选择存储桶的算法是不正确的，有时我们会选择错误的文件或者不能选择任何文件。
+我们已经将该算法与Hive进行了对齐，现在优化工作正常。
+
+我们还改进了用于检测未正确分区的表的算法。表格通常用于在Hive元数据中声明压力，但实际上并不是在HDFS中存储。
+当Presto检测到这种情况时，它将回退到分区的完整扫描。这种改变不仅使得功能更加安全，而且可以使桌面迁移更容易，而不会重写所有数据。
+
+=== 发布0.54
+
+* 对协调器上的节点资源进行恢复绑定，从而提供协调器故障检测器所看到的所有节点的状态。Access / v1 / node查看所有节点，或/ v1 / node /失败，看到失败的节点。
+
+* 防止命令行接口在服务器断开时挂起。
+
+* 为Apache Hadoop 1.x 添加Hive连接器hive-hadoop1。
+
+* 为hive-cdh4连接器添加Snappy和LZ4压缩编解码器的支持。
+
+* 添加示例HTTP连接器example-http，通过HTTP读取CSV数据。连接器需要一个元数据URI，它返回一个描述表元数据和要读取的CSV文件的JSON文档。
+
+其主要目的是作为如何编写连接器的示例，但也可以直接使用。 使用以下内容创建etc / catalog / example.properties，以挂载example-http连接器作为 示例目录：
+
+----
+connector.name =示例-HTTP
+元数据的URI = HTTP：//s3.amazonaws.com/presto-example/v1/example-metadata.json
+----
+
+* 当目录或模式不存在时显示正确的错误消息。
+
+* 验证启动时的JVM要求。
+
+* 当JVM代码缓存已满时，记录错误。
+
+* 升级嵌入式发现服务器以允许对node.id属性使用非UUID值。

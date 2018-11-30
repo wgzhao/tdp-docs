@@ -1,0 +1,306 @@
+== 概述
+
+Presto是一个分布式SQL查询引擎，用于查询分布在一个或多个不同数据源中的大数据集。
+
+=== 用例
+
+这一章将会细致的分析一下Presto，从而可以让管理员和终端用户深入的了解什么是Presto。
+
+*Presto不是什么*
+
+虽然Presto一直被一些个人或者团体称为 数据库 ，但是Presto并不是数据库。
+
+千万不要以为Presto可以解析SQL，那么Presto就是一个标准的数据库。Presto并不是传统意义上的数据库。Presto并不是MySQL、PostgreSQL或者Oracle的代替品。Presto并不能用来处理在线事务。其实很多其他的数据库产品也是被用来设计为数据仓库或者数据分析工具，但是也不能处理在线事务
+
+*Presto是什么*
+
+Presto通过使用分布式查询，可以快速高效的完成海量数据的查询。如果你需要处理TB或者PB级别的数据，那么你可能更希望借助于Hadoop和HDFS来完成这些数据的处理。作为Hive和Pig（Hive和Pig都是通过MapReduce的管道流来完成HDFS数据的查询）的替代者，Presto不仅可以访问HDFS，也可以操作不同的数据源，包括：RDBMS和其他的数据源（例如：Cassandra）。
+
+Presto被设计为数据仓库和数据分析产品：数据分析、大规模数据聚集和生成报表。这些工作经常通常被认为是线上分析处理操作。
+
+*谁使用Presto？*
+
+Presto是FaceBook开源的一个开源项目。Presto在FaceBook诞生，并且由FaceBook内部工程师和开源社区的工程师公共维护和改进。
+
+== 安装
+
+=== 部署Presto
+
+*安装Presto*
+
+下载 `Presto server tarball`,将它解压。它包含一个顶级目录,`presto-server-{prodver}`，我们叫它安装目录。
+
+Presto需要一个用于存储日志、本地元数据等的数据目录。 建议在安装目录的外面创建一个数据目录。这样方便Presto进行升级。
+
+*配置Presto*
+
+在安装目录中创建一个etc目录。 在这个etc目录中放入以下配置信息：
+
+* 节点属性：每个节点的环境配置信息
+* JVM 配置：JVM的命令行选项
+* 配置属性：Presto server的配置信息
+* Catalog属性：`configuration forConnectors`（数据源）的配置信息
+
+*Node Properties*
+
+节点属性配置文件：`etc/node.properties` 包含针对于每个节点的特定的配置信息。一个节点就是在一台机器上安装的Presto实例。 这份配置文件一般情况下是在Presto第一次安装的时候，由部署系统创建的。一个 `etc/node.properties` 配置文件至少包含如下配置信息：
+
+----
+ node.environment=production
+ node.id=ffffffff-ffff-ffff-ffff-ffffffffffff
+ node.data-dir=/var/presto/data
+----
+
+针对上面的配置信息描述如下：
+
+* node.environment： 集群名称。所有在同一个集群中的Presto节点必须拥有相同的集群名称。
+* node.id： 每个Presto节点的唯一标示。每个节点的node.id都必须是唯一的。在Presto进行重启或者升级过程中每个节点的node.id必须保持不变。
+如果在一个节点上安装多个Presto实例（例如：在同一台机器上安装多个Presto节点），那么每个Presto节点必须拥有唯一的node.id。
+* node.data-dir： 数据存储目录的位置（操作系统上的路径）。Presto将会把日期和数据存储在这个目录下。
+
+*JVM配置*
+
+JVM配置文件，`etc/jvm.config`， 包含一系列在启动JVM的时候需要使用的命令行选项。这份配置文件的格式是：一系列的选项，每行配置一个单独的选项。由于这些选项不在shell命令中使用。因此即使将每个选项通过空格或者其他的分隔符分开，java程序也不会将这些选项分开，而是作为一个命令行选项处理。（就想下面例子中的OnOutOfMemoryError选项）
+
+一个典型的 `etc/jvm.config` 配置文件如下：
+
+----
+ -server
+-Xmx16G
+-XX:+UseConcMarkSweepGC
+-XX:+ExplicitGCInvokesConcurrent
+-XX:+CMSClassUnloadingEnabled
+-XX:+AggressiveOpts
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:OnOutOfMemoryError=kill -9 %p
+-XX:ReservedCodeCacheSize=150M
+----
+
+由于OutOfMemoryError将会导致JVM处于不一致状态，所以遇到这种错误的时候我们一般的处理措施就是将dump headp中的信息（用于debugging），然后强制终止进程。
+
+Presto会将查询编译成字节码文件，因此Presto会生成很多class，因此我们我们应该增大Perm区的大小（在Perm中主要存储class）并且要允许Jvm class unloading。
+
+*Config Properties*
+
+Presto的配置文件：`etc/config.properties` 包含了Presto server的所有配置信息。每个Presto server既是一个coordinator也是一个worker。 但是在大型集群中，处于性能考虑，建议单独用一台机器作为 coordinator。
+
+一个coordinator的 `etc/config.properties` 应该至少包含以下信息：
+
+----
+coordinator=true
+node-scheduler.include-coordinator=false
+http-server.http.port=8080
+task.max-memory=1GB
+discovery-server.enabled=true
+discovery.uri=http://example.net:8080
+----
+
+以下是最基本的worker配置：
+
+----
+coordinator=false
+http-server.http.port=8080
+task.max-memory=1GB
+discovery.uri=http://example.net:8080
+----
+
+但是如果你用一台机器进行测试，那么这一台机器将会即作为coordinator，也作为worker。配置文件将会如下所示：
+
+----
+coordinator=true
+node-scheduler.include-coordinator=true
+http-server.http.port=8080
+task.max-memory=1GB
+discovery-server.enabled=true
+discovery.uri=http://example.net:8080
+----
+
+对配置项解释如下：
+
+* coordinator：指定是否运维Presto实例作为一个coordinator(接收来自客户端的查询情切管理每个查询的执行过程)。
+* node-scheduler.include-coordinator：是否允许在coordinator服务中进行调度工作。对于大型的集群，在一个节点上的Presto server即作为coordinator又作为worke将会降低查询性能。因为如果一个服务器作为worker使用，那么大部分的资源都不会被worker占用，那么就不会有足够的资源进行关键任务调度、管理和监控查询执行。
+* http-server.http.port：指定HTTP server的端口。Presto 使用 HTTP进行内部和外部的所有通讯。
+* task.max-memory=1GB：一个单独的任务使用的最大内存 (一个查询计划的某个执行部分会在一个特定的节点上执行)。这个配置参数限制的GROUP BY语句中的Group的数目、JOIN关联中的右关联表的大小、ORDER BY语句中的行数和一个窗口函数中处理的行数。该参数应该根据并发查询的数量和查询的复杂度进行调整。如果该参数设置的太低，很多查询将不能执行；但是如果设置的太高将会导致JVM把内存耗光。
+* discovery-server.enabled：Presto 通过Discovery 服务来找到集群中所有的节点。为了能够找到集群中所有的节点，每一个Presto实例都会在启动的时候将自己注册到discovery服务。Presto为了简化部署，并且也不想再增加一个新的服务进程，Presto coordinator 可以运行一个内嵌在coordinator 里面的Discovery 服务。这个内嵌的Discovery 服务和Presto共享HTTP server并且使用同样的端口。
+* discovery.uri：Discovery server的URI。由于启用了Presto coordinator内嵌的Discovery 服务，因此这个uri就是Presto coordinator的uri。修改example.net:8080，根据你的实际环境设置该URI。注意：这个URI一定不能以“/“结尾。
+
+*日志级别*
+
+日志配置文件：`etc/log.properties`。在这个配置文件中允许你根据不同的日志结构设置不同的日志级别。每个logger都有一个名字（通常是使用logger的类的全标示类名）. Loggers通过名字中的“.“来表示层级和集成关系。 (像java里面的包). 如下面的log配置信息：
+
+----
+com.facebook.presto=INFO
+----
+
+这将为 `com.facebook.presto.server` 和 `com.facebook.presto.hive` 设定最低水平INFO。默认的最小级别是 `INFO`（因此上面的例子实际上并没有改变任何东西）。有四个级别：`DEBUG`，`INFO`，`WARN` 和 `ERROR`。
+
+*Catalog Properties*
+
+Presto通过connectors访问数据。这些connectors挂载在catalogs上。 connector 可以提供一个catalog中所有的schema和表。例如： Hive connector 将每个hive的database都映射成为一个schema,所以如果hive connector挂载到了名为hive的catalog， 并且在hive的web有一张名为clicks的表，那么在Presto中可以通过 `hive.web.clicks` 来访问这张表。
+
+通过在 `etc/catalog` 目录下创建catalog属性文件来完成catalogs的注册。例如：可以先创建一个 `etc/catalog/jmx.properties` 文件，文件中的内容如下，完成在jmxcatalog上挂载一个jmxconnector：
+
+----
+connector.name=jmx
+----
+
+查看Connectors的详细配置选项。
+
+*运行Presto*
+
+在安装目录的bin/launcher文件，就是启动脚本。Presto可以使用如下命令作为一个后台进程启动：
+
+----
+bin/launcher start
+----
+
+另外，也可以在前台运行， 日志和相关输出将会写入stdout/stderr（可以使用类似daemontools的工具捕捉这两个数据流）：
+
+----
+bin/launcher run
+----
+
+运行bin/launcher–help，Presto将会列出支持的命令和命令行选项。 另外可以通过运行bin/launcher–verbose命令，来调试安装是否正确。
+
+启动完之后，日志将会写在var/log目录下，该目录下有如下文件：
+
+* launcher.log：这个日志文件由launcher创建，并且server的stdout和stderr都被重定向到了这个日志文件中。这份日志文件中只会有很少的信息，包括：
+* 在server日志系统初始化的时候产生的日志和JVM产生的诊断和测试信息。
+* server.log：这个是Presto使用的主要日志文件。一般情况下，该文件中将会包括server初始化失败时产生的相关信息。这份文件会被自动轮转和压缩。
+* http-request.log：这是HTTP请求的日志文件，包括server收到的每个HTTP请求信息，这份文件会被自动轮转和压缩。
+
+=== 命令行接口
+
+Presto CLI为用户提供了一个用于查询的可交互终端窗口。CLI是一个 #可执行# JAR文件, 这也就意味着你可以像UNIX终端窗口一样来使用CLI。
+
+下载 #presto-cli-0.100-executable.jar# ，重名名为 presto ， 使用 chmod +x 命令设置可执行权限，然后执行：
+
+----
+./presto --server localhost:8080 --catalog hive --schema default
+----
+
+使用 `--help` 选项运行CLI，可以看到可用的选项。
+
+默认情况下，查询的结果是分页的。而这种分页的实现不需要你去编写什么代码，而是通过配置一系列的配置信息来实现的。你也可以通过将环境变量：PRESTO_PAGER 设置为你自己的程序名称来自己实现分页或者也可以PRESTO_PAGER 的值设置为空，从而禁止分页。
+
+=== JDBC驱动
+
+通过使用JDBC驱动，可以访问Presto。下载 #presto-jdbc-0.100.jar# 并将这个jar文件添加到你的java应用程序的classpath中，Presto支持的URL格式如下：
+
+----
+jdbc:presto://host:port
+jdbc:presto://host:port/catalog
+jdbc:presto://host:port/catalog/schema
+----
+
+例如，可以使用下面的URL来连接运行在example.net服务器8080端口上的Presto的hive catalog中的sales schema：
+
+----
+jdbc:presto://example.net:8080/hive/sales
+----
+
+=== Presto校验器
+
+我们可以使用Presto Verifier 来将Presto与其他的数据库（例如：MySql）进行对比测试或者将两个Presto集群相互进行对比测试。如果我们需要对Presto进行二次开发，那么我们将会使用Presto Verifier不间断的与Presto的前一版本进行对比测试。
+
+第一步：创建一个MySQL数据库，并且在数据库中用如下语句创建一个表：
+
+[source, sql]
+----
+CREATE TABLE verifier_queries(
+    id INT NOT NULL AUTO_INCREMENT,
+    suite VARCHAR(256) NOT NULL,
+    name VARCHAR(256),
+    test_catalog VARCHAR(256) NOT NULL,
+    test_schema VARCHAR(256) NOT NULL,
+    test_query TEXT NOT NULL,
+    control_catalog VARCHAR(256) NOT NULL,
+    control_schema VARCHAR(256) NOT NULL,
+    control_query TEXT NOT NULL,
+    PRIMARY KEY (id)
+);
+----
+
+第二步，创建一个属性文件，通过该属性文件来配置校验器：
+
+----
+suite=my_suite
+query-database=jdbc:mysql://localhost:3306/my_database?user=my_username&password=my_password
+control.gateway=jdbc:presto://localhost:8080
+test.gateway=jdbc:presto://localhost:8081
+thread-count=1
+----
+
+最后一步, 下载 #presto-verifier-0.100-executable.jar#，并将其重命名为：verifier，通过命令：chmod +x为其赋予执行权限，然后运行：
+
+----
+./verifier config.properties
+----
+
+=== 基准测试驱动
+
+基准驱动程序可用于测量Presto群集中查询的性能。我们用它来连续测量 #trunk# 的性能。
+
+下载 #presto-benchmark-driver-0.100-executable.jar#，将其重命名为presto-benchmark-driver，然后使其可执行chmod + x
+
+*Suites*
+
+创建一个suite.json文件：
+
+----
+{
+    "file_formats": {
+        "query": ["single_.*", "tpch_.*"],
+        "schema": [ "tpch_sf(?<scale>.*)_(?<format>.*)_(?<compression>.*?)" ]
+    },
+    "legacy_orc": {
+        "query": ["single_.*", "tpch_.*"],
+        "schema": [ "tpch_sf(?<scale>.*)_(?<format>orc)_(?<compression>.*?)" ],
+        "session": {
+            "hive.optimized_reader_enabled": "false"
+        }
+    }
+}
+----
+
+此示例包含两个suites文件file_formats和legacy_orc，在和正则表达式tpch_sf.*_.*_.*?匹配的所有模式中 file_formats suite将运行具有与正则表达式suite single_.*或tpch_.*的名称匹配的查询。
+该legacy_orc suite增加了一个会话属性，以停用优化ORC读者只有在运行tpch_sf.*_orc_.*? 架构。
+
+*查询*
+
+SQL文件包含在名为sql的目录中，并且必须具有 .sql文件扩展名。查询的名称是没有扩展名的文件的名称。
+
+*输出*
+
+基准驱动程序将测量所有Presto进程使用的停留时间，总CPU时间以及查询使用的CPU时间。对于每个时序，驱动程序会报告查询运行的中位数，平均值和标准偏差。进程和查询CPU时间之间的区别是查询开销，通常来自垃圾回收。以下是上面的 `file_formats` suite的输出 ：
+
+----
+suite        query          compression format scale wallTimeP50 wallTimeMean wallTimeStd processCpuTimeP50 processCpuTimeMean processCpuTimeStd queryCpuTimeP50 queryCpuTimeMean queryCpuTimeStd
+============ ============== =========== ====== ===== =========== ============ =========== ================= ================== ================= =============== ================ ===============
+file_formats single_varchar none        orc    100   597         642          101         100840            97180              6373              98296           94610            6628
+file_formats single_bigint  none        orc    100   238         242          12          33930             34050              697               32452           32417            460
+file_formats single_varchar snappy      orc    100   530         525          14          99440             101320             7713              97317           99139            7682
+file_formats single_bigint  snappy      orc    100   218         238          35          34650             34606              83                33198           33188            83
+file_formats single_varchar zlib        orc    100   547         543          38          105680            103373             4038              103029          101021           3773
+file_formats single_bigint  zlib        orc    100   282         269          23          38990             39030              282               37574
+----
+
+请注意，上述输出已经从驱动程序输出的标准TSV重新格式化为可读性。
+
+驱动程序可以通过从模式名称或SQL文件中提取值来向输出添加其他列。在上面的suite文件中，模式名称包含用于压缩，格式化和缩放的命名正则表达式捕获组，因此，如果我们在包含模式 `tpch_sf100_orc_none`，`tpch_sf100_orc_snappy` 和 `tpch_sf100_orc_zlib` 的目录中运行查询，我们得到上述输出。
+
+创建其他输出列的另一种方法是将标记添加到SQL文件。例如，以下SQL文件声明了两个标签， 投影和过滤器：
+
+----
+projection=true
+filter=false
+=================
+SELECT SUM(LENGTH(comment))
+FROM lineitem
+----
+
+这将导致驱动程序为此查询的每次运行输出这些值。
+
+*CLI 参数*
+
+该基准测试驱动程序包含了许多CLI参数用来控制suites和查询的运行，热身运行的次数和测量运行的次数。所有的命令行参数都可以通过--help选项看到。

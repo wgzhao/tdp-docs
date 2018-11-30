@@ -1,0 +1,1305 @@
+== 函数和运算符
+
+=== 逻辑运算符
+
+*逻辑运算符*
+
+[cols="3*", options="header"]
+|===
+|运算符	|描述	|示例
+|`AND`	|True if both values are true	|a AND b
+|`OR`	|True if either value is true	|a OR b
+|`NOT`	|True if the value is false	|NOT a
+|===
+
+*逻辑运算符中NULL的效果*
+
+如果AND表达式中有一边或者两边都是null，那么整个AND表达式的结果将会是null。如果AND表达式中至少有一边的值是false，那么整个AND表达式的值都是false。:
+
+----
+SELECT CAST(null AS boolean) AND true; => null
+
+SELECT CAST(null AS boolean) AND false; => false
+
+SELECT CAST(null AS boolean) AND CAST(null AS boolean); => null
+----
+
+如果OR表达式的一边或者两边都是null，那么整个OR表达式的值就是null。如果OR表达式中只要有一边的值为true，那么整个OR表达式的值就是true。:
+
+----
+SELECT CAST(null AS boolean) OR CAST(null AS boolean); => null
+
+SELECT CAST(null AS boolean) OR false; => null
+
+SELECT CAST(null AS boolean) OR true; => true
+----
+
+下表说明了AND和OR表达式的计算规则：
+
+[cols="4*", options="header"]
+|===
+|a	|b |a AND b	|a OR b
+|TRUE	|TRUE	|TRUE	|TRUE
+|TRUE	|FALSE	|FALSE	|TRUE
+|TRUE	|NULL	|NULL	|TRUE
+|FALSE	|TRUE	|FALSE	|TRUE
+|FALSE	|FALSE	|FALSE	|FALSE
+|FALSE	|NULL	|FALSE	|NULL
+|NULL	|TRUE	|NULL	|TRUE
+|NULL	|FALSE	|FALSE	|NULL
+|NULL	|NULL	|NULL	|NULL
+|===
+
+`NULL` 的NOT表达式的结果还是 `NULL`，如下所示：:
+
+----
+SELECT NOT CAST(null AS boolean); => null
+----
+
+下表说明了NOT表达式的计算规则：
+
+[cols="2*", options="header"]
+|===
+|a	|NOT a
+|TRUE	|FALSE
+|FALSE	|TRUE
+|NULL	|NULL
+|===
+
+=== 比较函数和运算符
+
+*比较运算符*
+
+[cols="2*", options="header"]
+|===
+|运算符	|描述
+|<	|小于
+|>	|大于
+|<=	|小于等于
+|>=	|大于等于
+|= |等于
+|<>	|不等
+|!=	|不等（不标准的用法，但是很流行这样使用）
+|===
+
+*范围运算符: BETWEEN*
+
+`BETWEEN` 运算符检测一个值是否在指定的范围。 使用语法 `value BETWEEN min AND max`:
+
+----
+SELECT 3 BETWEEN 2 AND 6;
+----
+
+上面的语句和下面的语句等效:
+
+----
+SELECT 3 >= 2 AND 3 <= 6;
+----
+
+要检测一个值不在指定的范围， 使用 NOT BETWEEN:
+
+----
+SELECT 3 NOT BETWEEN 2 AND 6;
+----
+
+上面的语句和下面的语句等效:
+
+----
+SELECT 3 < 2 OR 3 > 6;
+----
+
+如果在 BETWEEN 或 NOT BETWEEN 语句中出现NULL， 将导致结果为NULL:
+
+----
+SELECT NULL BETWEEN 2 AND 4; => null
+
+SELECT 2 BETWEEN NULL AND 6; => null
+----
+
+`BETWEEN` 和 `NOT BETWEEN` 运算符 也可以用于字符串参数:
+
+----
+SELECT 'Paul' BETWEEN 'John' AND 'Ringo'; => true
+----
+
+使用 `BETWEEN` 和 `NOT BETWEEN` 时， value、min和max参数的类型必须相同。 例如，如果你问John是否在2.3到35.2之间，Presto将会报错。
+
+*空和非空*
+
+`IS NULL` 和 `IS NOT NULL` 运算符检测一个值是否为空（未定义）。 这两个运算符适用于所有数据类型。
+
+在 `IS NULL` 语句中使用 `NULL` 进行对比 ，结果为true:
+
+----
+select NULL IS NULL; => true
+----
+
+但使用其他常量进行对比，结果都是false:
+
+----
+SELECT 3.0 IS NULL; => false
+----
+
+*IS DISTINCT FROM 和 IS NOT DISTINCT FROM*
+
+在SQL中 `NULL` 表示一个未知的值， 因此，任何比较相关的语句含有 `NULL` ，结果都是 `NULL`。 而 `IS DISTINCT FROM` 和 `IS NOT DISTINCT FROM` 运算符将 `NULL` 视为一个已知的值， 这两个运算符保证即使输入中有 NULL ， 结果也是true或false。
+
+SELECT NULL IS DISTINCT FROM NULL; => false
+
+SELECT NULL IS NOT DISTINCT FROM NULL; => true
+
+上述示例中， `NULL` 值与 `NULL` 没有区别。 当你的比较操作中可能包含 `NULL` 的值时， 使用这两个运算符可以保证结果只能是 `TRUE` 或 `FALSE` 。
+
+下表格展示了 `NULL` 在 `IS DISTINCT FROM` 和 `IS NOT DISTINCT FROM` 中是怎样计算的:
+
+[cols="6*", options="header"]
+|===
+|a	|b	|a = a	|a <> b	|a DISTINCT b	|a NOT DISTINCT b
+|1	|1	|TRUE	|FALSE	|FALSE	|TRUE
+|1	|2	|FALSE	|TRUE	|TRUE	|FALSE
+|1	|NULL	|NULL	|NULL	|TRUE	|FALSE
+|NULL	|NULL	|NULL	|NULL	|FALSE	|TRUE
+|===
+
+*最大和最小*
+
+这两个函数不是SQL标准函数，他们是常用的扩展。 与Presto的其他数函数相似，任何一个参数为空，则返回空。 但是在某些其他数据库中，例如PostgreSQL， 只有全部参数都为空时，才返回空。
+
+支持类型： `DOUBLE`, `BIGINT`, `VARCHAR`, `TIMESTAMP`, `TIMESTAMP WITH TIME ZONE`, `DATE`
+
+*greatest*(value1, value2) → [与输入相同]
+返回提供的最大值。
+
+*least*(value1, value2) → [与输入相同]
+返回提供的最小值。
+
+=== 条件表达式
+
+*CASE*
+
+标准的SQL `CASE` 表达式有两种模式。 “简单模式”从左向右查找表达式的每个 `value` ， 直到找出相等的 `expression`:
+
+----
+CASE expression
+    WHEN value THEN result
+    [ WHEN ... ]
+    [ ELSE result ]
+END
+----
+
+返回匹配 `value` 的 `result` 。 如果没有匹配到任何值，则返回 `ELSE` 子句的 `result` ； 如果没有 `ELSE` 子句，则返回空。示例:
+
+----
+SELECT a,
+       CASE a
+           WHEN 1 THEN 'one'
+           WHEN 2 THEN 'two'
+           ELSE 'many'
+       END
+----
+
+“查找模式”从左向右判断每个 `condition` 的布尔值， 直到判断为真，返回匹配 `result` :
+
+----
+CASE
+    WHEN condition THEN result
+    [ WHEN ... ]
+    [ ELSE result ]
+END
+----
+
+如果判断条件都不成立，则返回 `ELSE` 子句的 `result` ； 如果没有 `ELSE` 子句，则返回空。示例:
+
+----
+SELECT a, b,
+       CASE
+           WHEN a = 1 THEN 'aaa'
+           WHEN b = 2 THEN 'bbb'
+           ELSE 'ccc'
+       END
+----
+
+*IF*
+
+`IF` 函数是语言结构， 它与下面的 `CASE` 表达式功能相同:
+
+----
+CASE
+    WHEN condition THEN true_value
+    [ ELSE false_value ]
+END
+----
+
+*if*(condition, true_value)
+如果 condition 为真，返回 true_value ； 否则返回空， true_value 不进行计算。
+
+*if*(condition, true_value, false_value)
+如果 condition 为真，返回 true_value ； 否则计算并返回 false_value 。
+
+*COALESCE*
+
+*coalesce*(value[, ...])
+返回参数列表中的第一个非空 value 。 与 CASE 表达式相似，仅在必要时计算参数。
+
+*NULLIF*
+
+*nullif*(value1, value2)
+如果 value1 与 value2 相等，返回空；否则返回 value1 。
+
+=== 转换函数
+
+Presto会将数字和字符值隐式转换成正确的类型。 Presto不会把字符和数字类型相互转换。 例如，一个查询期望得到一个varchar类型的值， Presto不会自动将bigint类型的值转换为varchar 类型。
+
+如果有必要，可以将值显式转换为指定类型。
+
+*转换函数*
+
+*cast*(value AS type) → type
+显式转换一个值的类型。 可以将varchar类型的值转为数字类型，反过来转换也可以。
+
+*try_cast*(value AS type) → type
+与 cast() 相似，区别是转换失败返回null。
+
+=== 数学函数和运算符
+
+*数学运算符*
+
+[cols="2*", options="header"]
+|===
+|运算符	|描述
+|+	|加
+|-	|减
+|*	|乘
+|/	|除
+|%	|模（余数）
+|===
+
+*数学函数*
+
+*abs*(x) → [same as input]
+
+返回 `x` 的绝对值
+
+*cbrt*(x) → double
+
+返回 `x` 的立方根
+
+*ceil*(x) → [same as input]
+
+是 `ceiling()` 的同名方法
+
+*ceiling*(x) → [same as input]
+
+返回 `x` 的向上取整的数值
+
+*degrees*(x) → double
+
+将角度 `x` 以弧度转换为度
+
+*e*() → double
+
+返回欧拉的常数
+
+*exp*(x) → double
+
+将欧拉的数字提高到 `x` 的强度
+
+*floor*(x) → [same as input]
+
+返回 `x` 舍入到最接近的整数
+
+*from_base*(string, radix) → bigint
+
+返回字符串的值为一个base-radix数。
+
+*ln*(x) → double
+
+返回 `x` 的自然对数。
+
+*log2*(x) → double
+
+返回 `x` 的基数2的对数。
+
+*log10*(x) → double
+
+返回 `x` 的基数10的对数。
+
+*log*(x, b) → double
+
+返回基数为b的对数 `x`。
+
+*mod*(n, m) → [same as input]
+
+返回 `n` 除以 `m` 的余数
+
+*pi*() → double
+
+返回常数pi
+
+*pow*(x, p) → double
+
+将x提高到p的幂。
+
+*radians*(x) → double
+
+将角度x以度为单位转换为弧度。
+
+*rand*() → double
+
+随机函数
+
+*random*() → double
+
+返回0到1范围内的伪随机值
+
+*round*(x) → [same as input]
+
+返回x舍入到最接近的整数。
+
+*round*(x, d) → [same as input]
+
+返回X四舍五入到d小数。
+
+*sqrt*(x) → double
+
+ 返回x的算数平方根
+
+*to_base*(x, radix) → varchar
+
+返回x的基数
+
+*三角函数*
+
+所有三角函数的参数都是以弧度表示。参考单位转换函数degrees() 和 radians()
+
+*acos*(x) → double
+
+返回x的反余弦。
+
+*asin*(x) → double
+
+返回x的反正弦
+
+*atan*(x) → double
+
+返回x的反正切
+
+*atan2*(y, x) → double
+
+返回y/x的反正弦切
+
+*cos*(x) → double
+
+返回x的余弦
+
+*cosh*(x) → double
+
+返回x的双曲余弦。
+
+*sin*(x) → double
+
+返回x的正弦。
+
+*tan*(x) → double
+
+返回x的正切。
+
+*tanh*(x) → double
+
+返回x的双曲正切。
+
+*浮点函数*
+
+*infinity*() → double
+
+返回代表正无穷大的常量Returns
+
+*is_finite*(x) → boolean
+
+确定x是否有限。
+
+*is_infinite*(x) → boolean
+
+确定x是无限的。
+
+*is_nan*(x) → boolean
+
+确定x是否不是数字。
+
+*nan*() → double
+
+返回表示not-a-number的常量。
+
+=== 字符串函数和运算符
+
+*字符串运算符*
+
+使用运算符： || 完成字符串连接
+
+*字符串函数*
+
+WARNING: 目前所有的字符串函数都不能对Unicode（non-ASCII）字符串进行正确处理。例如，方法length()会返回UTF-8格式的字符串中的byte的数目，但是对于UniCode编码的字符串中的byte的个数却不能返回。
+
+*chr*(n) → varchar
+
+返回在下标为n的位置的char字符的字符串格式表示
+
+*concat*(string1, string2) → varchar
+
+返回string1和string2的并置。此函数提供与SQL标准连接运算符（||）相同的功能。
+
+*length*(string) → bigint
+
+以字符返回字符串的长度。
+
+*lower*(string) → varchar
+
+将字符串转换为小写
+
+*ltrim*(string) → varchar
+
+从字符串中删除前导空格。
+
+*replace*(string, search) → varchar
+
+从字符串中删除所有搜索实例。
+
+*replace*(string, search, replace) → varchar
+
+替换的所有实例查找与替换的字符串。
+
+*reverse*(string) → varchar
+
+以相反的顺序返回带字符的字符串。
+
+*rtrim*(string) → varchar
+
+从字符串中删除尾随空格。
+
+*split*(string, delimiter) → array<varchar>
+
+在分隔符上分割字符串并返回数组。
+
+*split*(string, delimiter, limit) → array<varchar>
+
+拆分分隔符上的字符串，并返回大小最大限制的数组 。数组中的最后一个元素总是包含字符串中的所有内容。极限必须是正数。
+
+*split_part*(string, delimiter, index) → varchar
+
+在分隔符上分割字符串并返回字段索引。字段索引以1开头。如果索引大于字段数，则返回null。
+
+*strpos*(string, substring) → bigint
+
+返回的第一个实例的起始位置子的 字符串。职位从1开始。如果没有找到，则返回0
+
+*substr*(string, start) → varchar
+
+从起始位置开始返回字符串的其余部分。职位从1开始。负起始位置被解释为相对于字符串的结尾。
+
+*substr*(string, start, length) → varchar
+
+从起始位置开始返回长度为长度的字符串的子串。职位从1开始。负起始位置被解释为相对于字符串的结尾。
+
+*trim*(string) → varchar
+
+从字符串中删除前导和尾随空格。
+
+*upper*(string) → varchar
+
+将字符串转换为大写。
+
+=== 二进制函数
+
+*二进制函数*
+
+*length*(binary) → bigint
+
+返回 binary 的字节长度。
+
+*to_base64*(binary) → varchar
+
+将 binary 编码为base64字符串表示。
+
+*from_base64*(string) → varbinary
+
+将base64编码的 string 解码为二进制数据。
+
+*to_base64url*(binary) → varchar
+
+使用URL安全字符，将 binary 编码为base64字符串表示。
+
+*from_base64url*(string) → varbinary
+
+使用URL安全字符，将base64编码的 string 解码为二进制数据。
+
+*to_hex*(binary) → varchar
+
+将 binary 编码为16进制字符串表示。
+
+*from_hex*(string) → varbinary
+
+将16进制编码的 string 解码为二进制数据。
+
+=== 日期时间函数和运算符
+
+*日期时间运算符*
+
+[cols="3*",header=option]
+|===
+|运算符	|示例	|结果
+|+	|date '2012-08-08' + interval '2' day	|2012-08-10
+|+	|time '01:00' + interval '3' hour	|04:00:00.000
+|+	|timestamp '2012-08-08 01:00' + interval '29' hour	|2012-08-09 06:00:00.000
+|+	|timestamp '2012-10-31 01:00' + interval '1' month	|2012-11-30 01:00:00.000
+|+	|interval '2' day + interval '3' hour	|2 03:00:00.000
+|+	|interval '3' year + interval '5' month	|3-5
+|-	|date '2012-08-08' - interval '2' day	|2012-08-06
+|-	|time '01:00' - interval '3' hour	|22:00:00.000
+|-	|timestamp '2012-08-08 01:00' - interval '29' hour	|2012-08-06 20:00:00.000
+|-	|timestamp '2012-10-31 01:00' - interval '1' month	|2012-09-30 01:00:00.000
+|-	|interval '2' day - interval '3' hour	|1 21:00:00.000
+|-	|interval '3' year - interval '5' month	|2-7
+|===
+
+*时区转换*
+
+运算符：AT TIME ZONE，用于设置一个时间戳的时区:
+
+----
+SELECT timestamp '2012-10-31 01:00 UTC';
+2012-10-31 01:00:00.000 UTC
+
+SELECT timestamp '2012-10-31 01:00 UTC' AT TIME ZONE 'America/Los_Angeles';
+2012-10-30 18:00:00.000 America/Los_Angeles
+----
+
+*日期时间函数*
+
+*current_date* -> date
+
+返回查询开始时的当前日期。
+
+*current_time* -> time with time zone
+
+返回从查询开始的当前时间。
+
+*current_timestamp* -> timestamp with time zone
+
+从查询开始返回当前时间戳。
+
+*current_timezone*() → varchar
+
+以IANA（例如，America / Los_Angeles）定义的格式返回当前时区，或以UTC的固定偏移量（例如+08：35）返回当前时区
+
+*from_unixtime*(unixtime) → timestamp
+
+将UNIX时间戳记unixtime作为时间戳返回。
+
+*from_unixtime*(unixtime, hours, minutes) → timestamp with time zone
+
+返回UNIX时间戳unixtime与使用时区的时间戳小时和分钟的时区偏移量。
+
+*(localtime* -> time
+
+返回从查询开始的当前时间。
+
+*localtimestamp* -> timestamp
+
+从查询开始返回当前时间戳。
+
+*now*() → timestamp with time zone
+
+这是current_timestamp的别名。
+
+*to_unixtime*(timestamp) → double
+
+返回时间戳作为UNIX时间戳。
+
+NOTE: 下列SQL标准的函数不使用圆括号：
+* current_date
+* current_time
+* current_timestamp
+* localtime
+* localtimestamp
+
+*截取函数*
+
+函数 date_trunc 支持如下单位：
+
+[cols="2*",header=option]
+|===
+|单位	|Example Truncated Value
+|second	|2001-08-22 03:04:05.000
+|minute	|2001-08-22 03:04:00.000
+|hour	|2001-08-22 03:00:00.000
+|day	|2001-08-22 00:00:00.000
+|week	|2001-08-20 00:00:00.000
+|month	|2001-08-01 00:00:00.000
+|quarter	|2001-07-01 00:00:00.000
+|year	|2001-01-01 00:00:00.000
+|===
+
+上面的例子使用时间戳： `2001-08-22 03:04:05.321` 作为输入。
+
+*date_trunc*(unit, x) → [same as input]
+
+返回x截取到单位 `unit` 之后的值
+
+*间隔函数*
+
+本章中的函数支持如下所列的间隔单位：
+
+[cols="2*",header=option]
+|===
+|Unit	|Description
+|second	|Seconds
+|minute	|Minutes
+|hour	|Hours
+|day	|Days
+|week	|Weeks
+|month	|Months
+|quarter	|Quarters of a year
+|year	|Years
+|===
+
+*date_add*(unit, value, timestamp) → [same as input]
+
+在timestamp的基础上加上value个unit。如果想要执行相减的操作，可以通过将value赋值为负数来完成。
+
+*date_diff*(unit, timestamp1, timestamp2) → bigint
+
+返回 timestamp2 - timestamp1 之后的值，该值的表示单位是unit。
+
+*MySQL日期函数*
+
+在这一章节使用与MySQL `date_parse` 和 `str_to_date` 方法兼容的格式化字符串。下面的表格是基于MySQL手册列出的，描述了各种格式化描述符：
+
+[cols="2*",header=option]
+|===
+|Specifier	|Description
+|%a	|Abbreviated weekday name (Sun .. Sat)
+|%b	|Abbreviated month name (Jan .. Dec)
+|%c	|Month, numeric (0 .. 12)
+|%D	|Day of the month with English suffix (0th, 1st, 2nd, 3rd, ...)
+|%d	|Day of the month, numeric (00 .. 31)
+|%e	|Day of the month, numeric (0 .. 31)
+|%f	|Microseconds (000000 .. 999999)
+|%H	|Hour (00 .. 23)
+|%h	|Hour (01 .. 12)
+|%I	|Hour (01 .. 12)
+|%i	|Minutes, numeric (00 .. 59)
+|%j	|Day of year (001 .. 366)
+|%k	|Hour (0 .. 23)
+|%l	|Hour (1 .. 12)
+|%M	|Month name (January .. December)
+|%m	|Month, numeric (00 .. 12)
+|%p	|AM or PM
+|%r	|Time, 12-hour (hh:mm:ss followed by AM or PM)
+|%S	|Seconds (00 .. 59)
+|%s	|Seconds (00 .. 59)
+|%T	|Time, 24-hour (hh:mm:ss)
+|%U	|Week (00 .. 53), where Sunday is the first day of the week
+|%u	|Week (00 .. 53), where Monday is the first day of the week
+|%V	|Week (01 .. 53), where Sunday is the first day of the week; used with %X
+|%v	|Week (01 .. 53), where Monday is the first day of the week; used with %x
+|%W	|Weekday name (Sunday .. Saturday)
+|%w	|Day of the week (0 .. 6), where Sunday is the first day of the week
+|%X	|Year for the week where Sunday is the first day of the week, numeric, four digits; used with %V
+|%x	|Year for the week, where Monday is the first day of the week, numeric, four digits; used with %v
+|%Y	|Year, numeric, four digits
+|%y	|Year, numeric (two digits)
+|%%	|A literal % character
+|%x	|x, for any x not listed above
+|===
+
+WARNING: 这些格式化描述符现在还不支持：%D %U %u %V %X
+
+*date_format*(timestamp, format) → varchar
+
+使用format指定的格式，将timestamp格式化成字符串。
+
+*date_parse*(string, format) → timestamp
+
+按照format指定的格式，将字符串string解析成timestamp。
+
+*Java日期函数*
+
+在这一章节中使用的格式化字符串都是与Java的 SimpleDateFormat样式兼容的。
+
+*format_datetime*(timestamp, format) → varchar
+
+格式时间戳为使用字符串格式。
+
+|*parse_datetime*(string, format) → timestamp with time zone
+
+使用格式将字符串解析为带有时区的时间戳。
+
+*抽取函数*
+
+可以使用抽取函数来抽取如下域：
+
+[cols="2*",header=option]
+|===
+|Field	|Description
+|YEAR	|year()
+|QUARTER	|quarter()
+|MONTH	|month()
+|WEEK	|week()
+|DAY	|day()
+|DAY_OF_MONTH	|day()
+|DAY_OF_WEEK	|day_of_week()
+|DOW	|day_of_week()
+|DAY_OF_YEAR	|day_of_year()
+|DOY	|day_of_year()
+|YEAR_OF_WEEK	|year_of_week()
+|YOW	|year_of_week()
+|HOUR	|hour()
+|MINUTE	|minute()
+|SECOND	|second()
+|TIMEZONE_HOUR	|timezone_hour()
+|TIMEZONE_MINUTE	|timezone_minute()
+|===
+
+抽取函数支持的数据类型取决于需要抽取的域。大多数域都支持日期和时间类型。
+
+*extract*(field FROM x) → bigint
+
+从x中返回域field
+
+NOTE: SQL标准的函数一般都会使用特定的语法来指定参数。
+
+*便利的抽取函数*
+
+*day*(x) → bigint
+
+从x返回月份的日期。
+
+*day_of_month*(x) → bigint
+
+这是day（）的别名。
+
+*day_of_week*(x) → bigint
+
+从x返回星期的ISO日。取值范围为1（星期一）到7（星期日）。
+
+*day_of_year*(x) → bigint
+
+从x返回一年中的日期。取值范围为1至366。
+
+*dow*(x) → bigint
+
+这是day_of_week（）的别名。
+
+*doy*(x) → bigint
+
+这是day_of_year（）的别名。
+
+*hour*(x) → bigint
+
+从x返回当天的小时数。取值范围为0到23。
+
+*minute*(x) → bigint
+
+从x返回小时的分钟。
+
+*month*(x) → bigint
+
+从x返回一年中的月份。
+
+*quarter*(x) → bigint
+
+从x返回一年中的季度。取值范围为1至4。
+
+*second*(x) → bigint
+
+从x返回第二个小时。
+
+*timezone_hour*(timestamp) → bigint
+
+返回从时间戳偏移的时区。
+
+*timezone_minute*(timestamp) → bigint
+
+返回从时间戳偏移的时区的分钟。
+
+*week*(x) → bigint
+
+从x返回一年中的ISO周。取值范围为1至53。
+
+*week_of_year*(x) → bigint
+
+这是星期（）的别名。
+
+*year*(x) → bigint
+
+从x返回年份。
+
+*year_of_week*(x) → bigint
+
+从x返回ISO周的年份。
+
+*yow*(x) → bigint
+
+这是year_of_week（）的别名。
+
+=== 正则表达式函数
+
+所有的正则表达式函数都使用Java样式的语法。
+
+*regexp_extract_all*(string, pattern) → array<varchar>
+
+返回由正则表达式匹配的子串（一个或多个）图案 中的字符串。
+
+*regexp_extract_all*(string, pattern, group) → array<varchar>
+
+发现正则表达式中出现的所有图案中的字符串 并返回捕获组号 组。
+
+*regexp_extract*(string, pattern) → varchar
+
+返回由正则表达式匹配的第一子图案 中的字符串。
+
+*regexp_extract*(string, pattern, group) → varchar
+
+发现正则表达式的第一个匹配图案中 的字符串并返回捕获组号 组。
+
+*regexp_like*(string, pattern) → boolean
+
+评估正则表达式模式并确定它是否包含在字符串中。
+
+此函数类似于LIKE运算符，期望该模式只需要包含在字符串中，而不是需要匹配所有的字符串。换句话说，这将执行 包含操作而不是匹配操作。您可以通过使用^和$锚定模式来匹配整个字符串。
+
+*regexp_replace*(string, pattern) → varchar
+
+从字符串中删除正则表达式模式匹配的子字符串的每个实例 。
+
+*regexp_replace*(string, pattern, replacement) → varchar
+
+替换由正则表达式匹配的子串的每一个实例 的图案中的字符串与替换。可以使用$ g为编号组或 $ {name} 替换获取组的命名组。替换中的美元符号（$）可能会用反斜杠（\ $）进行转义。
+
+=== JSON函数
+
+*json_array_contains*(json, value) → boolean
+
+判断value是否在json（json格式的字符串）中存在:
+
+----
+SELECT json_array_contains('[1, 2, 3]', 2);
+----
+
+*json_array_length*(json) → bigint
+
+返回json的数组长度（包含JSON数组的字符串）。
+
+----
+SELECT json_array_length('[1, 2, 3]');
+----
+
+*json_extract*(json, json_path) → varchar
+
+评估json上的JSONPath样表达式json_path （包含JSON的字符串），并将结果作为JSON字符串返回。
+
+----
+SELECT json_extract(json, '$.store.book');
+----
+
+*json_extract_scalar*(json, json_path) → varchar
+
+像json_extract（），但返回结果值作为一个字符串（而不是编码为JSON）。json_path引用的值必须是标量（布尔值，数字或字符串）。
+
+----
+SELECT json_extract_scalar('[1, 2, 3]', '$[2]');
+
+SELECT json_extract_scalar(json, '$.store.book[0].author');
+----
+
+*json_array_get*(json_array, index) → varchar
+
+将指定索引处的元素返回到json_array中。索引为0。例如：
+
+----
+SELECT json_array_get('["a", "b", "c"]', 0); => "a"
+SELECT json_array_get('["a", "b", "c"]', 1); => "b"
+----
+
+此函数还支持从数组末尾读取元素索引的负索引。例如：
+
+----
+SELECT json_array_get('["c", "b", "a"]', -1); => "a"
+SELECT json_array_get('["c", "b", "a"]', -2); => "b"
+----
+
+如果指定索引处的元素不存在，则函数返回null：
+
+----
+SELECT json_array_get('[]', 0); => null
+SELECT json_array_get('["a", "b", "c"]', 10); => null
+SELECT json_array_get('["c", "b", "a"]', -10); => null
+----
+
+*json_size*(json, json_path) → bigint
+
+像json_extract（），但返回值的大小。对象值的大小是字段的数量，数组的大小是元素的数量。标量值的大小为零。例如：
+
+----
+SELECT json_size('{ "x": {"a": 1, "b": 2} }', '$.x'); => 2
+SELECT json_size('{ "x": [1, 2, 3] }', '$.x'); => 2
+SELECT json_size('{ "x": {"a": 1, "b": 2} }', '$.x.a'); => 0
+----
+
+===  URL函数
+
+URL方法用于从HTTP URLs（或者是任何满足RFC 2396标准的有效URIs）中提取相应的信息。URL方法支持如下的语法：
+
+----
+[protocol:][//host[:port]][path][?query][#fragment]
+----
+
+被从URLs中提取出来的部分，不会包括URI的语法分隔符（如:或者?）
+
+*url_extract_fragment*(url) → varchar
+
+从url返回片段标识符。
+
+*url_extract_host*(url) → varchar
+
+从url返回主机。
+
+*url_extract_parameter*(url, name) → varchar
+
+从url返回名为name的第一个查询字符串参数的值。参数提取按照指定的典型方式处理RFC 1866。
+
+*url_extract_path*(url) → varchar
+
+从url返回路径。
+
+*url_extract_port*(url) → bigint
+
+从url返回端口号。
+
+*url_extract_protocol*(url) → varchar
+
+从url返回协议。
+
+*url_extract_query*(url) → varchar
+
+从url返回查询字符串。
+
+=== 聚合函数
+
+聚合函数作用于一个数据集，计算出一个单独的结果。
+
+除了 count() 、 count_if() 、 max_by() 和 approx_distinct() ， 所有聚合函数都忽略空值，如果没有输入或全部输入都为空时，返回空。 例如， sum() 返回空，而不是0。
+ avg() 会将数据中的空值进行计数。 coalesce 函数可以将空转换为0。
+
+*一般聚合函数*
+
+*arbitrary*(x) → [与输入相同]
+
+返回 x 的任意非空值（如果存在的话）。
+
+*avg*(x) → double
+
+返回所有输入值的平均数（算术平均数）。
+
+*bool_and*(boolean) → boolean
+
+如果所有输入值都为 TRUE 返回 TRUE ，否则返回 FALSE 。
+
+*bool_or*(boolean) → boolean
+
+如果任何一个输入值为 TRUE 返回 TRUE ，否则返回 FALSE 。
+
+*count*(*) → bigint
+
+返回输入行的数量。
+
+*count*(x) → bigint
+
+返回非空输入值的数量。
+
+*count_if*(x) → bigint
+
+返回输入值为 TRUE 的数量。 本函数与 count(CASE WHEN x THEN 1 END) 相同。
+
+*every*(boolean) → boolean
+
+bool_and() 的别名。
+
+*max_by*(x, y) → [与x相同]
+
+返回 x 与 y 的最大值进行关联的结果，通过全部输入值进行关联。
+
+*min_by*(x, y) → [与x相同]
+
+返回 x 与 y 的最小值进行关联的结果，通过全部输入值进行关联。
+
+*max*(x) → [与输入相同]
+
+返回全部输入值的最大值。
+
+*min*(x) → [与输入相同]
+
+返回全部输入值的最小值。
+
+*sum*(x) → [与输入相同]
+
+返回全部输入值的和。
+
+*Map聚合函数*
+
+*map_agg*(key, value) → map<K,V>
+
+返回一个由 key / value 键值对构成的map。
+
+*近似聚合函数*
+
+*approx_distinct*(x) → bigint
+
+返回不重复输入值的近似数量。 本函数给出 count(DISTINCT x) 的近似值。 如果所有输入值都为空则返回0。
+
+本函数会产生2.3%的误差， （近似正态）误差分布的标准偏差会覆盖全部数据集。 对于任意指定的输入， 不保证误差上限。
+
+*approx_distinct*(x, e) → bigint
+
+返回不重复输入值的近似数量。 本函数给出 count(DISTINCT x) 的近似值。 如果所有输入值都为空则返回0。
+
+本函数会产生不超过 e 的误差， （近似正态）误差分布的标准偏差会覆盖全部数据集。 对于任意指定的输入， 不保证误差上限。 目前的函数实现要求 e 在[0.01150, 0.26000]范围之间。
+
+*approx_percentile*(x, p) → [与输入相同]
+
+按照百分比 p ，返回所有 x 输入值的近似百分比。 p 的值必须在0到1之间， 并且所有输入行必须为常量。
+
+*approx_percentile*(x, w, p) → [与输入相同]
+
+按照百分比 p ，返回所有 x 输入值的近似百分比。 每一项的宽度使用 w 。 至少有一个宽度为整数。 x 设置有效的百分位。 p 的值必须在0到1之间， 并且所有输入行必须为常量。
+
+*numeric_histogram*(buckets, value, weight) → map<double, double>
+
+按照 buckets 桶的数量，为所有的 value 计算近似直方图， 每一项的宽度使用 weight 。 本算法大体上基于：
+
+----
+Yael Ben-Haim and Elad Tom-Tov, "A streaming parallel decision tree algorithm",
+
+J. Machine Learning Research 11 (2010), pp. 849--872.
+----
+
+buckets 必须是 bigint 。 value 和 weight 必须是数值。
+
+*numeric_histogram*(buckets, value) → map<double, double>
+
+按照 buckets 桶的数量，为所有的 value 计算近似直方图， 本函数与 numeric_histogram() 相同， 只是没有 weight 参数，每一项的宽度都为 1 。
+
+*统计聚合函数*
+
+*stddev*(x) → double
+
+stddev_samp() 的别名。
+
+*stddev_pop*(x) → double
+
+返回全部输入值的总体标准偏差。
+
+*stddev_samp*(x) → double
+
+返回全部输入值的样本标准偏差。
+
+*variance*(x) → double
+
+var_samp() 的别名。
+
+*var_pop*(x) → double
+
+返回全部输入值的总体方差。
+
+*var_samp*(x) → double
+
+返回全部输入值的样本方差。
+
+=== 窗口函数
+窗口函数主要用于在查询结果的所有行之间进行计算。窗口函数运行在HAVING语句之后，但是运行在ORDER BY语句之前。如果想要调用窗口函数，需要使用OVER语句来指定窗口。
+一个窗口有3个组成部分（这里就不做汉化了，因为我感觉直接看英文更清楚一点）：
+
+* The partition specification, which separates the input rows into different partitions. This is analogous to how the GROUP BY clause separates rows into different groups for aggregate functions.
+* The ordering specification, which determines the order in which input rows will be processed by the window function.
+* The window frame, which specifies a sliding window of rows to be processed by the function for a given row. If the frame is not specified, it defaults to RANGE UNBOUNDED PRECEDING, which is the same as RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW. This frame contains all rows from the start of the partition up to the last peer of the current row.
+
+例如：下面的查询将orders表中的信息按照每个出纳员营业额的大小进行排序:
+
+----
+SELECT orderkey, clerk, totalprice,
+       rank() OVER (PARTITION BY clerk
+                    ORDER BY totalprice DESC) AS rnk
+FROM orders
+ORDER BY clerk, rnk
+----
+
+*聚合函数*
+
+所有聚合函数可以通过添加OVER 子句用作窗口函数。为当前行的窗口框架中的行上的每一行计算聚合函数。
+
+例如，以下查询为每个店员按日期生成订单价格滚动总和：
+
+----
+SELECT clerk, orderdate, orderkey, totalprice,
+       sum(totalprice) OVER (PARTITION BY clerk
+                             ORDER BY orderdate) AS rolling_sum
+FROM orders
+ORDER BY clerk, orderdate, orderkey
+----
+
+*排序函数*
+
+*cume_dist*() → bigint
+
+返回一组值中的值的累积分布。结果是窗口分区的窗口排序中的行前面或对等的行数除以窗口分区中的总行数。因此，排序中的任何关联值都将计算为相同的分布值。
+
+*dense_rank*() → bigint
+
+返回一组值中的值的等级。这与rank（）类似 ，除了tie值不会在序列中产生空白。
+
+*ntile*(n) → bigint
+
+将每个窗口分区的行划分为n个桶，范围从1到最多n。桶值将不同于1。如果分区中的行数不会均匀地划分为桶数，则剩余值将从第一个桶开始，每个桶分配一个。
+
+例如，6行和4个桶，桶值将如下所示：1 1 2 2 3 4
+
+*percent_rank*() → bigint
+
+返回值组中值的百分比排序。结果是（r - 1） / （n - 1）其中r是行的rank（）， n是窗口分区中的总行数。
+
+*rank*() → bigint
+
+返回一组值中的值的等级。排名是一行加上不与该行对等的行之前的行数。因此，排序中的连接值将在序列中产生间隙。为每个窗口分区执行排名。
+
+*row_number*() → bigint
+
+根据窗口分区中的行的顺序，为每行返回一个唯一的，顺序的数字，从一开始。
+
+*价值函数*
+
+*first_value*(x) → [same as input]
+
+返回窗口的第一个值。
+
+*last_value*(x) → [same as input]
+
+返回窗口的最后一个值。
+
+*nth_value*(x, offset) → [same as input]
+
+从窗口开始返回指定偏移处的值。偏移量从1开始。偏移量可以是任何标量表达式。如果偏移量为空或大于窗口中的值的数量，则返回null。偏移量为零或负值是错误的。
+
+*lead*(x[, offset[, default_value]]) → [same as input]
+
+返回窗口中当前行之后的偏移行的值。偏移量从0开始，这是当前行。偏移量可以是任何标量表达式。默认偏移量为1。如果偏移量为空或大于窗口，则返回default_value，否则返回null。
+
+*lag*(x[, offset[, default_value]]) → [same as input]
+
+返回偏移行之前的值，窗口偏移量中的当前行将从0开始，即当前行。偏移量可以是任何标量表达式。默认偏移量为1。如果偏移量为空或大于窗口，则返回default_value，否则返回null。
+
+=== 颜色函数
+
+*bar*(x, width) → varchar
+
+使用默认的low_color（红色）和high_color（绿色），在ANSI条形图中呈现单条 。例如，如果25％的x和40的宽度被传递到该功能。将绘制一个10个字符的红色条形，然后绘制30个空格以创建一个40个字符的栏。
+
+*bar*(x, width, low_color, high_color) → varchar
+
+在指定宽度的ANSI条形图中呈现单行 。参数x是[0,1]之间的双重值。落在范围[0,1]之外的x的值将被截断为0或1值。
+的low_color和 HIGH_COLOR捕获要用于水平条形图的任一端的颜色。例如，如果x是0.5，宽度 是80，low_color是0xFF0000，而high_color是0x00FF00，这个函数会返回一个40个字符，
+这个字符不同于红色（0xFF0000）和黄色（0xFFFF00），80个字符栏的剩余部分将是填充空间。
+
+../_images/functions_color_bar.png
+
+*color*(string) → color
+
+返回从格式“＃000”的4个字符串中捕获解码的RGB值的颜色。输入字符串应为包含CSS样式的短rgb字符串或黑色， 红色，绿色，黄色，蓝色，品红色，青色， 白色之一的varchar 。
+
+*color*(x, low, high, low_color, high_color) → color
+
+使用双参数x，low和high返回在low_color和 high_color之间插值的颜色， 以计算一个分数，然后传递给如下所示的 颜色（fraction，low_color，high_color）函数。如果x超出了由low和high定义的范围， 它的值将被截断以适合此范围。
+
+*color*(x, low_color, high_color) → color
+
+根据0到1.0之间的双参数x返回在low_color和 high_color之间插值的颜色。参数x是[0,1]之间的双重值。落在范围[0,1]之外的x的值将被截断为0或1值。
+
+*render*(x, color) → varchar
+
+使用指定的颜色对 x 渲染，使用ANSI标准颜色代码。 x 可以是double、bigint或varchar类型。
+
+*render*(b) → varchar
+
+接受布尔值b，并使用ANSI颜色代码呈现绿色true或红色false。
+
+*rgb*(red, green, blue) → color
+
+返回一个颜色值，捕获以0到255之间的int参数提供的三分量颜色值的RGB值：红色，绿色，蓝色。
+
+=== 数组函数和运算符
+
+*下标运算符: []*
+
+[] 运算符用于访问数组中的元素，索引从1开始:
+
+----
+SELECT my_array[1] AS first_element
+----
+
+*连接运算符: ||*
+
+|| 运算符可以将数组与数组进行连接，或者将数组与一个相同类型的元素进行连接:
+
+----
+SELECT ARRAY [1] || ARRAY [2]; => [1, 2]
+SELECT ARRAY [1] || 2; => [1, 2]
+SELECT 2 || ARRAY [1]; => [2, 1]
+----
+
+*数组函数*
+
+*cardinality*(x) → bigint
+
+返回数组 x 的基数（大小）。
+
+*contains*(x, y) → boolean
+
+如果数组 x 中包含元素 y 返回true。
+
+*array_sort*(x) → array
+
+对数组 x 排序并返回结果。 x 中的元素必须是可排序的。
+
+*concat*(x, y) → array
+
+连接数组 x 和 y 。 x 和 y 中的元素类型必须相同。 本函数与连接符(||)功能相同。
+
+=== Map函数和运算符
+
+*下标运算符: []*
+
+[] 运算符用于取出map中指定键的值:
+
+----
+SELECT name_to_age_map['Bob'] AS bob_age
+----
+
+*Map函数*
+
+*map*(array<K>, array<V>) → map<K,V>
+
+返回一个由指定的键/值数组构成的map。:
+
+*SELECT MAP*(ARRAY[1,3], ARRAY[2,4]); => {1 -> 2, 3 -> 4}
+
+cardinality(x) → bigint
+返回map x 的基数（大小）。
+
+*map_keys*(x<K, V>) → array<K>
+
+返回map x 中的全部键。
+
+*map_values*(x<K, V>) → array<V>
+
+返回map x 中的全部值。
+
+参见 map_agg() 用于创建map集合。
