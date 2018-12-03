@@ -1,0 +1,54 @@
+[[_ambari]]
+
+== Ambari 安装
+
+该章节描述Ambari 2.7.1及以上版本的安装过程，低版本的Ambari理论理论上也可以按照此手册安装，但不保证完全一致。
+依据 {corpname} 的实际情况，以下安装均是针对 `CentOS` 操作系统。
+
+=== 软件安装
+
+首先创建 _/etc/yum.repos.d/ambari.repo_ 文件，内容如下：
+
+[source]
+....
+[ambari-2.7.1.0]
+name=ambari Version - ambari-2.7.1.0
+baseurl=http://hdp.fzzq.com/centos7/2.7.1.0-169/
+gpgcheck=1
+gpgkey=http://hdp.fzzq.com/centos7/2.7.1.0-169/RPM-GPG-KEY/RPM-GPG-KEY-Jenkins
+enabled=1
+priority=1
+....
+
+其实在该节点上安装 `Ambari Server`
+
+[source,bash]
+....
+yum install  -y ambari-server
+Installing : postgresql-libs-9.2.18-1.el7.x86_64         1/4
+Installing : postgresql-9.2.18-1.el7.x86_64              2/4
+Installing : postgresql-server-9.2.18-1.el7.x86_64       3/4
+Installing : ambari-server-2.7.1.0-143.x86_64           4/4
+Verifying  : ambari-server-2.7.1.0-143.x86_64           1/4
+Verifying  : postgresql-9.2.18-1.el7.x86_64              2/4
+Verifying  : postgresql-server-9.2.18-1.el7.x86_64       3/4
+Verifying  : postgresql-libs-9.2.18-1.el7.x86_64         4/4
+
+Installed:
+  ambari-server.x86_64 0:2.7.1.0-143
+Dependency Installed:
+ postgresql.x86_64 0:9.2.18-1.el7
+ postgresql-libs.x86_64 0:9.2.18-1.el7
+ postgresql-server.x86_64 0:9.2.18-1.el7
+Complete!
+....
+
+=== 配置
+
+安装完成后，用root账号执行下面的命令，完成配置
+
+[source,bash]
+....
+ambari-server setup --java-home=/usr/java/jdk1.8.0_181-amd64 --enable-lzo-under-gpl-license
+....
+
