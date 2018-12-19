@@ -218,7 +218,7 @@ header:
   vertical_align: bottom
   border_color: #000000
   recto_content: # odd pages
-    left: 'image:{imagedir}/header-logo.png[width=80]'
+    #left: 'image:{imagedir}/header-logo.png[width=80]'
     right: '{chapter-title}'
   verso_content: # even pages
     left: $header_recto_content_left

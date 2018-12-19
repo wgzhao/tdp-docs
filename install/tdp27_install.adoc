@@ -1,11 +1,11 @@
-= Tcloudata Data Platform V2.7:  安装手册
-湖南天云魔方数据科技有限公司
-2015
-:corpname: 湖南天云魔方数据科技有限公司
-:corpshortname: 天云魔方
-:prodverbname: TCloudata Data Platform
-:prodshortname: TDP
-:prodver: 2.7
+= Hortonworks HDP  V3.0:  安装手册
+方正证券股份有限公司
+2018
+:corpname: 方正证券股份有限公司
+:corpshortname: 方正证券
+:prodverbname: Hortonworks Hadoop Data Platform
+:prodshortname: HDP
+:prodver: 3.0
 :imagedir: ./images
 :stylesdir: ./styles
 :doctype: book
@@ -18,7 +18,7 @@
 :docinfo:
 :docinfo1:
 :source-highlighter: pygments
-:keywords: TDP, Hadoop, bigdata, Spark
+:keywords: HDP, Hadoop, bigdata, Spark
 //i18n
 :appendix-caption: 附录
 :chapter-label:
@@ -28,7 +28,7 @@
 :preface-title: 前言
 :toc-title: 目录
 :appendix-caption: 附录
-:orgname: 湖南天云魔方数据科技有限公司
+:orgname: 方正证券股份有限公司
 :last-update-label: 最后更新时间
 :front-cover-image: image:cover/cover.pdf[width=1050,height=1600]
 
