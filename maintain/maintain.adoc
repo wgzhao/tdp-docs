@@ -1,0 +1,677 @@
+= Hortonworks HDP V3.0: 集群维护手册
+方正证券股份有限公司
+2018
+:corpname: 方正证券股份有限公司
+:corpshortname: 方正证券
+:prodverbname: Hortonworks Hadoop Data Platform
+:prodshortname: HDP
+:prodver: 3.0
+:imagedir: ./images
+:stylesdir: ./styles
+:doctype: book
+:numbered:
+:icons: font
+:toc: left
+:toclevels: 2
+//active header and footer
+:pagenums:
+:docinfo:
+:docinfo1:
+:source-highlighter: pygments
+:keywords: HDP, Hadoop, bigdata, Spark
+//i18n
+:appendix-caption: 附录
+:chapter-label:
+:figure-caption: 图
+:table-caption: 表
+:lang: zh_cn
+:preface-title: 前言
+:toc-title: 目录
+:appendix-caption: 附录
+:orgname: 方正证券股份有限公司
+:last-update-label: 最后更新时间
+
+该手册主要提供HDP集群在日常维护过程中进场用到的操作以及维护方法
+
+== Ambari 管理
+=== 修改admin密码
+在Ambari管理页面，可以修改默认账号admin以及自行创建的账号密码，步骤如下：
+
+. 在 **Admin/Users** ，找到需要修改的账号，如何点击 **Action->Edit**
+. 在 **Users/[UERNAME]**，点击 **Change password**
+. 点击 **change password**
+. 在 **Change password for [username]** 一栏，输入该账号的当前密码以及新的密码两次。
+. 点击 **OK** 
+
+=== 更改 JDK 版本
+
+Ambari 在安装过程既可以使用默认的 JDK 版本，也可以指定一个 JDK版本。安装完成后，如果 JDK 已经升级，则可能需要更换 JDK 版本。
+更换 JDK 的前提是集群所有节点都已经安装了需要替换的 JDK 版本，并且设置该 JDK 为默认 JDK 版本。
+改换 JDK 版本步骤如下
+
+. 登陆到 Ambari Server 节点，用 root 账号执行 `ambari-server setup`
+. 当提示 `change the JDK ?` 时，输入 `y` 
+. 当提示 `Do you want to change Oracle JDK[y/n] (n)?` 时，输入 `y`
+. 当提示 `choose a JDK: ` 时，输入 3 ，使用自定义的 JDK
+. 输入更换版本的 JDK 路径
+
+NOTE:: 如果自定义 JDK，且集群启用了 Kerberos，务必对 JDK 增加 JCE 补丁。具体方法参考集群安装手册的环境准备章节
+
+完成替换后，还需要执行两个步骤：
+
+. 登陆到 Ambari web 界面，然后重启所有的服务，确保所有的服务使用更换的 JDK 启动服务
+. 重启 Ambari Server  `ambari-server restart`
+
+=== 更换集群名称
+
+创建集群后，你可以修改创建时定义的集群名称，步骤如下：
+
+. 在 Ambari 管理界面，在 **Cluster Information->Cluster name** , 输入新的集群名称，长度不超过80个字符 image::https://docs.hortonworks.com/HDPDocuments/Ambari-2.7.1.0/administering-ambari/how-to/images/amb_rename_cluster.png[change cluster name]
+. 点击 **Save**
+. 确认新的集群名称
+. 重启 Ambari Server 和 Ambari Agent
+. 如果有涉及到利用 Ambari API 调用的程序，记得同时调整 API 调用路径
+
+=== 迁移 Ambari Server
+将当前的 Ambari Server 迁移到另外一个节点主要包括两个步骤，一是在新节点上安装 Ambari Server 软件包；二是将老的Ambari Server 数据传输到新节点上并做必要的配置，将步骤细化如下：
+
+. 备份当前的 Ambari  Server 数据
+. 更新所有的 Ambari Agent
+. 安装新的 Ambari Server
+. 导入 Ambari Server 数据
+. 启动新的 Ambari Server 和 Agent
+
+下面分别描述
+
+==== 备份当前的 Ambari Server 数据
+
+备份步骤如下：
+
+. 登陆 Ambari Server 节点，停止 Ambari Server 服务 `ambari-server stop`
+. 创建备份文件的存储目录
++
+[source,bash]
+....
+cd /tmp
+mkdir dbdumps/
+chmod 777 dbdumps/
+cd dbdumps
+....
+. 创建数据库备份
++
+[source,bash]
+....
+pg_dump -U [AMBARI_DB_USERNAME] -f ambari.sql
+password: [AMBARI_DB_PASSWORD]
+....
++
+这里
++
+.数据备份变量一览表
+[cols="^,^,^"]
+|====
+| 变量      |   描述        | 默认值    
+| [AMBARI_DB_USERNAME]  | 数据库名称    | ambari
+| [AMBARI_DB_PASSWORD]  | 数据库密码    | bigdata
+|====
+. 创建 Ambari Server 元数据库信息备份 `ambari-server backup`
+
+==== 更新所有的 Ambari Agent
+
+更新步骤如下：
+
+. 在每个集群节点上停止 Ambari Agent `ambari-agent stop`
+. 删除原来的 Agent 证书 `rm -rf /var/lib/ambari-agent/*`
+. 编辑 _/etc/ambari-agent/conf/ambari-agent.ini_ 文件，修改 `hostname=` 的值为新 Ambari Server 节点主机名
++
+[source,ini]
+....
+[server]
+hostname={NEW_AMBARI_SERVER_FQDN} // <1>
+url_post=8440
+secured_url_port=8441
+....
+<1> 新的 Ambari Server 节点主机名
+
+==== 安装新的 Ambari Server
+
+在节点上安装 Ambari Server，删除老的 Ambari 数据库，增加新的 Ambari 数据库，步骤如下：
+
+. 在新节点上安装新的 Ambari Server `yum install -y ambari-server`
+. 配置新的节点 `ambari-setup setup -j <jdk path> -q`
+. 重启 PostgreSQL 进程 `systemctl postgresql restart`
+. 删除刚创建的 `ambari` 数据库
++
+[source,bash]
+....
+su - postgres 
+psql -e "drop database ambari"
+psql -e "create database ambari owner ambari charset utf8"
+....
+
+==== 导入备份数据到新的 Ambari Server
+
+. 拷贝老的 Ambari Server 上备份的数据(_/tmp/dbdumps/ambari.sql_)到新节点
+. 导入数据 `su - postgres -c "psql -d ambari -f /tmp/dbdumps/ambari.sql `
+
+==== 启动新的 Ambari Server 和 Agent
+
+. 启动新的 Server `ambari-server start`
+. 所有节点启动 Agent `ambari-agent start`
+. 打开浏览器，浏览 http://<your new ambari server>:8080 
+
+=== 使用Oracle 作为 Ambari 的数据库
+
+默认情况下，Ambari 使用嵌入式 PostgreSQL 作为后端数据库。当然我们也可以使用其他数据库作为 Ambari 的元数据存储库。
+这里用 Oracle 作为例子来描述如何使用配置，其他数据库的配置流程相似。
+
+在使用 Oracle 作为后端数据库之前，需要获得对应的 JDBC 驱动包，以及在 Oracle 上创建有权限的账号以及对应的数据库。
+如果 Oracle 是11g，则使用 `ojdbc6.jar` 包，如果是 12c ，则使用 `ojdbc7.jar` 包。
+
+配置步骤如下：
+
+. 在 Ambari Server 节点上获取正确的 JDBC 包，并拷贝到对应的目录
++
+[source,bash]
+....
+cp ojdbc6.jar /usr/share/java
+chmod 644 /usr/share/java/ojdbc6.jar
+....
+. 在 Oracle 上创建 Ambari Server 的连接账号，并授权
++
+[source,sql]
+....
+# sqlplus sys/root as sysdba
+CREATE USER [AMBARI_USER] IDENTIFIED BY [AMBARI_PASSWORD] default
+ tablespace "USERS" temporary tablespace "TEMP";
+GRANT unlimited tablespace to [AMBARI_USER];
+GRANT create session to [AMBARI_USER];
+GRANT create TABLE to [AMBARI_USER];
+GRANT create SEQUENCE to [AMBARI_USER];
+QUIT;
+....
+这里 `[AMBARI_USER]` 是 Ambari Server 连接的账号，一般是 `ambari`，`AMBARI_PASSWORD` 是密码  
+. 加载 Ambari Server 数据库结构 `sqlplus [AMBARI_USER]/[AMBARI_PASSWORD] Ambari-DDL-Oracle-CREATE.sql`，其中 `Ambari-DDL-Oracle-CREATE.sql` 位于 _/var/lib/ambari-server/resources/_ 目录
+
+接下来执行 `ambari-server setup` ，等到出现 
+`select Advanced Database Configuration ] Option [2] Oracle` 时，选择2，然后按照提示进行后续操作。
+
+=== 配置网络端口
+
+Ambari 安装向导默认会针对 Server 和 Agent 分配默认的端口，后期我们可以修改，默认情况下，Ambari 使用到以下端口：
+
+[cols="^,^,^,^,^", headers=true]
+|====
+| 服务              |   节点    |   默认端口        | 协议      |   描述    
+| Ambari Server     |  Ambari Server 节点   | 8080  | http      | Ambari web 服务以及 REST API 服务
+| Ambari Server     | Ambari Server 节点    | 8440  | https     | Ambari Server 和 Agent 的握手端口
+| Ambari Server     | Ambari Sever 节点 | 8441  | https     | Ambari Agent 向 Server 的注册端口以及两者通讯的心跳端口
+| Ambari Agent      | 所有运行 Agent 的节点 | 8670  | tcp   | ping 端口，用来检查 Agent 的状态并发出警告
+|====
+
+==== 修改 Ambari web 端口
+
+我们可以修改 Ambari web 的默认8080 端口为其他端口，方法如下：
+
+. 登陆到 Ambari Server 节点，打开 _/etc/ambari-server/conf/ambari.properties_ 文件
+. 增加 `client.api.port=[PORT]` 一行到文件的最后，`[PORT]` 是你想更改的端口号
+. 重启服务 `ambari-server restart`
+
+=== Ambari 性能调优
+
+默认配置下，Ambari 运行不会有任何问题，如果你的集群节点超过100台，可以考虑从以下几个方面进行调优
+
+* 增加 Ambari Server 的 heap size
+* 设置更大的 cache size
+* 调整 JDBC 连接池配置
+
+下面分别描述
+
+==== 增加 heap size
+
+打开 Ambari Server 节点上的 _/var/lib/ambari-server/ambari-env.sh_ 文件，找到 `AMBARI_JVM_ARGS` 变量，根据集群节点数量情况，替代
+`-Xmx2048m` 参数，一般来说
+
+* 100-800节点，配置为4G 内存
+* 800-1200节点，配置为 8G 内存
+* 1200以上，配置为 16G 内存
+
+==== 增加 cache size
+
+cache size 的大致计算公式是 `60 * [CLUSTER_SIZE]`, `CLUSTER_SIZE` 是集群节点数量。
+打开 Ambari Server 节点上的 _/etc/ambari-server/conf/ambari.properties_ 文件，增加下面一行
+
+`server.ecCacheSize=[EC_CACHE_SIZE_VALUE]`
+
+`EC_CACHE_SIZE_VALUE` 是依据前面计算公式得到的值
+
+==== 调整JDBC连接池
+
+打开 Ambari Server 节点上的 _/etc/ambari-server/conf/ambari.properties_ 文件，增加以下几行
+
+.JDBC 连接池配置
+[cols='6,3']
+|===
+| 属性              | 值
+| server.jdbc.connection-pool.acquisition-size | 5
+|server.jdbc.connection-pool.max-age | 0
+|server.jdbc.connection-pool.max-idle-time | 14400
+|server.jdbc.connection-pool.max-idle-time-excess | 0
+|server.jdbc.connection-pool.idle-test-interval | 7200
+|===
+
+=== 删除 Ambari Server 历史数据
+
+为了减少性能损耗，可以使用 Ambari 命令行工具自动删除 Ambari 数据库中的历史数据，步骤如下：
+
+. 停止服务 `ambari-server stop`
+. 运行 purge 命令
++
+[source,bash]
+....
+# ambari-server db-purge-history --cluster-name fzzq --from-date 2018-11-01
+Using python  /usr/bin/python
+Purge database history...
+Ambari Server configured for Embedded Postgres. Confirm you have made a backup of the Ambari Server database [y/n]y
+Ambari server is using db type Embedded Postgres. Cleanable database entries older than 2018-11-01 will be purged. Proceed [y/n]y
+Purging historical data from the database ...
+Error output from database purge-history command:
+Dec 04, 2018 10:30:56 AM com.google.inject.assistedinject.FactoryProvider2 isValidForOptimizedAssistedInject
+WARNING: AssistedInject factory org.apache.ambari.server.state.cluster.ClusterFactory will be slow because class org.apache.ambari.server.state.cluster.ClusterImpl has assisted Provider dependencies or injects the Injector. Stop injecting @Assisted Provider<T> (instead use @Assisted T) or Injector to speed things up. (It will be a ~6500% speed bump!)  The exact offending deps are: [Key[type=com.google.inject.Injector, annotation=[none]]@org.apache.ambari.server.state.cluster.ClusterImpl.<init>()[1]]
+
+... ...
+
+Purging historical data completed. Check the ambari-server.log for details.
+Ambari Server 'db-purge-history' completed successfully.
+....
+. 启动服务 `ambari-server start`
+
+上述删除的命令执行的结果是会将以下数据记录进行删除
+
+* AlertCurrent
+* AlertNotice
+* ExecutionCommand
+* HostRoleCommand
+* Request
+* RequestOperationLevel
+* RequestResourceFilter
+* RoleSuccessCriteria
+* Stage
+* TopologyHostRequest
+* TopologyHostTask
+* TopologyLogicalTask
+
+== HDFS 运维
+
+=== 优化数据存储空间
+
+针对存储在 HDFS 上的数据库，我们可以从以下几个方面提升存储的效率和访问性能
+
+* 单个节点上多磁盘的存储空间平衡
+* 集群内跨节点的存储空间平衡
+* 通过纠删码提升存储空间
+* 针对归档的冷数据应用存储策略
+
+下面分别描述
+
+==== 单个节点上多磁盘的存储空间平衡
+HDFS 磁盘平衡是一个命令行工具，用来达到单个节点上移动不同磁盘上的数据以获得每块磁盘上数据使用占比大致相同的功能。
+在使用该命令之前，先要保证 `hdfs-site.xml` 文件中 `dfs.disk.balancer.enabled` 属性设置为 `true`
+
+然后先执行下面的命令生成计划配置文件
+[source,bash]
+....
+hdfs diskbalancer -plan [NODE] 
+....
+`[NODE]` 是集群中节点的主机名、IP 地址或者 UUID。
+如果程序认为已经达到了平衡，则给出下面的提示：
+[source,bash]
+....
+18/12/04 13:08:38 INFO balancer.KeyManager: Block token params received from NN: update interval=10hrs, 0sec, token lifetime=10hrs, 0sec
+18/12/04 13:08:38 INFO block.BlockTokenSecretManager: Setting block keys
+18/12/04 13:08:38 INFO balancer.KeyManager: Update block keys every 2hrs, 30mins, 0sec
+18/12/04 13:08:39 INFO planner.GreedyPlanner: Starting plan for Node : data-hdp-0001:8010
+18/12/04 13:08:39 INFO planner.GreedyPlanner: Compute Plan for Node : data-hdp-0001:8010 took 22 ms
+18/12/04 13:08:39 INFO command.Command: No plan generated. DiskBalancing not needed for node: data-hdp-0001 threshold used: 10.0
+No plan generated. DiskBalancing not needed for node: data-hdp-0001 threshold used: 10.0
+....
+
+否则会生成两个文件
+
+<nodename>.before.json:: 表示执行平衡之前该节点的磁盘空间状态
+<nodename>.plan.json:: 包含了详细了需要移动的数据情况
+
+默认情况下，上述文件会保存在 HDFS 的 _/system/diskbalancer/<creation-timestamp>_ 目录下， 这里的 `create-timestamp` 是执行上述命令的时间戳
+
+接下来，通过下面的命令，真正开始移动数据已达到平衡
+[source,bash]
+....
+hdfs diskbalancer -execute /system/diskbalancer/<creation-timestamp>/nodename.plan.json
+....
+
+上述命令还可以指定几个参数，更详细的情况，请看 
+`hdfs diskbalancer -help plan`
+和 `hdfs diskbalancer -help execute` 
+的输出结果
+
+==== 集群内跨节点的存储空间平衡
+应用程序生成数据时并没有让所有存储节点参与会导致集群内节点间的数据不平衡；新增数据节点也会导致这种情况。因此随着集群的时候增加，节点之间的不平衡率会增加，如果超过了
+一定的阈值（默认是10%），则需要通过人工来调整平衡。
+
+`hdfs balancer` 命令有不少配置属性来控制或者影响平衡的效率以及对集群使用的影响，说明如下：
+
+dfs.datanode.balance.max.concurrent.moves:: 单个节点上数据移动进程的最大数据量，默认值是5。你可以配置为当前节点磁盘的数量
+dfs.datanode.balance.bandwidthPerSec:: 数据平衡命令所能使用的最高带宽，默认是 1048576（1MB/s)，这个值对大部分集群来说都太小，如果你是在集群空闲时运行，建议设置到节点间最大带宽的80%
+dfs.balancer.max-size-to-move:: 在每一个批次里，数据节点间能移动的数据大小，默认是10737418240(10GB)
+dfs.balancer.getBlocks.size:: getBlocks()方法返回的大小，默认是214783648（2GB）
+
+同时，`hdfs balancer` 还可以指定一些参数，描述如下：
+
+[-policy <policy>]:: 指定如何判断集群内数据是否平衡的策略；目前支持两种策略：`blockpool` 和 `datanode` 前者表示如果每个节点的 pool 是平衡的，则集群是平衡的，
+            后者表示如果集群内每个节点是平衡的，则集群是平衡的，默认策略是 `datanode`
+[-threshold <threhold>]:: 表示可接受的数据节点间存储占比的差值，范围为 `[1.0,100.0]` 之间，比如 指定值为 5，则表示两个节点间存盘使用空间比率差值可以在
+            `[-5%,0.5%]` 之间，也即是两者最多相差10%。默认值是 10
+[-exclude [-f <hosts-file> | <comma-separated list of hosts>]]:: 指明哪些 datanode 参与本次数据调整，这些指明的 datanode，既不会拷贝数据出去，也不会传输数据进来。
+            默认为空
+[-include [-f <hosts-file> | <comma-separated list of hosts>]]:: 指明只有哪些 datenode 参与本次数据调整。默认为空
+[-source [-f <hosts-file> | <comma-separated list of hosts>]]:: 指明哪些 datenode 作为数据的复制源，一旦指明这些节点，则本次数据调整仅从这些节点拷贝数据出去。
+默认为空。该参数在特定的数据倾斜下有减少数据移动次数。
+考虑下面的集群数据存储情况
++
+.集群数据存储利用率
+[cols="3,2,2"]
+|===
+| 节点      |   利用率      | 机架  
+| D1        | 95%       |   A
+| D2        | 30%       | B
+| D3,D4,D5  | 0%        | B
+|===
+
+通过上表，我们知道该就集群的存储平均利用率是 $ (0.95*1 + 0.30*1+3*0)/5 = 25% $， 而 D2 节点是在默认阈值 10% 范围内，因此理论上做数据平衡时，D2节点可以不用参与。
+但是，当不指定 `-source` 参数时，所有的 datanodes 都会参与。而且因为 D2节点和 D3-D5节点是在同一个机架上。因此会优先从 D2传输数据到 D3-D5，然后再从 D1 传输数据到
+其他节点。因此，当我们使用 `-source D1` 后，就只有 D1 参与数据移动，本例中，D1数据直接移动到 D3-D5节点，节省了移动次数。
+
+依据配置的参数不同，HDFS Balancer 可以作为后台模式运行，也可以作为快速模式运行。后台运行模式不影响集群上的其他任务。快速模式则尽可能占用集群资源。
+以下是两者的参数对比
+
+[cols="4,2,2,2"]
+|===
+|   属性        |   默认值      |后台模式值     |快速模式值
+| dfs.datanode.balance.max.concurrent.moves | 5 | 4 x 磁盘数量  | 4 * 磁盘数量
+| dfs.datanode.balance.max.bandwidthPerSec | 1048576（1MB/s) | 1048576（1MB/s) | 10737418240 (10 GB)
+| dfs.balancer.MoverThreads | 1000 | 1000 | 20000 
+| dfs.balancer.max-size-to-move | 10737418240 (10 GB) | 1073741824(1GB) | 107374182400(100GB)
+| dfs.balancer.getBlocks.min-block-size |  10485760（10MB/s) |  10485760（10MB/s) |  104857600（100MB/s)
+|===
+
+HDFS Balancer 进程完成或退出时给出特定的返回码来表明本次执行的状态以及可能的出错原因，列表如下：
+
+.HDFS Balancer退出码
+[cols="3,1,6"]
+|===
+| 状态  | 值        | 描述
+| SUCCESS | 0 | 集群处于平衡状态，利用率差异都在指定的阈值范围内。 
+| ALREADY_RUNNING |  -1 | 已经有一个 HDFS Balancer 正在运行
+| NO_MOVE_BLOCK |  -2 | HDFS Balancer 无法执行移动操作
+| NO_MOVE_PROGRESS | -3 |  连续5个批次的移动操作都失败了
+| IO_EXCEPTION |  -4 | 发生 IOException 异常
+| ILLEGAL_ARGUMENTS |  -5 | 参数异常 
+| INTERUPTED |  -6 | HDFS Balancer 进程被中断
+| UNFINALIZED_UPGRADE |  -7 | 集群正在升级 
+|===
+
+==== 通过纠删码提升存储空间
+
+HDFS 纠删码（Erasure Coding， EC）用来减低对负数数量的要求，从而达到减少存储空间的目标。
+默认情况下，HDFS 采取3副本策略，这意味着需要增加200%的额外存储空间来确保数据的安全。而采取纠删码后，
+在不降低数据安全等级的情况下，需要的额外存储空间不超过50%。
+HDFS 通过数据条带化技术支持在目录层级实现纠删码。同时不同的目录可以采取不同的策略，每一个策略由以下两组信息组成：
+
+* EC Schema: 包括在一个 EC 组里的数据和对等数据的数量，以及编码算法（比如Reed-Solomon)
+* 条带单元大小: 决定了条带读写的大小，包括缓存大小以及编码工作量
+
+HDFS 支持 Reed-Solomon 纠删算法，这也是系统的默认算法，其配置参数为6个数据块，3个对等块，条带大小为1024K（RS-6-3-1024k)
+
+另外，HDFS 还支持以下算法
+
+* RS-3-2-1024k
+* RS-LEGACY-6-3-1024k
+* XOR-2-1-1024k
+
+注意，纠删码只针对启用后写入的数据有效，已经写入的文件夹和目录即便在启用纠删码后，依然采取默认的3副本策略。
+另外，纠删码因为需要消耗一定的 CPU 和网络带宽，因此对集群的性能有一定的影响。
+
+`hdfs ec` 命令提供了配置纠删码的功能，下面我们举一个实际的例子来说明如何使用：
+
+首先我们查看当前有哪些策略以及是否启用
+[source,bash]
+....
+$ hdfs ec -listPolicies
+Erasure Coding Policies:
+ErasureCodingPolicy=[Name=RS-10-4-1024k, Schema=[ECSchema=[Codec=rs, numDataUnits=10, numParityUnits=4]], CellSize=1048576, Id=5], State=DISABLED
+ErasureCodingPolicy=[Name=RS-3-2-1024k, Schema=[ECSchema=[Codec=rs, numDataUnits=3, numParityUnits=2]], CellSize=1048576, Id=2], State=DISABLED
+ErasureCodingPolicy=[Name=RS-6-3-1024k, Schema=[ECSchema=[Codec=rs, numDataUnits=6, numParityUnits=3]], CellSize=1048576, Id=1], State=ENABLED
+ErasureCodingPolicy=[Name=RS-LEGACY-6-3-1024k, Schema=[ECSchema=[Codec=rs-legacy, numDataUnits=6, numParityUnits=3]], CellSize=1048576, Id=3], State=DISABLED
+ErasureCodingPolicy=[Name=XOR-2-1-1024k, Schema=[ECSchema=[Codec=xor, numDataUnits=2, numParityUnits=1]], CellSize=1048576, Id=4], State=DISABLED
+....
+
+从上述输出结果来看，我们知道有些策略没有启动，如果希望启用，则使用下面的命令：
+[source,bash]
+....
+$ hdfs ec -enablePolicy -policy RS-3-2-1024k
+Erasure coding policy RS-3-2-1024k is enabled
+....
+
+接下来我们针对某一个目录进行策略设置：
+[source,bash]
+....
+hdfs ec -setPolicy -path /user -policy RS-6-3-1024k
+Set RS-6-3-1024k erasure coding policy on /user
+Warning: setting erasure coding policy on a non-empty directory will not automatically convert existing files to RS-6-3-1024k erasure coding policy
+....
+
+我们可以通过下面的命令来确认策略是否已经正确设置：
+[source,bash]
+....
+$ hdfs ec -getPolicy -path /user
+RS-6-3-1024k
+....
+
+设置后，我们可以通过运行 `hdfs fsck` 来检查块数据来查看纠删码块的状态：
+[source,bash]
+....
+$ hdfs fsck /user
+.
+.
+.
+Erasure Coded Block Groups:
+ Total size:    0 B
+ Total files:   0
+ Total block groups (validated):        0
+ Minimally erasure-coded block groups:  0
+ Over-erasure-coded block groups:       0
+ Under-erasure-coded block groups:      0
+ Unsatisfactory placement block groups: 0
+ Average block group size:      0.0
+ Missing block groups:          0
+ Corrupt block groups:          0
+ Missing internal blocks:       0
+FSCK ended at Thu Dec 06 09:46:17 CST 2018 in 7 milliseconds
+
+The filesystem under path '/user' is HEALTHY
+....
+
+==== 针对归档的冷数据应用存储策略
+
+归档存储能够提升存储密度，同时降低处理资源。
+HDFS 的存储的类型可以分为这么几类：
+* DISK: 磁盘存储（默认存储类型）
+* ARCHIVE: 归档存储
+* SSD: 固态磁盘存储
+* RAM_DISK: DataNode 内存存储
+
+同时 HDFS 也内置了集中存储策略，描述如下：
+
+* HOT: 存储和计算同时使用。用此策略的数据表示会用到后续的处理中。如果一个数据标志为 HOT，则会在 DISK(磁盘)上存储所有的副本。
+* WARM: 兼顾 HOT 和 COLD。当块标志位 WARM 时，第一个副本会存储在 DISK 上，剩下的副本存储在 ARCHIVE 上。
+* COLD: 仅用于存储，或者参与非常有限的计算。当数据块标志为 COLD 时，所有的副本都存储在 ARCHIVE 上。
+
+下表给出了不同策略下的副本情况：
+|====
+| 策略编号  |   策略名称    |   副本策略（n 个副本下）  | 回撤机制  |   回撤副本存储策略
+| 12     | HOT (默认) |  Disk: n | N/A   | ARCHIVE
+| 8      | WARM         | Disk:1 , ARCHIVE:n-1  | DISK,ARCHIVE  | DISK,ARCHIVE
+| 4      | COLD     | ARCHIVE:n         | N/A       | N/A
+|====
+
+如果我们需要希望在某一个 DataNode 上启用归档策略，首先必须在该节点上设置 ARCHIVE 存储类型，然后移动对应的数据块，在设置类型之前，
+需要停止 datanode 进程，然后进行设置，首先修改 _/etc/hadoop/conf/hdfs-site.xml_ 文件，找到 `dfs.datanode.data.dir` 属性，将该属性值中的 `[DISK]` 替换成
+`[ARCHIVE]` ，类似如下：
+[source,xml]
+....
+<property>
+  <name>dfs.datanode.data.dir</name>
+  <value>[ARCHIVE]/grid/1/tmp/data_trunk</value>
+</property>
+....
+然后启动 datanode 进程，最后执行 `hdfs mover` ，该命令会是扫描 HDFS 上的特性文件，看是否满足存储策略，然后进行必要数据移动操作。
+
+=== HDFS 性能优化
+
+HDFS 的性能优化可以从以下几个方面考虑：
+. 缓存数据
+. 配置机架感知
+. 定制 HDFS
+. 用 Hadoop 归档优化NameNode 磁盘空间
+. 识别较慢的 DataNode，并优化
+. 利用 DataNode 的内存作为存储来优化小数据写操作
+. 实现短路读(short-circuit reads)
+
+==== 配置集中的缓存管理提升性能
+
+集中缓存管理通过指定 HDFS 的某一个目录作为存储，那些需要重复访问同一个数据的应用由此可以提升性能；其架构如下：
+
+image::https://docs.hortonworks.com/HDPDocuments/HDP3/HDP-3.0.1/data-storage/concepts/images/dsg_caching.png[centralized cache management architecture]
+
+要启用集中缓存管理，首先必须启用 JNI，另外还需要修改一些列配置属性，配置参数大部分在 `hdfs-site.xml` 文件中，其中必须设定的属性是 `dfs.datanode.max.locked.memory`，
+该属性决定了一个 DataNode 能用来当做缓存的最大内存是多少（字节单位）。
+下面列举的是可选属性配置：
+
+. `dfs.namenode.path.based.cache.refresh.interval.ms` NameNode 扫描的间隔时间，默认是 300000，即5分钟
+. `dfs.time.between.resending.caching.directives.ms` NameNode 发起清理缓存的间隔时间
+. `dfs.datanode.fsdatasetcache.max.threads.per.volume` DataNode 用来针对每个卷（volume）缓存数据时的最大线程数，默认是4
+. `dfs.cachereport.intervalMsec` DataNode 发送一次完整缓存状态报给NameNode 的间隔时间，默认是10000，即10秒
+. `dfs.namenode.path.based.cache.block.map.allocation.percent` Java heap size 比例，默认是 0.25
+
+我们可以使用 `hdfs cacheadmin` 命令集来创建、修改、打印缓存池，以及通过其子命令执行缓存操作，详细命令如下：
+
+[source,bash]
+....
+Usage: bin/hdfs cacheadmin [COMMAND]
+          [-addDirective -path <path> -pool <pool-name> [-force] [-replication <replication>] [-ttl <time-to-live>]]
+          [-modifyDirective -id <id> [-path <path>] [-force] [-replication <replication>] [-pool <pool-name>] [-ttl <time-to-live>]]
+          [-listDirectives [-stats] [-path <path>] [-pool <pool>] [-id <id>]]
+          [-removeDirective <id>]
+          [-removeDirectives -path <path>]
+          [-addPool <name> [-owner <owner>] [-group <group>] [-mode <mode>] [-limit <limit>] [-defaultReplication <defaultReplication>] [-maxTtl <maxTtl>]]
+          [-modifyPool <name> [-owner <owner>] [-group <group>] [-mode <mode>] [-limit <limit>] [-defaultReplication <defaultReplication>] [-maxTtl <maxTtl>]]
+          [-removePool <name>]
+          [-listPools [-stats] [<name>]]
+          [-help <command-name>]
+....
+
+==== 配置 HDFS 机架感知
+
+HDFS 中的 NameNode 维护所有 DataNode 的机架 ID，当需要在网络间传输数据库时，NameNode 会优选选择“更靠近”的DataNode 来完成这个任务以提升效率。而 NameNode 判断 DataNode 之间的距离便是通过位置，而这个位置使用机架 ID 来标示的，比如同一个机架的下 DataNode 就比不同机架之间的 DataNode 更近。
+
+在 HDP 集群上配置机架感知，要创建一个机架拓扑脚本，然后在 `core-site.xml` 文件中指明该文件，并重启 HDFS，最后校验是否正确。详细描述如下：
+
+.创建机架拓扑脚本
+在 _/etc/hadoop/conf_ 下，创建名为 `rack_topology.sh` 脚本，内如类似如下：
+[source, bash]
+....
+#!/bin/bash
+# Adjust/Add the property "net.topology.script.file.name"
+# to core-site.xml with the "absolute" path the this
+# file. ENSURE the file is "executable".
+# Supply appropriate rack prefix
+RACK_PREFIX=default
+# To test, supply a hostname as script input:
+if [ $# -gt 0 ]; then
+CTL_FILE=${CTL_FILE:-"rack_topology.data"}
+HADOOP_CONF=${HADOOP_CONF:-"/etc/hadoop/conf"}
+if [ ! -f ${HADOOP_CONF}/${CTL_FILE} ]; then
+ echo -n "/$RACK_PREFIX/rack "
+ exit 0
+fi
+while [ $# -gt 0 ] ; do
+ nodeArg=$1
+ exec< ${HADOOP_CONF}/${CTL_FILE}
+ result=""
+ while read line ; do
+ ar=( $line )
+ if [ "${ar[0]}" = "$nodeArg" ] ; then
+ result="${ar[1]}"
+ fi
+ done
+ shift
+ if [ -z "$result" ] ; then
+ echo -n "/$RACK_PREFIX/rack "
+ else
+ echo -n "/$RACK_PREFIX/rack_$result "
+ fi
+done
+else
+ echo -n "/$RACK_PREFIX/rack "
+fi
+....
+接下来在同样的目录下创建 `rack_topology.data` 文件，该文件包含了集群中每个节点的机架位置（机架 ID）
+[source, ini]
+....
+# This file should be:
+# - Placed in the /etc/hadoop/conf directory
+# - On the Namenode (and backups IE: HA, Failover, etc)
+# - On the Job Tracker OR Resource Manager (and any Failover JT's/RM's)
+# This file should be placed in the /etc/hadoop/conf directory.
+# Add Hostnames to this file. Format <host ip> <rack_location>
+192.168.2.10 01
+192.168.2.11 02
+192.168.2.12 03
+....
+运行第一个脚本，检查输出输出是否正确，正确无误后，将上述两个文件拷贝到每个节点的对应目录。
+
+.增加拓扑脚本属性到core-site.xml中
+首先停止 HDFS 集群，然后在 _/etc/hadoop/conf/core-site.xml_ 中，添加下面的属性
+[source, xml]
+....
+<property>
+  <name>net.topology.script.file.name</name>
+  <value>/etc/hadoop/conf/rack-topology.sh</value>
+</property>
+....
+默认情况下下，脚本一次最多处理100个请求，你可以通过下面的属性进行配置
+[source, xml]
+....
+<property>
+  <name>net.topology.script.number.args</name>
+  <value>75</value>
+</property>
+....
+
+.校验
+上述步骤完成后，重启 HDFS 以及 MapReduce 服务。查看 _/var/log/hadoop/hdfs_ 下的日志，看是否有类似下面的输出：
+[source]
+....
+2018-11-13 15:58:08,495 INFO org.apache.hadoop.net.NetworkTopology: Adding a new node: /rack01/<ipaddres>
+....
+继续执行 `hdfs fsck` 来确保没有不一致的情况发生，对于有两个机架的集群，该命令的输出的最后几行类似如下：
+[source]
+....
+Status: HEALTHY  Total size: 123456789 B  Total dirs: 0  Total files: 1
+Total blocks (validated): 1 (avg. block size 123456789 B)
+Minimally replicated blocks: 1 (100.0 %)  Over-replicated blocks: 0 (0.0 %)
+Under-replicated blocks: 0 (0.0 %)  Mis-replicated blocks: 0 (0.0 %)
+Default replication factor: 3  Average block replication: 3.0  Corrupt
+blocks: 0  Missing replicas: 0 (0.0 %)  Number of data-nodes: 40  Number of
+racks: 2  FSCK ended at Mon Nov 13 17:10:51 UTC 2018 in 1 milliseconds
+....

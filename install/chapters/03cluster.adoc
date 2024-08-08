@@ -1,0 +1,81 @@
+== 集群安装
+
+该章节描述如何通过Ambari来部署一套HDP 3.0 集群
+
+=== 启动Ambari
+
+执行 `/etc/init.d/ambari-server start` 启动服务，并可以通过 http://<ambari hostname>:8080/ 访问，默认的账号和密码均为 `admin`
+
+=== 启动集群安装向导
+从 Ambari 欢迎界面，选择 **Launch Install Wizard**
+
+image::https://docs.hortonworks.com/HDPDocuments/Ambari-2.7.1.0/bk_ambari-installation/content/figures/2/figures/amb_270_first_login.png[Launch Install Wizard]
+
+=== 命名集群名称
+
+.步骤
+1. 在 **Name your cluster** ，输入你希望创建的集群名字，比如 `fzzq`, 注意名字不要包含空格以及特殊字符
+2. 选择 **Next**
+
+=== 选择集群版本
+
+这个步骤分为两个步骤，一个是选择集群版本，一个是配置仓库地址。
+
+**选择版本**
+
+这里允许你选择安装不同的集群版本，这里我们选择最新的版本，如下图所示：
+
+image::https://docs.hortonworks.com/HDPDocuments/Ambari-2.7.1.0/bk_ambari-installation/content/figures/2/figures/select_hdp_stack_300_amb_27.png[choose stack version]
+
+**设置仓库**
+
+因为我们自己搭建了仓库，因此在单选中选中 `Use Local Repository`， 然后在下面列表中出现不同OS中，除保留redhat7外，其他全部删除，如下图所示：
+
+image::{imagedir}/cluster_repo_url.png[cluster local repository]
+
+点击 **Next**
+
+=== 安装选项
+
+.步骤
+1. 在 **Target Hosts** 里，输入你集群几点名称，一行一个，也可以使用 `[]` 来表示一个范围内的节点，比如 `host[01-10].domain` 就表示从 `host01.domain` 到 `host10.domain` 10个节点
+2. 选择默认的自动安装Ambari agent，在下面的文本框里，粘贴 `Ambari Server` 节点 `root` 账号下的 `$HOME/.ssh/id_rsa` 文件的内容
+3. 点击 **Register and Confirm** 继续
+
+=== 确认安装的节点
+
+该弹出框是用来提示你本次集群安装的节点是否正确，如果满足要求，点击 **Next** 继续，否则重新返回上一个步骤
+
+=== 选择要安装的服务
+
+这里选择你要安装的服务，如果你选择了依赖A服务的B服务，则会提示你集群也会自动安装A服务，其中 `SmartSense` 是必须安装的服务，不可取消，但是我们可以安装完毕后，删除该服务。
+
+因为服务在安装完成后，可以随时增加和删除服务，因此这里建议先安装实际用到的服务，暂未使用的服务可以先不安装。
+
+=== 分配Master服务
+
+集群会尽可能把Master服务分散到不同的节点上，这里需要你提前对集群每个节点的角色做一个规划，然后对照规划分配不同Master服务到你期望你的节点上。
+
+=== 分配Slave服务以及客户端
+
+该步骤和上一步方法相同，其中客户端需要安装所有节点上
+
+=== 定制服务
+
+这里可以对自动设置的配置进行手工调整以满足特别的需求，要特别注意HDFS默认配置的存储路径。
+
+=== 确认
+
+所有配置完成后，安装向导会给出一个安装摘要，如果想打印上述信息，便于以后参考，可以点击 **Print** 按钮  
+也可以选择 **Generate Blueprint** 按钮来导出配置文件，如果要安装相同集群，可以使用该配置完成快速完成安装
+确认配置满足要求后，点击 **Deploy** 
+
+=== 安装、启动和测试
+
+到这里，集群安装向导开始安装对应的软件包，对服务进行配置，并给出安装进度，顺利的话，你只需要等待完成。
+当看到 `Successfully installed and started the services` 消息时，表示安装顺利完成，点击 **Next**
+
+=== 完成
+
+安装完成后，向导给出一个安装摘要信息告诉你所完成任务的列表。点击 **Complete** 即完成安装。
+
