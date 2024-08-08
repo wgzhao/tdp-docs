@@ -250,7 +250,7 @@ cache size 的大致计算公式是 `60 * [CLUSTER_SIZE]`, `CLUSTER_SIZE` 是集
 打开 Ambari Server 节点上的 _/etc/ambari-server/conf/ambari.properties_ 文件，增加以下几行
 
 .JDBC 连接池配置
-[cols='6,3,3']
+[cols='6,3']
 |===
 | 属性              | 值
 | server.jdbc.connection-pool.acquisition-size | 5
@@ -386,6 +386,7 @@ dfs.balancer.getBlocks.size:: getBlocks()方法返回的大小，默认是214783
 | D2        | 30%       | B
 | D3,D4,D5  | 0%        | B
 |===
+
 通过上表，我们知道该就集群的存储平均利用率是 $ (0.95*1 + 0.30*1+3*0)/5 = 25% $， 而 D2 节点是在默认阈值 10% 范围内，因此理论上做数据平衡时，D2节点可以不用参与。
 但是，当不指定 `-source` 参数时，所有的 datanodes 都会参与。而且因为 D2节点和 D3-D5节点是在同一个机架上。因此会优先从 D2传输数据到 D3-D5，然后再从 D1 传输数据到
 其他节点。因此，当我们使用 `-source D1` 后，就只有 D1 参与数据移动，本例中，D1数据直接移动到 D3-D5节点，节省了移动次数。
@@ -432,6 +433,7 @@ HDFS 通过数据条带化技术支持在目录层级实现纠删码。同时不
 HDFS 支持 Reed-Solomon 纠删算法，这也是系统的默认算法，其配置参数为6个数据块，3个对等块，条带大小为1024K（RS-6-3-1024k)
 
 另外，HDFS 还支持以下算法
+
 * RS-3-2-1024k
 * RS-LEGACY-6-3-1024k
 * XOR-2-1-1024k
@@ -577,7 +579,6 @@ Usage: bin/hdfs cacheadmin [COMMAND]
           [-listPools [-stats] [<name>]]
           [-help <command-name>]
 ....
-
 
 ==== 配置 HDFS 机架感知
 
